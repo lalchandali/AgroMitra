@@ -12,6 +12,8 @@
 #
 # ============================================================
 
+from readline import backend
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,6 +29,7 @@ from xgboost import XGBRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
+
 
 warnings.filterwarnings('ignore')
 
@@ -54,7 +57,7 @@ def load_data(file_path):
     print("  STEP 1: Data Loading & Cleaning")
     print("="*60)
 
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(backend.ai_models.data.raw.crop_prices_v2.csv)
     print(f"  ✅ Data loaded: {len(df)} rows, {len(df.columns)} columns")
     print(f"  📋 Columns: {list(df.columns)}")
 

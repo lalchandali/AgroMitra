@@ -29,6 +29,8 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 warnings.filterwarnings('ignore')
 
 # ── Load environment variables (.env) ───────────────────────

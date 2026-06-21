@@ -4,12 +4,11 @@
 # ============================================================
 
 import uuid
+from backend.database.database import Base
 from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Integer, Text, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 import enum
-
-from backend.database.database import Base
 
 
 class QualityGrade(str, enum.Enum):
@@ -27,6 +26,7 @@ class ProductStatus(str, enum.Enum):
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = {'extend_existing': True}
 
     product_id     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     farmer_id      = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)

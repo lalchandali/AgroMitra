@@ -9,7 +9,7 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 
-from backend.database.database import get_db
+from backend.database import get_db
 from backend.database.models.order import Order, OrderStatus, PaymentStatus
 from backend.database.models.product import Product, ProductStatus
 from backend.database.models.user import User, UserRole

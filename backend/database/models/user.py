@@ -4,12 +4,11 @@
 # ============================================================
 
 import uuid
+from backend.database.database import Base
 from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Enum
 from sqlalchemy.dialects.postgresql import UUID
 import enum
-
-from backend.database.database import Base
 
 
 # ── Enums ────────────────────────────────────────────────────
@@ -23,6 +22,7 @@ class UserRole(str, enum.Enum):
 # ── User Table ───────────────────────────────────────────────
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
 
     user_id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mobile_number    = Column(String(15), unique=True, nullable=False, index=True)

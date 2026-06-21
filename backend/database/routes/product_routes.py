@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session  # type: ignore[import]
 from typing import Optional, List
 from uuid import UUID
 
-from backend.database.database import get_db
+from backend.database import get_db
 from backend.database.models.product import Product, ProductStatus
 from backend.database.models.user import User, UserRole
 from backend.database.schemas.product_schema import ProductCreate, ProductUpdate, ProductResponse

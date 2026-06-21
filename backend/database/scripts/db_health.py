@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.database.database import engine
+from backend.database import engine
 from sqlalchemy import inspect, text
 
 if __name__ == '__main__':

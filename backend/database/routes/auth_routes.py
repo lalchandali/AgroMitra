@@ -10,7 +10,7 @@ from typing import List, Optional
 from fastapi import Query
 from backend.database.models.user import User, UserRole
 
-from backend.database.database import get_db
+from backend.database import get_db
 from backend.database.models.user import User
 from backend.database.schemas.user_schema import (
     UserRegister, UserLogin, OTPRequest, OTPVerify,

@@ -1,6 +1,4 @@
 import { Link } from 'react-router-dom'
-import React from 'react';
-// import { CloudRain, MapPin, Thermometer, AlertTriangle } from 'lucide-react'; // lucide-icons ব্যবহার করলে
 import { useEffect, useRef, useState } from 'react'
 import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip, LineChart, Line } from 'recharts'
 import { getPricePrediction, getDemandForecast, getWeatherAlert, getSowingCalendar, getMarketPrices } from '../api/agromitra'
@@ -34,7 +32,19 @@ const gapRows = [
 ]
 
 const DEMO_CROPS = ['Tomato', 'Onion', 'Potato', 'Brinjal', 'Cabbage', 'Garlic', 'Rice', 'Ginger']
-const DEMO_DISTRICTS = ['Bogura', 'Rajshahi', 'Cumilla', 'Dhaka', 'Chattogram']
+const DEMO_DISTRICTS = [
+  "Bagerhat", "Bandarban", "Barguna", "Barishal", "Bhola", "Bogura",
+  "Brahmanbaria", "Chandpur", "Chapai Nawabganj", "Chattogram", "Chuadanga",
+  "Cumilla", "Cox's Bazar", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha",
+  "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokathi",
+  "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj", "Kurigram",
+  "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur", "Magura", "Manikganj",
+  "Meherpur", "Moulvibazar", "Munshiganj", "Mymensingh", "Naogaon", "Narail",
+  "Narayanganj", "Narsingdi", "Natore", "Netrokona", "Nilphamari", "Noakhali",
+  "Pabna", "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi",
+  "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur", "Sirajganj",
+  "Sunamganj", "Sylhet", "Tangail", "Thakurgaon"
+]
 const DEMO_CROP_EMOJI = { Tomato: '🍅', Onion: '🧅', Potato: '🥔', Brinjal: '🍆', Cabbage: '🥬', Garlic: '🧄', Rice: '🌾', Ginger: '🫚' }
 
 // Crop -> emoji, used for the Sowing Calendar cards
@@ -45,13 +55,13 @@ const Home = () => {
 
   // ── Live AI price/demand demo ───────────────────────────────
   const [demoCrop, setDemoCrop] = useState('Tomato')
-  const [demoDistrict, setDemoDistrict] = useState('Bogura')
+  const [demoDistrict, setDemoDistrict] = useState('Dhaka')
   const [demoLoading, setDemoLoading] = useState(false)
   const [demoData, setDemoData] = useState(null)
   const [demoError, setDemoError] = useState(false)
 
   // ── Weather alert ────────────────────────────────────────────
-  const [weatherDistrict, setWeatherDistrict] = useState('Bogura')
+  const [weatherDistrict, setWeatherDistrict] = useState('Dhaka')
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
   const [weatherError, setWeatherError] = useState(false)
@@ -353,111 +363,48 @@ const Home = () => {
       </div>
 
       {/* 1. EMERGENCY ADVISORY ALERTS — live from OpenWeatherMap via our backend */}
-      <section className="am-section" style={{ maxWidth: '900px', margin: '24px auto', padding: '0 16px' }}>
-        {/* কন্ট্রোল সেকশন: ড্রপডাউনটি বামে সুন্দরভাবে এলাইন করা */}
-        <div className="am-weather-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <span className="am-weather-controls-label" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--gray-dark)' }}>📍 Checking weather for:</span>
-          <select
-            className="am-demo-select am-weather-select"
-            value={weatherDistrict}
-            onChange={e => setWeatherDistrict(e.target.value)}
-            style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', fontWeight: '6px', outline: 'none', cursor: 'pointer' }}
-          >
+      <section className="am-section">
+        <div className="am-weather-controls">
+          <span className="am-weather-controls-label">📍 Checking weather for:</span>
+          <select className="am-demo-select am-weather-select" value={weatherDistrict} onChange={e => setWeatherDistrict(e.target.value)}>
             {DEMO_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
 
-        {/* লোডিং স্টেট */}
         {weatherLoading && (
-          <div className="am-demo-loading" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-dark)' }}>
+          <div className="am-demo-loading">
             <span className="am-demo-spinner" />
             Checking live conditions in {weatherDistrict}…
           </div>
         )}
 
-        {/* এরর স্টেট */}
         {weatherError && !weatherLoading && (
-          <div className="am-demo-error" style={{ padding: '16px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '12px', textAlign: 'center', fontSize: '14px', fontWeight: '500' }}>
-            ⚠️ Could not reach the weather service right now.
-          </div>
+          <div className="am-demo-error">⚠️ Could not reach the weather service right now.</div>
         )}
 
-        {/* মূল ওয়েদার ডেটা কার্ড */}
         {weather && !weatherLoading && !weatherError && (
           weather.has_alert ? (
-            /* 🔴 ALERT WARNING CARD */
-            <div className="alert alert-warning" style={{
-              display: 'flex',
-              flexDirection: window.innerWidth < 640 ? 'column' : 'row', // রেসপনসিভ হ্যান্ডেল
-              alignItems: window.innerWidth < 640 ? 'flex-start' : 'center',
-              justifyContent: 'space-between',
-              padding: '20px',
-              backgroundColor: '#fffbeb', // হালকা সফট ওয়ার্নিং ব্যাকগ্রাউন্ড
-              borderRadius: '16px',
-              borderLeft: '6px solid var(--orange)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-              gap: '16px',
-              position: 'relative'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                {/* বড় আইকন ব্যাজ */}
-                <div style={{ padding: '12px', backgroundColor: '#fef3c7', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '24px', lineHeight: '1' }}>🌧️</span>
-                </div>
+            <div className="alert alert-warning" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', border: '6px solid var(--orange)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '32px', paddingLeft: '20px' }}>⚠️</span>
                 <div>
-                  <strong style={{ fontSize: '18px', fontWeight: '700', display: 'block', color: 'var(--orange)', marginBottom: '4px' }}>
-                    {weather.alert_title}
-                  </strong>
-                  <span style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.5', display: 'block' }}>
-                    {weather.alert_message}
-                  </span>
+                  <strong style={{ fontSize: '16px', display: 'block', color: 'var(--orange)' }}>{weather.alert_title}</strong>
+                  <span style={{ fontSize: '14px', color: 'var(--gray-dark)' }}>{weather.alert_message}</span>
                 </div>
               </div>
+              <strong style={{ fontSize: '16px', color: 'var(--orange)', display: 'block', paddingRight: '20px' }}>{weather.district} : {weather.temperature_c}°C {weather.alert_source}</strong>
 
-              {/* ডান পাশের ইনফো ব্যাজ */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: window.innerWidth < 640 ? 'flex-start' : 'flex-end', shrink: 0, gap: '4px', paddingLeft: window.innerWidth < 640 ? '60px' : '0' }}>
-                <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '600', textTransform: 'uppercase', tracking: 'wide' }}>{weather.district}</span>
-                <span className="badge badge-orange" style={{ whiteSpace: 'nowrap', fontSize: '20px', fontWeight: '800', color: '#78350f' }}>
-                  {weather.temperature_c}<span style={{ fontSize: '14px', fontWeight: '500' }}>°C</span>
-                </span>
-              </div>
             </div>
           ) : (
-            /* 🟢 NO ALERT SUCCESS CARD */
-            <div className="alert alert-success" style={{
-              display: 'flex',
-              flexDirection: window.innerWidth < 640 ? 'column' : 'row',
-              alignItems: window.innerWidth < 640 ? 'flex-start' : 'center',
-              justifyContent: 'space-between',
-              padding: '20px',
-              backgroundColor: '#f0fdf4', // সফট গ্রিন ব্যাকগ্রাউন্ড
-              borderRadius: '16px',
-              borderLeft: '6px solid var(--green)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-              gap: '16px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                {/* বড় আইকন ব্যাজ */}
-                <div style={{ padding: '12px', backgroundColor: '#dcfce7', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '24px', lineHeight: '1' }}>☀️</span>
-                </div>
+            <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', border: '6px solid var(--green)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '32px' }}>☀️</span>
                 <div>
-                  <strong style={{ fontSize: '18px', fontWeight: '700', display: 'block', color: 'var(--green-dark)', marginBottom: '4px' }}>
-                    No active weather alerts
-                  </strong>
-                  <span style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.5', display: 'block' }}>
-                    Conditions in {weather.district}: {weather.condition || "Clear Sky"}, {weather.temperature_c}°C, wind {weather.wind_speed_ms} m/s.
-                  </span>
+                  <strong style={{ fontSize: '16px', display: 'block', color: 'var(--green-dark)' }}>No active weather alerts</strong>
+                  <span style={{ fontSize: '14px', color: 'var(--gray-dark)' }}>Conditions in {weather.district}: {weather.condition}, {weather.temperature_c}°C, wind {weather.wind_speed_ms} m/s.</span>
                 </div>
               </div>
-
-              {/* ডান পাশের ইনফো ব্যাজ */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: window.innerWidth < 640 ? 'flex-start' : 'flex-end', shrink: 0, gap: '4px', paddingLeft: window.innerWidth < 640 ? '60px' : '0' }}>
-                <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '600', textTransform: 'uppercase' }}>{weather.district}</span>
-                <span className="badge badge-green" style={{ whiteSpace: 'nowrap', fontSize: '20px', fontWeight: '800', color: '#14532d' }}>
-                  {weather.temperature_c}<span style={{ fontSize: '14px', fontWeight: '500' }}>°C</span>
-                </span>
-              </div>
+              {/* <span className="badge badge-green" style={{ whiteSpace: 'nowrap' }}>Agri Info Service</span> */}
             </div>
           )
         )}

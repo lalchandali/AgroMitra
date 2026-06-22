@@ -22,7 +22,7 @@ const CROPS = [
 const DISTRICTS = [
   "Bagerhat","Bandarban","Barguna","Barishal","Bhola","Bogura",
   "Brahmanbaria","Chandpur","Chapai Nawabganj","Chattogram","Chuadanga",
-  "Comilla","Cox's Bazar","Dhaka","Dinajpur","Faridpur","Feni","Gaibandha",
+  "Cumilla","Cox's Bazar","Dhaka","Dinajpur","Faridpur","Feni","Gaibandha",
   "Gazipur","Gopalganj","Habiganj","Jamalpur","Jashore","Jhalokathi",
   "Jhenaidah","Joypurhat","Khagrachhari","Khulna","Kishoreganj","Kurigram",
   "Kushtia","Lakshmipur","Lalmonirhat","Madaripur","Magura","Manikganj",

@@ -36,8 +36,9 @@ import numpy as np
 import os
 
 # ── CONFIG ───────────────────────────────────────────────────
-INPUT_CSV   = "crop_prices_v2.csv"                  # your existing file
-OUTPUT_CSV  = "crop_prices_v2_64districts.csv"       # new file (safe, doesn't overwrite)
+INPUT_CSV = "crop_prices_v2.csv"                  # your existing file
+# new file (safe, doesn't overwrite)
+OUTPUT_CSV = "crop_prices_v2_64districts.csv"
 RANDOM_SEED = 42
 
 np.random.seed(RANDOM_SEED)
@@ -88,31 +89,37 @@ CROP_DISTRICTS = {
         "Bogura", "Rajshahi", "Cumilla", "Dhaka", "Chattogram",
         "Jashore", "Pabna", "Natore", "Tangail", "Mymensingh", "Narsingdi",
         "Jhenaidah", "Kushtia", "Faridpur", "Rangpur", "Dinajpur", "Gazipur",
-        "Munshiganj", "Manikganj",
+        "Munshiganj", "Manikganj", "Narayanganj", "Gopalganj", "Madaripur",
+        "Rajbari", "Shariatpur"
     ],
     "Onion": [
         "Rajshahi", "Pabna", "Bogura", "Faridpur", "Natore", "Kushtia",
         "Meherpur", "Chuadanga", "Magura", "Rajbari", "Manikganj",
-        "Shariatpur", "Madaripur", "Jashore",
+        "Shariatpur", "Madaripur", "Jashore", "Jhenaidah", "Narail",
+        "Sirajganj", "Naogaon", "Chapai Nawabganj"
     ],
     "Potato": [
         "Bogura", "Rangpur", "Munshiganj", "Cumilla", "Dinajpur",
         "Joypurhat", "Naogaon", "Rajshahi", "Pabna", "Thakurgaon",
         "Panchagarh", "Nilphamari", "Gaibandha", "Tangail", "Jashore",
+        "Feni", "Lakshmipur", "Kurigram", "Lalmonirhat", "Sherpur"
     ],
     "Brinjal": [
         "Bogura", "Cumilla", "Dhaka", "Rajshahi", "Chattogram",
         "Jashore", "Pabna", "Narsingdi", "Tangail", "Faridpur", "Gazipur",
-        "Mymensingh", "Noakhali", "Feni",
+        "Mymensingh", "Noakhali", "Feni", "Khulna", "Bagerhat", "Satkhira",
+        "Jhenaidah", "Magura", "Narail", "Kushtia", "Chuadanga", "Meherpur"
     ],
     "Cabbage": [
         "Bogura", "Rajshahi", "Cumilla", "Dhaka", "Jashore",
         "Dinajpur", "Rangpur", "Mymensingh", "Tangail", "Narsingdi",
-        "Munshiganj", "Pabna",
+        "Munshiganj", "Pabna", "Sylhet", "Moulvibazar", "Habiganj",
+        "Sunamganj", "Barishal", "Patuakhali", "Bhola", "Pirojpur"
     ],
     "Garlic": [
         "Rajshahi", "Faridpur", "Bogura", "Pabna", "Natore", "Meherpur",
-        "Chuadanga", "Magura", "Manikganj", "Rajbari",
+        "Chuadanga", "Magura", "Manikganj", "Rajbari", "Kushtia",
+        "Noakhali", "Feni", "Lakshmipur", "Chandpur", "Brahmanbaria"
     ],
     "Rice": [
         # Rice is grown nearly everywhere in Bangladesh
@@ -133,17 +140,53 @@ CROP_DISTRICTS = {
     "Ginger": [
         "Rajshahi", "Rangpur", "Sylhet", "Moulvibazar", "Habiganj",
         "Bandarban", "Khagrachhari", "Rangamati", "Mymensingh", "Sherpur",
+        "Tangail", "Nilphamari", "Thakurgaon", "Panchagarh", "Nilphamari"
     ],
     "Carrot": [
         "Bogura", "Rajshahi", "Jashore", "Cumilla", "Dhaka",
         "Pabna", "Narsingdi", "Mymensingh", "Tangail", "Munshiganj",
-        "Faridpur", "Natore",
+        "Faridpur", "Natore", "Gazipur", "Manikganj", "Narayanganj"
     ],
     "Cauliflower": [
         "Bogura", "Rajshahi", "Cumilla", "Dhaka", "Jashore", "Dinajpur",
         "Rangpur", "Mymensingh", "Tangail", "Narsingdi", "Munshiganj",
-        "Pabna", "Jhenaidah",
+        "Pabna", "Jhenaidah", "Chuadanga", "Meherpur", "Kushtia"
     ],
+    "Maize": [
+        "Dinajpur", "Chuadanga", "Rangpur", "Manikganj", "Thakurgaon",
+        "Panchagarh", "Lalmonirhat", "Kurigram", "Gaibandha", "Nilphamari",
+        "Bogura", "Rajshahi", "Pabna", "Kushtia", "Natore", "Naogaon"
+    ],
+    "Jute": [
+        "Faridpur", "Madaripur", "Sirajganj", "Mymensingh", "Rajbari",
+        "Gopalganj", "Shariatpur", "Magura", "Jhenaidah", "Kushtia",
+        "Pabna", "Jamalpur", "Sherpur", "Tangail", "Manikganj", "Dhaka"
+    ],
+    "Chili": [
+        "Bogura", "Patuakhali", "Bhola", "Jamalpur", "Noakhali", "Feni",
+        "Lakshmipur", "Chandpur", "Barishal", "Barguna", "Pirojpur",
+        "Jhalokathi", "Sirajganj", "Pabna", "Chattogram", "Cox's Bazar"
+    ],
+    "Watermelon": [
+        "Patuakhali", "Bhola", "Barguna", "Khulna", "Barishal", "Pirojpur",
+        "Jhalokathi", "Satkhira", "Bagerhat", "Noakhali", "Feni",
+        "Lakshmipur", "Chattogram", "Cox's Bazar", "Brahmanbaria"
+    ],
+    "Mustard": [
+        "Tangail", "Sirajganj", "Manikganj", "Pabna", "Dhaka", "Gazipur",
+        "Narsingdi", "Narayanganj", "Munshiganj", "Faridpur", "Rajbari",
+        "Madaripur", "Shariatpur", "Gopalganj", "Natore", "Naogaon"
+    ],
+    "Wheat": [
+        "Dinajpur", "Thakurgaon", "Panchagarh", "Rajshahi", "Pabna",
+        "Naogaon", "Natore", "Chapai Nawabganj", "Kushtia", "Chuadanga",
+        "Meherpur", "Faridpur", "Rajbari", "Sirajganj", "Bogura"
+    ],
+    "Cucumber": [
+        "Barishal", "Pirojpur", "Jhalokathi", "Barguna", "Patuakhali",
+        "Bhola", "Khulna", "Bagerhat", "Satkhira", "Jashore", "Dhaka",
+        "Gazipur", "Narsingdi", "Narayanganj", "Cumilla", "Bogura"
+    ]
 }
 
 # ── District soil-type assignment (broad approximation) ───────
@@ -162,11 +205,16 @@ CLAY_DISTRICTS = {
     "Gaibandha", "Kurigram", "Lalmonirhat", "Nilphamari",
 }
 
+
 def get_soil_type(district):
-    if district in SANDY_LOAM_DISTRICTS: return "Sandy Loam"
-    if district in CLAY_LOAM_DISTRICTS:  return "Clay Loam"
-    if district in CLAY_DISTRICTS:       return "Clay"
+    if district in SANDY_LOAM_DISTRICTS:
+        return "Sandy Loam"
+    if district in CLAY_LOAM_DISTRICTS:
+        return "Clay Loam"
+    if district in CLAY_DISTRICTS:
+        return "Clay"
     return "Loam"
+
 
 WEATHER_OPTIONS = ["Sunny", "Cloudy", "Foggy", "Rainy", "Windy"]
 WEATHER_WEIGHTS = [0.35, 0.25, 0.15, 0.15, 0.10]
@@ -187,16 +235,17 @@ def learn_baseline_stats(df: pd.DataFrame) -> dict:
     for crop, g in df.groupby("crop_name"):
         g = g.sort_values("date")
         avg_price_mean = g["avg_price"].mean()
-        avg_price_std  = g["avg_price"].std()
+        avg_price_std = g["avg_price"].std()
         if not avg_price_std or np.isnan(avg_price_std):
             avg_price_std = avg_price_mean * 0.05
 
         qty_mean = g["quantity_available"].mean()
-        qty_std  = g["quantity_available"].std()
+        qty_std = g["quantity_available"].std()
         if not qty_std or np.isnan(qty_std):
             qty_std = qty_mean * 0.1
 
-        spread_pct = ((g["max_price"] - g["min_price"]) / g["avg_price"]).mean()
+        spread_pct = ((g["max_price"] - g["min_price"]) /
+                      g["avg_price"]).mean()
         if np.isnan(spread_pct):
             spread_pct = 0.25
 
@@ -215,10 +264,10 @@ def generate_district_series(crop, district, base_stats, district_factor, dates)
     """Generate one (crop, district) time series matching the source CSV's date range."""
     rows = []
     avg_price_mean = base_stats["avg_price_mean"] * district_factor
-    avg_price_std  = base_stats["avg_price_std"] * district_factor
-    qty_mean       = base_stats["qty_mean"] * np.random.uniform(0.7, 1.3)
-    qty_std        = base_stats["qty_std"] * np.random.uniform(0.7, 1.3)
-    spread_pct     = base_stats["spread_pct"]
+    avg_price_std = base_stats["avg_price_std"] * district_factor
+    qty_mean = base_stats["qty_mean"] * np.random.uniform(0.7, 1.3)
+    qty_std = base_stats["qty_std"] * np.random.uniform(0.7, 1.3)
+    spread_pct = base_stats["spread_pct"]
 
     n = len(dates)
     if n == 0:
@@ -234,7 +283,8 @@ def generate_district_series(crop, district, base_stats, district_factor, dates)
         month = date.month
         seasonal_wave = np.sin(2 * np.pi * month / 12) * avg_price_std * 0.4
 
-        price = max(1.0, avg_price_mean + drift[i] + seasonal_wave + np.random.normal(0, avg_price_std * 0.3))
+        price = max(1.0, avg_price_mean +
+                    drift[i] + seasonal_wave + np.random.normal(0, avg_price_std * 0.3))
         half_spread = price * spread_pct / 2
         min_p = round(max(0.5, price - half_spread), 2)
         max_p = round(price + half_spread, 2)
@@ -275,7 +325,8 @@ def main():
     df["district"] = df["district"].replace(DISTRICT_ALIASES)
 
     existing_districts = set(df["district"].unique())
-    print(f"Existing districts in file ({len(existing_districts)}): {sorted(existing_districts)}")
+    print(
+        f"Existing districts in file ({len(existing_districts)}): {sorted(existing_districts)}")
 
     baseline = learn_baseline_stats(df)
     print(f"Learned baselines for crops: {list(baseline.keys())}")
@@ -287,7 +338,8 @@ def main():
 
     for crop, target_districts in CROP_DISTRICTS.items():
         if crop not in baseline:
-            print(f"  Skipping '{crop}' — no baseline data found in source CSV.")
+            print(
+                f"  Skipping '{crop}' — no baseline data found in source CSV.")
             continue
         dates = baseline[crop]["dates"]
 
@@ -298,17 +350,20 @@ def main():
             # naturally run a bit higher/lower (distance from production
             # zones, transport cost, local demand, etc.)
             district_factor = np.random.uniform(0.85, 1.20)
-            rows = generate_district_series(crop, district, baseline[crop], district_factor, dates)
+            rows = generate_district_series(
+                crop, district, baseline[crop], district_factor, dates)
             new_rows.extend(rows)
 
     new_df = pd.DataFrame(new_rows)
     combined = pd.concat([df, new_df], ignore_index=True)
     combined["date"] = pd.to_datetime(combined["date"]).dt.strftime("%Y-%m-%d")
-    combined = combined.sort_values(["crop_name", "district", "date"]).reset_index(drop=True)
+    combined = combined.sort_values(
+        ["crop_name", "district", "date"]).reset_index(drop=True)
 
     combined.to_csv(OUTPUT_CSV, index=False)
 
-    print(f"\nDone. Wrote {len(combined):,} total rows ({len(new_rows):,} newly generated) to '{OUTPUT_CSV}'.")
+    print(
+        f"\nDone. Wrote {len(combined):,} total rows ({len(new_rows):,} newly generated) to '{OUTPUT_CSV}'.")
     print(f"Districts now covered: {combined['district'].nunique()} / 64")
     print("\nNext step: review the file, then REPLACE your original:")
     print(f"  1. Rename current crop_prices_v2.csv -> crop_prices_v2_backup.csv (keep a backup!)")

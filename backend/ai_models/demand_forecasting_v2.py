@@ -51,7 +51,7 @@ print("🌾"*30)
 # ============================================================
 # CONFIG
 # ============================================================
-DATA_FILE  = r'E:\Personal\UU INFO\UU_Project\Final_Project\AgroMitra\ai_models\data\raw\crop_prices_v2.csv'
+DATA_FILE = r'E:\Personal\UU INFO\UU_Project\Final_Project\AgroMitra\backend\ai_models\data\raw\crop_prices_v2_64districts.csv'
 CROP_NAME  = 'Tomato'
 DISTRICT   = 'Bogura'
 LOOK_BACK  = 60     # 60 দিনের pattern দেখে predict করবে

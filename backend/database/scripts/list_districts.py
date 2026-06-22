@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
-csv = Path(__file__).resolve().parents[1] / 'data' / 'raw' / 'crop_prices_v2.csv'
+csv = Path(__file__).resolve().parents[1] / \
+    'data' / 'raw' / 'crop_prices_v2_64districts.csv'
 if not csv.exists():
     print('MISSING')
 else:

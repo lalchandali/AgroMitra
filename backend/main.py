@@ -14,6 +14,9 @@
 #
 # ============================================================
 
+from fastapi import HTTPException
+from typing import Optional
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -60,7 +63,7 @@ MODELS = {}
 # Get the directory of this file and construct relative path to data
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'ai_models', 'data',
-                         'raw', 'crop_prices_v2.csv')
+                         'raw', 'crop_prices_v2_64districts.csv')
 AI_MODELS_DIR = os.path.join(BASE_DIR, 'ai_models')
 
 if AI_MODELS_DIR not in sys.path:
@@ -158,62 +161,185 @@ class CropRecommendationItem(BaseModel):
 # ============================================================
 
 CROP_DB = {
-    'Tomato':  {'name_bn': 'টমেটো', 'category': 'Vegetable', 'grow_days': 75,
-                'best_months': [10, 11, 12, 1, 2], 'soil_types': ['Loam', 'Sandy Loam', 'Clay Loam'],
-                'water_need': 'Medium', 'temp_min': 15, 'temp_max': 30,
-                'avg_yield_kg': 8000, 'avg_price_bdt': 28, 'input_cost_bdt': 35000,
-                'districts': ['Bogura', 'Rajshahi', 'Cumilla', 'Dhaka', 'Chattogram'],
-                'difficulty': 'Medium', 'market_demand': 'High', 'export_potential': False,
-                'organic_possible': True, 'risk_level': 'Medium'},
-    'Onion':   {'name_bn': 'পেঁয়াজ', 'category': 'Vegetable', 'grow_days': 120,
-                'best_months': [10, 11, 12, 1, 2, 3], 'soil_types': ['Loam', 'Sandy Loam'],
-                'water_need': 'Low', 'avg_yield_kg': 7000, 'avg_price_bdt': 45,
-                'input_cost_bdt': 40000,
-                'districts': ['Rajshahi', 'Pabna', 'Bogura', 'Faridpur'],
-                'difficulty': 'Medium', 'market_demand': 'Very High', 'export_potential': True,
-                'organic_possible': False, 'risk_level': 'Medium'},
-    'Potato':  {'name_bn': 'আলু', 'category': 'Vegetable', 'grow_days': 90,
-                'best_months': [10, 11, 12, 1], 'soil_types': ['Sandy Loam', 'Loam'],
-                'water_need': 'Medium', 'avg_yield_kg': 20000, 'avg_price_bdt': 22,
-                'input_cost_bdt': 50000,
-                'districts': ['Bogura', 'Rangpur', 'Munshiganj', 'Comilla'],
-                'difficulty': 'Easy', 'market_demand': 'Very High', 'export_potential': True,
-                'organic_possible': False, 'risk_level': 'Low'},
-    'Brinjal': {'name_bn': 'বেগুন', 'category': 'Vegetable', 'grow_days': 60,
-                'best_months': [1, 2, 3, 9, 10, 11], 'soil_types': ['Loam', 'Clay Loam', 'Sandy Loam'],
-                'water_need': 'Medium', 'avg_yield_kg': 12000, 'avg_price_bdt': 30,
-                'input_cost_bdt': 28000,
-                'districts': ['Bogura', 'Cumilla', 'Dhaka', 'Rajshahi', 'Chattogram'],
-                'difficulty': 'Easy', 'market_demand': 'High', 'export_potential': False,
-                'organic_possible': True, 'risk_level': 'Low'},
-    'Cabbage': {'name_bn': 'বাঁধাকপি', 'category': 'Vegetable', 'grow_days': 70,
-                'best_months': [10, 11, 12, 1, 2], 'soil_types': ['Loam', 'Clay Loam'],
-                'water_need': 'Medium', 'avg_yield_kg': 25000, 'avg_price_bdt': 20,
-                'input_cost_bdt': 25000,
-                'districts': ['Bogura', 'Rajshahi', 'Cumilla', 'Dhaka'],
-                'difficulty': 'Easy', 'market_demand': 'High', 'export_potential': False,
-                'organic_possible': True, 'risk_level': 'Low'},
-    'Garlic':  {'name_bn': 'রসুন', 'category': 'Spice', 'grow_days': 150,
-                'best_months': [10, 11, 12], 'soil_types': ['Sandy Loam', 'Loam'],
-                'water_need': 'Low', 'avg_yield_kg': 5000, 'avg_price_bdt': 85,
-                'input_cost_bdt': 45000,
-                'districts': ['Rajshahi', 'Faridpur', 'Bogura', 'Pabna'],
-                'difficulty': 'Hard', 'market_demand': 'Very High', 'export_potential': True,
-                'organic_possible': False, 'risk_level': 'High'},
-    'Rice':    {'name_bn': 'ধান', 'category': 'Grain', 'grow_days': 120,
-                'best_months': [5, 6, 7, 11, 12], 'soil_types': ['Clay', 'Clay Loam', 'Loam'],
-                'water_need': 'High', 'avg_yield_kg': 4500, 'avg_price_bdt': 55,
-                'input_cost_bdt': 30000,
-                'districts': ['Bogura', 'Rajshahi', 'Cumilla', 'Dhaka', 'Chattogram'],
-                'difficulty': 'Easy', 'market_demand': 'Very High', 'export_potential': False,
-                'organic_possible': True, 'risk_level': 'Low'},
-    'Ginger':  {'name_bn': 'আদা', 'category': 'Spice', 'grow_days': 240,
-                'best_months': [3, 4, 5], 'soil_types': ['Sandy Loam', 'Loam'],
-                'water_need': 'Medium', 'avg_yield_kg': 8000, 'avg_price_bdt': 90,
-                'input_cost_bdt': 60000,
-                'districts': ['Rajshahi', 'Rangpur', 'Sylhet'],
-                'difficulty': 'Hard', 'market_demand': 'High', 'export_potential': True,
-                'organic_possible': True, 'risk_level': 'High'},
+    'Tomato': {
+        'name_bn': 'টমেটো', 'category': 'Vegetable', 'grow_days': 75,
+        'best_months': [10, 11, 12, 1, 2], 'soil_types': ['Loam', 'Sandy Loam', 'Clay Loam'],
+        'water_need': 'Medium', 'temp_min': 15, 'temp_max': 30,
+        'avg_yield_kg': 8000, 'avg_price_bdt': 28, 'input_cost_bdt': 35000,
+        'districts': [
+            'Bogura', 'Rajshahi', 'Cumilla', 'Dhaka', 'Chattogram', 'Narsingdi', 'Manikganj',
+            'Gazipur', 'Tangail', 'Mymensingh', 'Jamalpur', 'Sherpur', 'Kishoreganj', 'Netrokona',
+            'Munshiganj', 'Narayanganj', 'Faridpur', 'Gopalganj', 'Madaripur', 'Rajbari', 'Shariatpur'
+        ],
+        'difficulty': 'Medium', 'market_demand': 'High', 'export_potential': False,
+        'organic_possible': True, 'risk_level': 'Medium'
+    },
+    'Onion': {
+        'name_bn': 'পেঁয়াজ', 'category': 'Vegetable', 'grow_days': 120,
+        'best_months': [10, 11, 12, 1, 2, 3], 'soil_types': ['Loam', 'Sandy Loam'],
+        'water_need': 'Low', 'avg_yield_kg': 7000, 'avg_price_bdt': 45,
+        'input_cost_bdt': 40000,
+        'districts': [
+            'Rajshahi', 'Pabna', 'Bogura', 'Faridpur', 'Kushtia', 'Magura', 'Jhenaidah',
+            'Natore', 'Naogaon', 'Chapai Nawabganj', 'Sirajganj', 'Meherpur', 'Chuadanga', 'Jessore'
+        ],
+        'difficulty': 'Medium', 'market_demand': 'Very High', 'export_potential': True,
+        'organic_possible': False, 'risk_level': 'Medium'
+    },
+    'Potato': {
+        'name_bn': 'আলু', 'category': 'Vegetable', 'grow_days': 90,
+        'best_months': [10, 11, 12, 1], 'soil_types': ['Sandy Loam', 'Loam'],
+        'water_need': 'Medium', 'avg_yield_kg': 20000, 'avg_price_bdt': 22,
+        'input_cost_bdt': 50000,
+        'districts': [
+            'Bogura', 'Rangpur', 'Munshiganj', 'Comilla', 'Dinajpur', 'Nilphamari', 'Kurigram',
+            'Gaibandha', 'Lalmonirhat', 'Thakurgaon', 'Panchagarh', 'Joypurhat', 'Feni', 'Lakshmipur'
+        ],
+        'difficulty': 'Easy', 'market_demand': 'Very High', 'export_potential': True,
+        'organic_possible': False, 'risk_level': 'Low'
+    },
+    'Brinjal': {
+        'name_bn': 'বেগুন', 'category': 'Vegetable', 'grow_days': 60,
+        'best_months': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],  # বারোমাসি ফসল
+        'soil_types': ['Loam', 'Clay Loam', 'Sandy Loam'],
+        'water_need': 'Medium', 'avg_yield_kg': 12000, 'avg_price_bdt': 30,
+        'input_cost_bdt': 28000,
+        'districts': [
+            'Bogura', 'Cumilla', 'Dhaka', 'Rajshahi', 'Chattogram', 'Khulna', 'Bagerhat',
+            'Satkhira', 'Jessore', 'Jhenaidah', 'Magura', 'Narail', 'Kushtia', 'Chuadanga', 'Meherpur'
+        ],
+        'difficulty': 'Easy', 'market_demand': 'High', 'export_potential': False,
+        'organic_possible': True, 'risk_level': 'Low'
+    },
+    'Cabbage': {
+        'name_bn': 'বাঁধাকপি', 'category': 'Vegetable', 'grow_days': 70,
+        'best_months': [10, 11, 12, 1, 2], 'soil_types': ['Loam', 'Clay Loam'],
+        'water_need': 'Medium', 'avg_yield_kg': 25000, 'avg_price_bdt': 20,
+        'input_cost_bdt': 25000,
+        'districts': [
+            'Bogura', 'Rajshahi', 'Cumilla', 'Dhaka', 'Sylhet', 'Moulvibazar', 'Habiganj',
+            'Sunamganj', 'Barishal', 'Patuakhali', 'Bhola', 'Pirojpur', 'Jhalokati', 'Barguna'
+        ],
+        'difficulty': 'Easy', 'market_demand': 'High', 'export_potential': False,
+        'organic_possible': True, 'risk_level': 'Low'
+    },
+    'Garlic': {
+        'name_bn': 'রসুন', 'category': 'Spice', 'grow_days': 150,
+        'best_months': [10, 11, 12], 'soil_types': ['Sandy Loam', 'Loam'],
+        'water_need': 'Low', 'avg_yield_kg': 5000, 'avg_price_bdt': 85,
+        'input_cost_bdt': 45000,
+        'districts': [
+            'Rajshahi', 'Faridpur', 'Bogura', 'Pabna', 'Natore', 'Meherpur', 'Kushtia',
+            'Noakhali', 'Feni', 'Lakshmipur', 'Chandpur', 'Brahmanbaria', 'Cox\'s Bazar'
+        ],
+        'difficulty': 'Hard', 'market_demand': 'Very High', 'export_potential': True,
+        'organic_possible': False, 'risk_level': 'High'
+    },
+    'Rice': {
+        'name_bn': 'ধান', 'category': 'Grain', 'grow_days': 120,
+        # আউশ, আমন, বোরো মিলিয়ে প্রায় সারা বছর
+        'best_months': [1, 2, 3, 4, 5, 6, 7, 11, 12],
+        'soil_types': ['Clay', 'Clay Loam', 'Loam'],
+        'water_need': 'High', 'avg_yield_kg': 4500, 'avg_price_bdt': 55,
+        'input_cost_bdt': 30000,
+        'districts': [
+            'Bogura', 'Rajshahi', 'Cumilla', 'Dhaka', 'Chattogram', 'Rangpur', 'Dinajpur', 'Mymensingh',
+            'Sylhet', 'Barishal', 'Khulna', 'Jessore', 'Pabna', 'Naogaon', 'Natore', 'Kishoreganj',
+            'Netrokona', 'Gopalganj', 'Habiganj', 'Sunamganj', 'Barguna', 'Patuakhali', 'Bhola', 'Pirojpur',
+            'Jhalokati', 'Bagerhat', 'Satkhira', 'Narail', 'Magura', 'Jhenaidah', 'Kushtia', 'Chuadanga',
+            'Meherpur', 'Sirajganj', 'Joypurhat', 'Thakurgaon', 'Panchagarh', 'Nilphamari', 'Kurigram',
+            'Gaibandha', 'Lalmonirhat', 'Sherpur', 'Jamalpur', 'Tangail', 'Gazipur', 'Narsingdi', 'Manikganj',
+            'Munshiganj', 'Narayanganj', 'Faridpur', 'Madaripur', 'Rajbari', 'Shariatpur', 'Brahmanbaria',
+            'Chandpur', 'Noakhali', 'Feni', 'Lakshmipur', 'Cox\'s Bazar', 'Khagrachari', 'Rangamati', 'Bandarban'
+        ],  # ধান বাংলাদেশের ৬৪ জেলাতেই চাষ হয়
+        'difficulty': 'Easy', 'market_demand': 'Very High', 'export_potential': False,
+        'organic_possible': True, 'risk_level': 'Low'
+    },
+    'Ginger': {
+        'name_bn': 'আদা', 'category': 'Spice', 'grow_days': 240,
+        'best_months': [3, 4, 5], 'soil_types': ['Sandy Loam', 'Loam'],
+        'water_need': 'Medium', 'avg_yield_kg': 8000, 'avg_price_bdt': 90,
+        'input_cost_bdt': 60000,
+        'districts': [
+            'Rajshahi', 'Rangpur', 'Sylhet', 'Khagrachari', 'Rangamati', 'Bandarban',
+            'Tangail', 'Mymensingh', 'Sherpur', 'Nilphamari', 'Thakurgaon', 'Panchagarh'
+        ],
+        'difficulty': 'Hard', 'market_demand': 'High', 'export_potential': True,
+        'organic_possible': True, 'risk_level': 'High'
+    },
+    'Maize': {
+        'name_bn': 'ভুট্টা', 'category': 'Grain', 'grow_days': 130,
+        'best_months': [10, 11, 12, 2, 3, 4], 'soil_types': ['Sandy Loam', 'Loam'],
+        'water_need': 'Medium', 'avg_yield_kg': 9000, 'avg_price_bdt': 30,
+        'input_cost_bdt': 35000,
+        'districts': [
+            'Dinajpur', 'Chuadanga', 'Rangpur', 'Manikganj', 'Thakurgaon', 'Panchagarh',
+            'Lalmonirhat', 'Kurigram', 'Gaibandha', 'Nilphamari', 'Bogura', 'Rajshahi', 'Pabna', 'Kushtia'
+        ],
+        'difficulty': 'Easy', 'market_demand': 'High', 'export_potential': True,
+        'organic_possible': False, 'risk_level': 'Low'
+    },
+    'Wheat': {
+        'name_bn': 'গম', 'category': 'Grain', 'grow_days': 110,
+        'best_months': [11, 12], 'soil_types': ['Loam', 'Sandy Loam'],
+        'water_need': 'Low', 'avg_yield_kg': 3500, 'avg_price_bdt': 40,
+        'input_cost_bdt': 25000,
+        'districts': [
+            'Dinajpur', 'Thakurgaon', 'Panchagarh', 'Rajshahi', 'Pabna', 'Naogaon', 'Natore',
+            'Chapai Nawabganj', 'Kushtia', 'Chuadanga', 'Meherpur', 'Faridpur', 'Rajbari', 'Sirajganj'
+        ],
+        'difficulty': 'Easy', 'market_demand': 'Very High', 'export_potential': False,
+        'organic_possible': False, 'risk_level': 'Low'
+    },
+    'Chili': {
+        'name_bn': 'মরিচ', 'category': 'Spice', 'grow_days': 105,
+        'best_months': [10, 11, 3, 4, 5, 6],  # রবি এবং খরিফ উভয় মৌসুমেই সম্ভব
+        'soil_types': ['Loam', 'Sandy Loam'],
+        'water_need': 'Medium', 'avg_yield_kg': 4200, 'avg_price_bdt': 110,
+        'input_cost_bdt': 38000,
+        'districts': [
+            'Bogura', 'Patuakhali', 'Bhola', 'Jamalpur', 'Noakhali', 'Feni', 'Lakshmipur',
+            'Chandpur', 'Barishal', 'Barguna', 'Pirojpur', 'Jhalokati', 'Sirajganj', 'Pabna'
+        ],
+        'difficulty': 'Medium', 'market_demand': 'Very High', 'export_potential': True,
+        'organic_possible': True, 'risk_level': 'Medium'
+    },
+    'Watermelon': {
+        'name_bn': 'তরমুজ', 'category': 'Fruit', 'grow_days': 90,
+        'best_months': [12, 1, 2], 'soil_types': ['Sandy Loam', 'Sandy Soil'],
+        'water_need': 'Medium', 'avg_yield_kg': 28000, 'avg_price_bdt': 35,
+        'input_cost_bdt': 55000,
+        'districts': [
+            'Patuakhali', 'Bhola', 'Barguna', 'Khulna', 'Barishal', 'Pirojpur', 'Jhalokati',
+            'Satkhira', 'Bagerhat', 'Noakhali', 'Feni', 'Lakshmipur', 'Chattogram', 'Cox\'s Bazar'
+        ],
+        'difficulty': 'Medium', 'market_demand': 'High', 'export_potential': True,
+        'organic_possible': False, 'risk_level': 'Medium'
+    },
+    'Mustard': {
+        'name_bn': 'সরিষা', 'category': 'Oilseed', 'grow_days': 85,
+        'best_months': [10, 11], 'soil_types': ['Loam', 'Sandy Loam'],
+        'water_need': 'Low', 'avg_yield_kg': 1300, 'avg_price_bdt': 95,
+        'input_cost_bdt': 18000,
+        'districts': [
+            'Tangail', 'Sirajganj', 'Manikganj', 'Pabna', 'Dhaka', 'Gazipur', 'Narsingdi',
+            'Narayanganj', 'Munshiganj', 'Faridpur', 'Rajbari', 'Madaripur', 'Shariatpur', 'Gopalganj'
+        ],
+        'difficulty': 'Easy', 'market_demand': 'High', 'export_potential': False,
+        'organic_possible': True, 'risk_level': 'Low'
+    },
+    'Jute': {
+        'name_bn': 'পাট', 'category': 'Cash Crop', 'grow_days': 120,
+        'best_months': [3, 4, 5, 6], 'soil_types': ['Alluvial Soil', 'Loam'],
+        'water_need': 'High', 'avg_yield_kg': 2500, 'avg_price_bdt': 75,
+        'input_cost_bdt': 28000,
+        'districts': [
+            'Faridpur', 'Madaripur', 'Sirajganj', 'Mymensingh', 'Rajbari', 'Gopalganj', 'Shariatpur',
+            'Magura', 'Jhenaidah', 'Kushtia', 'Pabna', 'Jamalpur', 'Sherpur', 'Tangail', 'Manikganj'
+        ],
+        'difficulty': 'Medium', 'market_demand': 'High', 'export_potential': True,
+        'organic_possible': True, 'risk_level': 'Medium'
+    }
 }
 
 DISTRICT_PROFILES = {
@@ -986,20 +1112,21 @@ async def get_sowing_calendar(month: Optional[int] = None):
 
     matches = []
     for crop_name, info in CROP_DB.items():
-        if target_month in info['best_months']:
+        # এখানে চেক করা হচ্ছে বর্তমান মাসটি ফসলের best_months লিস্টে আছে কিনা
+        if target_month in info.get('best_months', []):
             matches.append({
                 "crop":           crop_name,
-                "name_bn":        info['name_bn'],
-                "category":       info['category'],
-                "grow_days":      info['grow_days'],
-                "difficulty":     info['difficulty'],
-                "water_need":     info['water_need'],
-                "soil_types":     info['soil_types'],
-                "market_demand":  info['market_demand'],
+                "name_bn":        info.get('name_bn', ''),
+                "category":       info.get('category', ''),
+                "grow_days":      info.get('grow_days', 0),
+                "difficulty":     info.get('difficulty', 'Medium'),
+                "water_need":     info.get('water_need', 'Medium'),
+                "soil_types":     info.get('soil_types', []),
+                "market_demand":  info.get('market_demand', 'Medium'),
                 "districts":      info.get('districts', []),
             })
 
-    # Sort: easiest crops with highest demand surfaced first
+    # Sort: highest demand surfaced first
     demand_rank = {"Very High": 0, "High": 1, "Medium": 2, "Low": 3}
     matches.sort(key=lambda c: demand_rank.get(c['market_demand'], 9))
 

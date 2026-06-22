@@ -12,8 +12,6 @@
 #
 # ============================================================
 
-from readline import backend
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -56,8 +54,8 @@ def load_data(file_path):
     print("\n" + "="*60)
     print("  STEP 1: Data Loading & Cleaning")
     print("="*60)
-
-    df = pd.read_csv(backend.ai_models.data.raw.crop_prices_v2.csv)
+    df = pd.read_csv(
+        r"E:\Personal\UU INFO\UU_Project\Final_Project\AgroMitra\backend\ai_models\data\raw\crop_prices_v2_64districts.csv")
     print(f"  ✅ Data loaded: {len(df)} rows, {len(df.columns)} columns")
     print(f"  📋 Columns: {list(df.columns)}")
 
@@ -83,19 +81,30 @@ def load_data(file_path):
         print("  ✅ No missing values found.")
 
     # Price outlier remove করো (IQR method)
-    Q1 = df['avg_price'].quantile(0.25)
-    Q3 = df['avg_price'].quantile(0.75)
-    IQR = Q3 - Q1
-    lower = Q1 - 2.5 * IQR
-    upper = Q3 + 2.5 * IQR
     before = len(df)
-    df = df[(df['avg_price'] >= lower) & (df['avg_price'] <= upper)]
+    clean_dfs = []
+
+    for crop, group in df.groupby('crop_name'):
+        Q1 = group['avg_price'].quantile(0.05)  # কন্ডিশন একটু লুজ করা হলো
+        Q3 = group['avg_price'].quantile(0.95)
+        IQR = Q3 - Q1
+        lower = Q1 - 3.0 * IQR  # ৩ গুণ পর্যন্ত বাফার দেওয়া হলো
+        upper = Q3 + 3.0 * IQR
+
+        filtered_group = group[(group['avg_price'] >= lower) & (
+            group['avg_price'] <= upper)]
+        clean_dfs.append(filtered_group)
+
+    df = pd.concat(clean_dfs, ignore_index=True).sort_values(
+        'date').reset_index(drop=True)
+
+    print(f"  🧹 Removed {before - len(df)} extreme outlier rows globally.")
     removed = before - len(df)
     if removed > 0:
         print(f"  🧹 Removed {removed} outlier rows.")
 
     print(
-        f"\n  📅 Date range: {df['date'].min().date()} → {df['date'].max().date()}")
+        f"  📅 Date range: {df['date'].min().date()} → {df['date'].max().date()}")
     print(f"  📦 Crops found: {df['crop_name'].unique()}")
     print(f"  📍 Districts: {df['district'].unique()}")
     print(f"  ✅ Data ready: {len(df)} clean rows\n")

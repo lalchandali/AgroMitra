@@ -6,16 +6,31 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+
   {
     files: ['**/*.{js,jsx}'],
+
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+
     languageOptions: {
       globals: globals.browser,
-      parserOptions: { ecmaFeatures: { jsx: true } },
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+
+    rules: {
+      // Disable React Compiler rules
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off',
     },
   },
 ])

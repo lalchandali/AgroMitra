@@ -1,21 +1,38 @@
+# ==========================
+# VS Code
+# ==========================
 .vscode/
+
+# ==========================
+# Archives & Documents
+# ==========================
 *.zip
 *.docx
+
+# ==========================
+# Temporary Files
+# ==========================
 repo_clean_status.txt
+
+# ==========================
+# Python
+# ==========================
 __pycache__/
 *.py[cod]
-output/
-dist/
-build/
-coverage/
-
-node_modules/
-dist/
-build/
-output/
-coverage/
-.pytest_cache/
-__pycache__/
 *.pyc
-.env
+.pytest_cache/
 .venv/
+.env
+
+# ==========================
+# Node.js
+# ==========================
+node_modules/
+
+# ==========================
+# Build Outputs
+# ==========================
+dist/
+build/
+output/
+coverage/

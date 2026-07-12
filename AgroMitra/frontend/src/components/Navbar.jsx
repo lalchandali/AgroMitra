@@ -26,11 +26,11 @@ const Navbar = () => {
 
   useEffect(() => {
     const syncUser = () => setUser(getStoredUser())
-    window.addEventListener('storage', syncUser)
-    window.addEventListener('agromitra-auth-changed', syncUser)
+    globalThis.addEventListener('storage', syncUser)
+    globalThis.addEventListener('agromitra-auth-changed', syncUser)
     return () => {
-      window.removeEventListener('storage', syncUser)
-      window.removeEventListener('agromitra-auth-changed', syncUser)
+      globalThis.removeEventListener('storage', syncUser)
+      globalThis.removeEventListener('agromitra-auth-changed', syncUser)
     }
   }, [])
 

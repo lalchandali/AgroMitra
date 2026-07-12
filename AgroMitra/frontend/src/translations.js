@@ -240,7 +240,6 @@ export const t = {
   thListed:         { en: 'Listed',      bn: 'তালিকাভুক্ত' },
 
   // ── Settings ──────────────────────────────────────────────
-  settings:           { en: 'Settings',                bn: 'সেটিংস' },
   settingsTitle:      { en: '⚙️ Settings',             bn: '⚙️ সেটিংস' },
   settingsSub:        { en: 'Manage your account preferences', bn: 'আপনার অ্যাকাউন্ট পছন্দ পরিচালনা করুন' },
   languageSection:    { en: '🌐 Language',              bn: '🌐 ভাষা' },

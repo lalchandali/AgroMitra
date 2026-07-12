@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
 import { useLanguage } from '../hooks/useLanguage'
 import { clearAuthSession, getPlatformFee, updatePlatformFee } from '../api/agromitra'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { useState, useEffect, useCallback } from 'react'
 
 // ── Helpers ──────────────────────────────────────────────────
 const PREF_KEY = 'agromitra_prefs'
@@ -46,7 +46,9 @@ export default function SettingsTab({ userRole }) {
 
   // prefs state
   const [prefs, setPrefs] = useState(getPrefs)
-  const [darkMode, setDarkMode] = useState(() => document.body.classList.contains('dark-mode'))
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem('agromitra_dark') === '1'
+  )
 
   // password change
   const [showPassForm, setShowPassForm] = useState(false)
@@ -63,7 +65,10 @@ export default function SettingsTab({ userRole }) {
   const [feeLoading, setFeeLoading]   = useState(false)
   const [feeSaving, setFeeSaving]     = useState(false)
 
-  const T = (en, bn) => isBn ? bn : en
+  const T = useCallback(
+    (en, bn) => (lang === 'bn' ? bn : en),
+    [lang]
+  )
 
   // Sync pref changes
   const setPref = (key, val) => {
@@ -83,23 +88,29 @@ export default function SettingsTab({ userRole }) {
 
   // Load dark mode on mount
   useEffect(() => {
-    const saved = localStorage.getItem('agromitra_dark')
-    if (saved === '1') { document.body.classList.add('dark-mode'); setDarkMode(true) }
-    else { document.body.classList.remove('dark-mode'); setDarkMode(false) }
-  }, [])
+    document.body.classList.toggle('dark-mode', darkMode)
+  }, [darkMode])
 
   // Admin হলে বর্তমান platform fee % লোড করো
   useEffect(() => {
     if (userRole !== 'admin') return
+
     setFeeLoading(true)
+
     getPlatformFee()
       .then(({ data }) => {
         setPlatformFee(data.platform_fee_percent)
         setFeeInput(String(data.platform_fee_percent))
       })
-      .catch(() => toast.error(T('Could not load platform fee', 'প্ল্যাটফর্ম ফি লোড করা যায়নি')))
+      .catch(() => {
+        toast.error(
+          lang === 'bn'
+            ? 'প্ল্যাটফর্ম ফি লোড করা যায়নি'
+            : 'Could not load platform fee'
+        )
+      })
       .finally(() => setFeeLoading(false))
-  }, [userRole])
+  }, [userRole, lang])
 
   const handleSavePlatformFee = async () => {
     const value = parseFloat(feeInput)

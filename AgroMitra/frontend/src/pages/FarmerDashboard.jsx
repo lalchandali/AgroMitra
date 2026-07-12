@@ -12,7 +12,6 @@ import {
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
-import { tr } from '../translations'
 import toast from 'react-hot-toast'
 
 const CROPS = [
@@ -80,7 +79,7 @@ const fmtTime = (iso) => {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' })
 }
 // ── Order Detail Modal ────────────────────────────────────────
-function OrderDetailModal({ order: o, onClose, onStatusUpdate }) {
+function OrderDetailModal({ order: o, onClose, onStatusUpdate, T }) {
   if (!o) return null
   const statusCfg = STATUS_CONFIG[o.status?.toLowerCase()] || STATUS_CONFIG.pending
 
@@ -231,7 +230,7 @@ function OrderDetailModal({ order: o, onClose, onStatusUpdate }) {
 // ════════════════════════════════════════════════════════════
 export default function FarmerDashboard() {
   const { lang } = useLanguage()
-  const T = (key) => tr(key, lang)
+  const T = (en, bn) => (lang === 'bn' ? bn : en)
   const [user, setUser] = useState(getStoredUser())
 
   useEffect(() => {
@@ -1606,6 +1605,7 @@ return (
       order={selectedOrder}
       onClose={() => setSelectedOrder(null)}
       onStatusUpdate={handleOrderStatus}
+      T={T}
     />
 
     {/* ════ Settings Tab ════ */}

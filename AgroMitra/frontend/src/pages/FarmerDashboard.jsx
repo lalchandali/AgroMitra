@@ -236,8 +236,8 @@ export default function FarmerDashboard() {
 
   useEffect(() => {
     const syncUser = () => setUser(getStoredUser())
-    window.addEventListener('agromitra-auth-changed', syncUser)
-    return () => window.removeEventListener('agromitra-auth-changed', syncUser)
+    globalThis.addEventListener('agromitra-auth-changed', syncUser)
+    return () => globalThis.removeEventListener('agromitra-auth-changed', syncUser)
   }, [])
 
   const [activeTab, setActiveTab] = useState('overview')
@@ -455,7 +455,7 @@ export default function FarmerDashboard() {
 }
 
 const handleDeleteProduct = async (id) => {
-  if (!window.confirm('Delete this listing?')) return
+  if (!globalThis.confirm('Delete this listing?')) return
   try {
     await deleteProduct(id)
     toast.success('Listing deleted')

@@ -120,7 +120,7 @@ export default function AdminPanel() {
 
   // ── Product actions ──────────────────────────────────────────
   const handleDeleteProduct = async (product) => {
-    if (!window.confirm(`Delete "${product.title_en}"? This cannot be undone.`)) return
+    if (!globalThis.confirm(`Delete "${product.title_en}"? This cannot be undone.`)) return
     try {
       await deleteProduct(product.product_id)
       toast.success(T('productDeleted'))

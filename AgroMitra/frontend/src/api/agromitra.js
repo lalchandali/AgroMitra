@@ -61,7 +61,7 @@ API.interceptors.response.use(
       // Refresh token-ই না থাকলে সরাসরি লগআউট
       if (!refreshToken) {
         clearAuthSession()
-        window.location.href = '/auth'
+        globalThis.location.href = '/auth'
         return Promise.reject(error)
       }
 
@@ -89,7 +89,7 @@ API.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null)
         clearAuthSession()
-        window.location.href = '/auth'
+        globalThis.location.href = '/auth'
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
@@ -124,14 +124,14 @@ export const saveAuthSession = ({ access_token, refresh_token, user }) => {
   localStorage.setItem('agromitra_access_token', access_token)
   localStorage.setItem('agromitra_refresh_token', refresh_token)
   localStorage.setItem('agromitra_user', JSON.stringify(user))
-  window.dispatchEvent(new Event('agromitra-auth-changed'))
+  globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
 export const clearAuthSession = () => {
   localStorage.removeItem('agromitra_access_token')
   localStorage.removeItem('agromitra_refresh_token')
   localStorage.removeItem('agromitra_user')
-  window.dispatchEvent(new Event('agromitra-auth-changed'))
+  globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
 export const getStoredUser = () => {

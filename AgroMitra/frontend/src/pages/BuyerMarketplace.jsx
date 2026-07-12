@@ -15,16 +15,16 @@ const CROP_EMOJIS = {
   Cucumber: '🥒', Pumpkin: '🎃', Spinach: '🥗', Wheat: '🌾',
 }
 
-const orderBadge = (status) => {
-  const map = {
-    pending: 'badge-gold',
-    confirmed: 'badge-blue',
-    shipped: 'badge-blue',
-    delivered: 'badge-green',
-    cancelled: 'badge-red',
-  }
-  return map[status?.toLowerCase()] || 'badge-blue'
-}
+// const orderBadge = (status) => {
+//   const map = {
+//     pending: 'badge-gold',
+//     confirmed: 'badge-blue',
+//     shipped: 'badge-blue',
+//     delivered: 'badge-green',
+//     cancelled: 'badge-red',
+//   }
+//   return map[status?.toLowerCase()] || 'badge-blue'
+// }
 
 export default function BuyerMarketplace() {
   const { lang } = useLanguage()
@@ -34,8 +34,8 @@ export default function BuyerMarketplace() {
 
   useEffect(() => {
     const sync = () => setUser(getStoredUser())
-    window.addEventListener('agromitra-auth-changed', sync)
-    return () => window.removeEventListener('agromitra-auth-changed', sync)
+    globalThis.addEventListener('agromitra-auth-changed', sync)
+    return () => globalThis.removeEventListener('agromitra-auth-changed', sync)
   }, [])
 
   // ── Browse state ────────────────────────────────────────────

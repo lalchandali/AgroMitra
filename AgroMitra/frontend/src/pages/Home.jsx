@@ -1,6 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
-import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip, LineChart, Line } from 'recharts'
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  YAxis,
+  Tooltip
+} from "recharts"
 import { getPricePrediction, getDemandForecast, getWeatherAlert, getSowingCalendar, getMarketPrices } from '../api/agromitra'
 
 const features = [
@@ -261,7 +267,7 @@ const Home = () => {
             const sparkData = demoData.price.forecasts?.map(f => ({ price: f.predicted_price })) || []
             const isUp = (demoData.price.summary?.trend_pct ?? 0) > 0
             const strokeColor = isUp ? '#2E7D32' : '#D32F2F'
-            const fillColor = isUp ? 'rgba(46, 125, 50, 0.15)' : 'rgba(211, 47, 47, 0.15)'
+            //const fillColor = isUp ? 'rgba(46, 125, 50, 0.15)' : 'rgba(211, 47, 47, 0.15)'
 
             return (
               <div className="am-demo-results">

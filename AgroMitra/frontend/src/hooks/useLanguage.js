@@ -15,14 +15,14 @@ export function useLanguage() {
     setLang(next)
     localStorage.setItem(LANG_KEY, next)
     // dispatch event so other components can sync
-    window.dispatchEvent(new CustomEvent('agromitra-lang-changed', { detail: next }))
+    globalThis.dispatchEvent(new CustomEvent('agromitra-lang-changed', { detail: next }))
   }
 
   // sync across tabs/components
   useEffect(() => {
     const handler = (e) => setLang(e.detail)
-    window.addEventListener('agromitra-lang-changed', handler)
-    return () => window.removeEventListener('agromitra-lang-changed', handler)
+    globalThis.addEventListener('agromitra-lang-changed', handler)
+    return () => globalThis.removeEventListener('agromitra-lang-changed', handler)
   }, [])
 
   return { lang, toggleLang, isBn: lang === 'bn' }

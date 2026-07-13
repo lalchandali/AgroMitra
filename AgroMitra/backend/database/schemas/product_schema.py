@@ -54,6 +54,8 @@ class ProductResponse(BaseModel):
     status         : ProductStatus
     views_count    : int
     created_at     : datetime
+    average_rating : Optional[float] = None   # reviews থেকে aggregate করা, review না থাকলে None
+    review_count   : int = 0
 
     class Config:
         from_attributes = True

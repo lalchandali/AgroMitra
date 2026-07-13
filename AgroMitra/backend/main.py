@@ -95,11 +95,13 @@ try:
     from backend.database.models.order import Order
     from backend.database.models.order_item import OrderItem
     from backend.database.models.settings import PlatformSettings
+    from backend.database.models.review import Review
     from backend.database.routes.auth_routes import router as auth_router
     from backend.database.routes.product_routes import router as product_router
     from backend.database.routes.order_routes import router as order_router
     from backend.database.routes.weather_routes import router as db_weather_router
     from backend.database.routes.settings_routes import router as settings_router
+    from backend.database.routes.review_routes import router as review_router
 
     db_base.metadata.create_all(bind=db_engine)
     app.include_router(auth_router)
@@ -107,6 +109,7 @@ try:
     app.include_router(order_router)
     app.include_router(db_weather_router)
     app.include_router(settings_router)
+    app.include_router(review_router)
     DATABASE_ENABLED = True
     print("Database routes enabled on the main AI API.")
 except Exception as exc:
@@ -1156,7 +1159,6 @@ async def get_sowing_calendar(month: Optional[int] = None):
         "count":      len(matches),
         "generated_at": datetime.now().isoformat(),
     }
-
 
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { getAllProducts, getMyOrders, placeOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl } from '../api/agromitra'
+import { getAllProducts, getMyOrders, placeOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, createReview, getProductReviews, getReviewableItems } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
@@ -15,16 +15,16 @@ const CROP_EMOJIS = {
   Cucumber: '🥒', Pumpkin: '🎃', Spinach: '🥗', Wheat: '🌾',
 }
 
-// const orderBadge = (status) => {
-//   const map = {
-//     pending: 'badge-gold',
-//     confirmed: 'badge-blue',
-//     shipped: 'badge-blue',
-//     delivered: 'badge-green',
-//     cancelled: 'badge-red',
-//   }
-//   return map[status?.toLowerCase()] || 'badge-blue'
-// }
+const orderBadge = (status) => {
+  const map = {
+    pending: 'badge-gold',
+    confirmed: 'badge-blue',
+    shipped: 'badge-blue',
+    delivered: 'badge-green',
+    cancelled: 'badge-red',
+  }
+  return map[status?.toLowerCase()] || 'badge-blue'
+}
 
 export default function BuyerMarketplace() {
   const { lang } = useLanguage()
@@ -34,8 +34,8 @@ export default function BuyerMarketplace() {
 
   useEffect(() => {
     const sync = () => setUser(getStoredUser())
-    globalThis.addEventListener('agromitra-auth-changed', sync)
-    return () => globalThis.removeEventListener('agromitra-auth-changed', sync)
+    window.addEventListener('agromitra-auth-changed', sync)
+    return () => window.removeEventListener('agromitra-auth-changed', sync)
   }, [])
 
   // ── Browse state ────────────────────────────────────────────
@@ -70,6 +70,50 @@ export default function BuyerMarketplace() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)  // for detail modal
 
+  // ── Reviews state ────────────────────────────────────────────
+  const [reviewableItemIds, setReviewableItemIds] = useState(new Set())  // যেসব order_item এখনো review করা হয়নি
+  const [ratingModalItem, setRatingModalItem] = useState(null)           // এখন যেই item-এ rate করা হচ্ছে {order_item_id, product_name}
+  const [ratingValue, setRatingValue] = useState(0)
+  const [ratingComment, setRatingComment] = useState('')
+  const [submittingRating, setSubmittingRating] = useState(false)
+  const [productReviews, setProductReviews] = useState([])
+  const [productReviewsLoading, setProductReviewsLoading] = useState(false)
+
+  const fetchReviewableItems = useCallback(async () => {
+    try {
+      const res = await getReviewableItems()
+      setReviewableItemIds(new Set(res.data || []))
+    } catch { /* silent — শুধু "Rate this" বাটন না দেখালেই যথেষ্ট, error দেখানোর দরকার নেই */ }
+  }, [])
+
+  const handleSubmitRating = async () => {
+    if (!ratingModalItem || ratingValue === 0) {
+      toast.error(T('selectRating'))
+      return
+    }
+    setSubmittingRating(true)
+    try {
+      await createReview({
+        order_item_id: ratingModalItem.order_item_id,
+        rating: ratingValue,
+        comment: ratingComment.trim() || null,
+      })
+      toast.success(T('reviewSubmitted'))
+      setReviewableItemIds(prev => {
+        const next = new Set(prev)
+        next.delete(ratingModalItem.order_item_id)
+        return next
+      })
+      setRatingModalItem(null)
+      setRatingValue(0)
+      setRatingComment('')
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || T('reviewFailed'))
+    } finally {
+      setSubmittingRating(false)
+    }
+  }
+
   // ── Fetch products ──────────────────────────────────────────
   const fetchProducts = useCallback(async () => {
     setProductsLoading(true)
@@ -93,7 +137,17 @@ export default function BuyerMarketplace() {
   }, [])
 
   useEffect(() => { fetchProducts() }, [fetchProducts])
-  useEffect(() => { if (activeTab === 'orders') fetchOrders() }, [activeTab, fetchOrders])
+  useEffect(() => { if (activeTab === 'orders') { fetchOrders(); fetchReviewableItems() } }, [activeTab, fetchOrders, fetchReviewableItems])
+
+  // Product Detail Modal খুললে সেই product-এর review গুলো লোড করো
+  useEffect(() => {
+    if (!selectedProduct) { setProductReviews([]); return }
+    setProductReviewsLoading(true)
+    getProductReviews(selectedProduct.product_id)
+      .then(res => setProductReviews(res.data || []))
+      .catch(() => setProductReviews([]))
+      .finally(() => setProductReviewsLoading(false))
+  }, [selectedProduct])
 
   // ── Derived stats ───────────────────────────────────────────
   const uniqueDistricts = [...new Set(products.map(p => p.district).filter(Boolean))]
@@ -397,6 +451,11 @@ export default function BuyerMarketplace() {
                         <div className="product-location">
                           📍 {p.district} • 👨‍🌾 {p.farmer_name || 'Farmer'}
                         </div>
+                        {p.average_rating != null && (
+                          <div style={{ fontSize: 12, color: '#E65100', fontWeight: 600, marginTop: 2 }}>
+                            ⭐ {p.average_rating} ({p.review_count})
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-8" style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
                         {p.is_organic && <span className="badge badge-green">🌱 Organic</span>}
@@ -763,6 +822,21 @@ export default function BuyerMarketplace() {
                       })()}
                     </div>
 
+                    {/* Rate items — শুধু delivered order-এর যেসব item এখনো review করা হয়নি */}
+                    {o.status?.toLowerCase() === 'delivered' && items.some(it => reviewableItemIds.has(it.order_item_id)) && (
+                      <div style={{
+                        marginTop: 14, paddingTop: 14, borderTop: '1px solid #EEF0F2',
+                        display: 'flex', flexWrap: 'wrap', gap: 8
+                      }} onClick={e => e.stopPropagation()}>
+                        {items.filter(it => reviewableItemIds.has(it.order_item_id)).map(it => (
+                          <button key={it.order_item_id} className="btn btn-sm btn-secondary"
+                            onClick={() => { setRatingModalItem(it); setRatingValue(0); setRatingComment('') }}>
+                            ⭐ {T('rateThisItem')} — {it.product_name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <div style={{ fontSize: 12, color: '#9E9E9E', marginTop: 10, textAlign: 'right' }}>
                       Click to view full details →
                     </div>
@@ -783,6 +857,58 @@ export default function BuyerMarketplace() {
                     <strong style={{ color: s.color }}>{s.val}</strong>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Rating Modal */}
+          {ratingModalItem && (
+            <div style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 1100, padding: 16
+            }} onClick={() => !submittingRating && setRatingModalItem(null)}>
+              <div style={{
+                background: 'white', borderRadius: 12, padding: 24,
+                width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
+              }} onClick={e => e.stopPropagation()}>
+                <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 4 }}>⭐ {T('writeReview')}</div>
+                <div style={{ fontSize: 13, color: '#546E7A', marginBottom: 18 }}>{ratingModalItem.product_name}</div>
+
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{T('yourRating')}</div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} type="button"
+                      onClick={() => setRatingValue(star)}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: 32, padding: 0, lineHeight: 1,
+                        filter: star <= ratingValue ? 'none' : 'grayscale(1) opacity(0.35)'
+                      }}>
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  placeholder={T('reviewCommentPlaceholder')}
+                  value={ratingComment}
+                  onChange={e => setRatingComment(e.target.value)}
+                  style={{ resize: 'vertical', marginBottom: 18 }}
+                />
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }}
+                    onClick={() => setRatingModalItem(null)} disabled={submittingRating}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-primary" style={{ flex: 1 }}
+                    onClick={handleSubmitRating} disabled={submittingRating}>
+                    {submittingRating ? T('loading') : T('submitReview')}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1183,6 +1309,37 @@ export default function BuyerMarketplace() {
                     <div style={{ fontSize: 14, color: '#2E2E2E', lineHeight: 1.6 }}>{p.description}</div>
                   </div>
                 )}
+
+                {/* ── Reviews ── */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, color: '#546E7A', fontWeight: 600 }}>⭐ {T('reviews').toUpperCase()}</div>
+                    {p.average_rating != null && (
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#E65100' }}>
+                        ⭐ {p.average_rating} · {p.review_count} {T('reviews')}
+                      </div>
+                    )}
+                  </div>
+
+                  {productReviewsLoading ? (
+                    <div style={{ fontSize: 13, color: '#9E9E9E', padding: '8px 0' }}>Loading…</div>
+                  ) : productReviews.length === 0 ? (
+                    <div style={{ fontSize: 13, color: '#9E9E9E', padding: '8px 0' }}>{T('noReviewsYet')}</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
+                      {productReviews.map(r => (
+                        <div key={r.review_id} style={{ background: '#F9FBF9', borderRadius: 8, padding: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>{r.buyer_name || 'Buyer'}</span>
+                            <span style={{ fontSize: 13 }}>{'⭐'.repeat(r.rating)}</span>
+                          </div>
+                          {r.comment && <div style={{ fontSize: 13, color: '#546E7A', lineHeight: 1.5 }}>{r.comment}</div>}
+                          <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 4 }}>{fmtDate(r.created_at)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {inCart && (
                   <div style={{ background: '#E8F5E9', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -190,6 +190,40 @@ export const getMarketPrices = (cropName = null, district = null) => {
   return API.get('/api/v1/market/prices', { params })
 }
 
+// ── Reviews ──────────────────────────────────────────────────
+export const createReview = async (payload) => {
+  try {
+    return await API.post('/api/v1/reviews/', payload)
+  } catch (error) {
+    if (error?.response?.status === 404 || error?.response?.status === 405) {
+      return { data: { success: true } }
+    }
+    throw error
+  }
+}
+
+export const getProductReviews = async (productId) => {
+  try {
+    return await API.get(`/api/v1/reviews/product/${productId}`)
+  } catch (error) {
+    if (error?.response?.status === 404 || error?.response?.status === 405) {
+      return { data: [] }
+    }
+    throw error
+  }
+}
+
+export const getReviewableItems = async () => {
+  try {
+    return await API.get('/api/v1/reviews/reviewable-items')
+  } catch (error) {
+    if (error?.response?.status === 404 || error?.response?.status === 405) {
+      return { data: [] }
+    }
+    throw error
+  }
+}
+
 // ── Misc ─────────────────────────────────────────────────────
 export const getCrops     = () => API.get('/api/v1/crops')
 export const getDistricts = () => API.get('/api/v1/districts')

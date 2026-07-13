@@ -18,6 +18,19 @@ export const t = {
   all:            { en: 'All',              bn: 'সব' },
   yes:            { en: 'Yes',              bn: 'হ্যাঁ' },
   no:             { en: 'No',              bn: 'না' },
+
+  // ── Reviews ───────────────────────────────────────────────
+  rateThis:         { en: '⭐ Rate this',            bn: '⭐ রেটিং দিন' },
+  selectRating:      { en: 'Please select a star rating', bn: 'তারকা সংখ্যা বাছাই করুন' },
+  reviewSubmitted:   { en: 'Review submitted, thank you!', bn: 'রিভিউ জমা হয়েছে, ধন্যবাদ!' },
+  reviewFailed:      { en: 'Could not submit review',    bn: 'রিভিউ জমা দেওয়া যায়নি' },
+  writeReview:       { en: 'Write a Review',            bn: 'রিভিউ লিখুন' },
+  yourRating:        { en: 'Your Rating',               bn: 'আপনার রেটিং' },
+  reviewCommentPlaceholder: { en: 'Share your experience (optional)', bn: 'আপনার অভিজ্ঞতা লিখুন (ঐচ্ছিক)' },
+  submitReview:      { en: 'Submit Review',             bn: 'রিভিউ জমা দিন' },
+  noReviewsYet:      { en: 'No reviews yet',             bn: 'এখনো কোনো রিভিউ নেই' },
+  reviews:           { en: 'Reviews',                    bn: 'রিভিউ' },
+  rateThisItem:      { en: 'Rate',                        bn: 'রেট করুন' },
   noData:         { en: 'No data found',   bn: 'কোনো তথ্য পাওয়া যায়নি' },
   verify:         { en: 'Verify',          bn: 'যাচাই করুন' },
   suspend:        { en: 'Suspend',         bn: 'স্থগিত করুন' },
@@ -240,6 +253,7 @@ export const t = {
   thListed:         { en: 'Listed',      bn: 'তালিকাভুক্ত' },
 
   // ── Settings ──────────────────────────────────────────────
+  settings:           { en: 'Settings',                bn: 'সেটিংস' },
   settingsTitle:      { en: '⚙️ Settings',             bn: '⚙️ সেটিংস' },
   settingsSub:        { en: 'Manage your account preferences', bn: 'আপনার অ্যাকাউন্ট পছন্দ পরিচালনা করুন' },
   languageSection:    { en: '🌐 Language',              bn: '🌐 ভাষা' },

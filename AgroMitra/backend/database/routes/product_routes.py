@@ -14,8 +14,10 @@ import uuid as uuid_lib
 from backend.database import get_db
 from backend.database.models.product import Product, ProductStatus, QualityGrade
 from backend.database.models.user import User, UserRole
+from backend.database.models.review import Review
 from backend.database.schemas.product_schema import ProductResponse
 from backend.database.routes.auth_routes import get_current_user
+from sqlalchemy import func
 
 def _parse_dt(value: Optional[str]):
     """Form দিয়ে আসা ISO date string-কে datetime এ পার্স করে; খালি/ভুল হলে None।"""
@@ -25,6 +27,21 @@ def _parse_dt(value: Optional[str]):
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except (ValueError, TypeError):
         return None
+
+
+def _get_rating_map(db: Session, product_ids):
+    """
+    একগুচ্ছ product_id দিয়ে {product_id: (average_rating, review_count)} রিটার্ন করে।
+    review না থাকা product_id এই dict-এ থাকবে না — caller .get(id, (None, 0)) ব্যবহার করবে।
+    """
+    if not product_ids:
+        return {}
+    rows = db.query(
+        Review.product_id,
+        func.avg(Review.rating).label("avg_rating"),
+        func.count(Review.review_id).label("cnt")
+    ).filter(Review.product_id.in_(product_ids)).group_by(Review.product_id).all()
+    return {row.product_id: (round(float(row.avg_rating), 1), row.cnt) for row in rows}
 
 
 router = APIRouter(prefix="/api/v1/products", tags=["Products"])
@@ -135,8 +152,11 @@ async def get_products(
     farmers = db.query(User).filter(User.user_id.in_(farmer_ids)).all()
     farmer_map = {str(f.user_id): f.name_en for f in farmers}
 
+    rating_map = _get_rating_map(db, [p.product_id for p in products])
+
     result = []
     for p in products:
+        avg_rating, review_count = rating_map.get(p.product_id, (None, 0))
         data = {
             "product_id": p.product_id,
             "farmer_id": p.farmer_id,
@@ -156,6 +176,8 @@ async def get_products(
             "status": p.status,
             "views_count": p.views_count,
             "created_at": p.created_at,
+            "average_rating": avg_rating,
+            "review_count": review_count,
         }
         result.append(ProductResponse(**data))
     return result
@@ -171,7 +193,35 @@ async def get_my_products(
     products = db.query(Product).filter(
         Product.farmer_id == current_user.user_id
     ).order_by(Product.created_at.desc()).all()
-    return products
+
+    rating_map = _get_rating_map(db, [p.product_id for p in products])
+    result = []
+    for p in products:
+        avg_rating, review_count = rating_map.get(p.product_id, (None, 0))
+        data = {
+            "product_id": p.product_id,
+            "farmer_id": p.farmer_id,
+            "farmer_name": current_user.name_en,
+            "title_en": p.title_en,
+            "title_bn": p.title_bn,
+            "category": p.category,
+            "description_en": p.description_en,
+            "quantity_kg": p.quantity_kg,
+            "unit_price_bdt": p.unit_price_bdt,
+            "quality_grade": p.quality_grade,
+            "district": p.district,
+            "is_organic": p.is_organic,
+            "image_url": p.image_url,
+            "ai_fair_price_min": p.ai_fair_price_min,
+            "ai_fair_price_max": p.ai_fair_price_max,
+            "status": p.status,
+            "views_count": p.views_count,
+            "created_at": p.created_at,
+            "average_rating": avg_rating,
+            "review_count": review_count,
+        }
+        result.append(ProductResponse(**data))
+    return result
 
 
 # ── GET /api/v1/products/{product_id} ────────────────────────
@@ -189,7 +239,32 @@ async def get_product(
     product.views_count += 1
     db.commit()
     db.refresh(product)
-    return product
+
+    farmer = db.query(User).filter(User.user_id == product.farmer_id).first()
+    avg_rating, review_count = _get_rating_map(db, [product.product_id]).get(product.product_id, (None, 0))
+
+    return ProductResponse(
+        product_id=product.product_id,
+        farmer_id=product.farmer_id,
+        farmer_name=farmer.name_en if farmer else None,
+        title_en=product.title_en,
+        title_bn=product.title_bn,
+        category=product.category,
+        description_en=product.description_en,
+        quantity_kg=product.quantity_kg,
+        unit_price_bdt=product.unit_price_bdt,
+        quality_grade=product.quality_grade,
+        district=product.district,
+        is_organic=product.is_organic,
+        image_url=product.image_url,
+        ai_fair_price_min=product.ai_fair_price_min,
+        ai_fair_price_max=product.ai_fair_price_max,
+        status=product.status,
+        views_count=product.views_count,
+        created_at=product.created_at,
+        average_rating=avg_rating,
+        review_count=review_count,
+    )
 
 
 # ── PUT /api/v1/products/{product_id} ────────────────────────

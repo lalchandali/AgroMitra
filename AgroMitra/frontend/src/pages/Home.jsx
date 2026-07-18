@@ -9,6 +9,8 @@ import {
 } from "recharts"
 import { getPricePrediction, getDemandForecast, getWeatherAlert, getSowingCalendar, getMarketPrices, getFeaturedTestimonials, submitTestimonial, getMyTestimonial, getStoredUser, resolveImageUrl } from '../api/agromitra'
 import toast from 'react-hot-toast'
+import lalchand from '../assets/lalchand.png'
+import TeamSection from '../components/TeamSection';
 
 const features = [
   { icon: '🤖', title: 'AI Price Prediction', desc: 'Prophet + XGBoost hybrid model forecasts crop prices 7–30 days ahead with 12% MAPE accuracy.' },
@@ -18,7 +20,6 @@ const features = [
   { icon: '🗣️', title: 'Bengali Interface', desc: 'Fully bilingual Bengali and English platform designed for rural farmers with low digital literacy.' },
   { icon: '🌤️', title: 'Micro-Climate Alerts', desc: 'Hyper-local weather warnings and regional sowing timelines mapped to safeguard crops against unpredictable weather.' },
 ]
-
 const stats = [
   { val: '17M+', label: 'Bangladeshi Farmers', icon: '👨‍🌾' },
   { val: '64', label: 'Districts Supported', icon: '🗺️' },
@@ -787,98 +788,7 @@ const Home = () => {
       </section>
 
       {/* ===== TEAM ===== */}
-      <section className="am-section am-reveal">
-        <div className="am-section-head">
-          <div className="am-section-eyebrow">Uttara University — CSE Department</div>
-          <h2>Meet the Team</h2>
-          <p className="am-section-sub">Final year project — Batch 60-C, Evening Program</p>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, maxWidth: 800, margin: '0 auto' }}>
-          {[
-            {
-              name: 'Lal Chand Ali',
-              role: 'Developer & Researcher',
-              details: 'Full-stack development · AI/ML integration · React + FastAPI',
-              avatar: '👨‍💻',
-              tag: 'Student',
-            },
-            {
-              name: 'Lal Chand Ali',
-              role: 'Developer & Researcher',
-              details: 'Full-stack development · AI/ML integration · React + FastAPI',
-              avatar: '👨‍💻',
-              tag: 'Student',
-            },
-            {
-              name: 'Lal Chand Ali',
-              role: 'Developer & Researcher',
-              details: 'Full-stack development · AI/ML integration · React + FastAPI',
-              avatar: '👨‍💻',
-              tag: 'Student',
-            },
-            {
-              name: 'Lal Chand Ali',
-              role: 'Developer & Researcher',
-              details: 'Full-stack development · AI/ML integration · React + FastAPI',
-              avatar: '👨‍💻',
-              tag: 'Student',
-            },
-            {
-              name: 'Lal Chand Ali',
-              role: 'Developer & Researcher',
-              details: 'Full-stack development · AI/ML integration · React + FastAPI',
-              avatar: '👨‍💻',
-              tag: 'Student',
-            },
-            {
-              name: 'Md. Ashraful Kabir',
-              role: 'Project Supervisor',
-              details: 'Department of CSE · Uttara University, Dhaka',
-              avatar: '👨‍🏫',
-              tag: 'Supervisor',
-            },
-          ].map((m, i) => (
-            <div key={i} style={{
-              background: 'white', borderRadius: 12, padding: 28,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-              textAlign: 'center', border: '1px solid #E8F5E9'
-            }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: '50%',
-                background: 'var(--green-pale)', fontSize: 36,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}>{m.avatar}</div>
-              <div style={{
-                display: 'inline-block', fontSize: 11, fontWeight: 700,
-                background: 'var(--green-pale)', color: 'var(--green-dark)',
-                padding: '3px 10px', borderRadius: 20, marginBottom: 8
-              }}>{m.tag}</div>
-              <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{m.name}</div>
-              <div style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600, marginBottom: 8 }}>{m.role}</div>
-              <div style={{ fontSize: 13, color: 'var(--gray)', lineHeight: 1.6 }}>{m.details}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* University badge */}
-        <center><div style={{
-          marginTop: 35, textAlign: 'center',
-          background: 'white', borderRadius: 12, padding: '25px 37px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-          display: 'inline-flex', alignItems: 'center', gap: 16,
-          border: '1px solid #E8F5E9'
-        }}>
-          <span style={{ fontSize: 40 }}>🎓</span>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--green-dark)' }}>Uttara University</div>
-            <div style={{ fontSize: 13, color: 'var(--gray)' }}>Department of Computer Science & Engineering</div>
-            <div style={{ fontSize: 12, color: 'var(--gray)' }}>Dhaka, Bangladesh · Final Year Project 2026</div>
-          </div>
-        </div>
-        </center>
-
-      </section>
+      <TeamSection />
 
       {/* ===== CTA ===== */}
       <div className="am-section am-reveal">

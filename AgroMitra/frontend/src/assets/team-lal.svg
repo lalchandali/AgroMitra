@@ -1,0 +1,7 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+  <rect width="240" height="240" rx="40" fill="#E8F5E9"/>
+  <circle cx="120" cy="96" r="52" fill="#2E7D32"/>
+  <path d="M64 202c10-36 42-54 56-54s46 18 56 54" fill="#1B5E20"/>
+  <circle cx="120" cy="90" r="38" fill="#F9A825"/>
+  <text x="120" y="150" text-anchor="middle" font-family="Segoe UI, Arial" font-size="34" font-weight="700" fill="#fff">LA</text>
+</svg>

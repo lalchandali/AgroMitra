@@ -1,6 +1,7 @@
 import React from 'react';
 import lalchand from '../assets/lalchand.png'
 import ashraful from '../assets/ashraful.png'
+import shakil from '../assets/shakil.jpeg'
 
 
 export default function TeamSection() {
@@ -19,24 +20,24 @@ export default function TeamSection() {
             avatar: typeof lalchand !== 'undefined' ? lalchand : '👨‍💻',
         },
         {
-            name: 'Lal Chand Ali',
+            name: 'Md Shakil khan',
             role: 'Developer & Researcher',
             details: 'Full-stack development · AI/ML integration · React + FastAPI',
             skills: ["React", "FastAPI", "Python"],
             github: "#",
             linkedin: "#",
             tag: 'Student',
-            avatar: typeof lalchand !== 'undefined' ? lalchand : '👨‍💻',
+            avatar: typeof shakil !== 'undefined' ? shakil : '👨‍💻',
         },
         {
-            name: 'Lal Chand Ali',
+            name: 'Shakil khan',
             role: 'Developer & Researcher',
             details: 'Full-stack development · AI/ML integration · React + FastAPI',
             skills: ["React", "FastAPI"],
             github: "#",
             linkedin: "#",
             tag: 'Student',
-            avatar: typeof lalchand !== 'undefined' ? lalchand : '👨‍💻',
+            avatar: typeof shakil !== 'undefined' ? shakil : '👨‍💻',
         },
         {
             name: 'Lal Chand Ali',

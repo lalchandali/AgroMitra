@@ -15,7 +15,7 @@ from backend.database import get_db
 from backend.database.models.product import Product, ProductStatus, QualityGrade
 from backend.database.models.user import User, UserRole
 from backend.database.models.review import Review
-from backend.database.schemas.product_schema import ProductResponse
+from backend.database.schemas.product_schema import ProductResponse, FarmerProfileResponse
 from backend.database.routes.auth_routes import get_current_user
 from sqlalchemy import func
 
@@ -185,7 +185,70 @@ async def get_products(
     return result
 
 
-# ── GET /api/v1/products/my ───────────────────────────────────
+# ── GET /api/v1/products/farmer/{farmer_id} ──────────────────
+@router.get("/farmer/{farmer_id}", response_model=FarmerProfileResponse)
+async def get_farmer_profile(farmer_id: UUID, db: Session = Depends(get_db)):
+    """Public farmer profile — photo, district, rating, আর তার active listings।
+    কোনো product card-এ farmer photo/name click করলে এখান থেকে data আসবে।"""
+    farmer = db.query(User).filter(
+        User.user_id == farmer_id, User.role == UserRole.farmer
+    ).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found.")
+
+    products = db.query(Product).filter(
+        Product.farmer_id == farmer_id, Product.status == ProductStatus.active
+    ).order_by(Product.created_at.desc()).all()
+
+    rating_map = _get_rating_map(db, [p.product_id for p in products])
+    product_list = []
+    for p in products:
+        avg_rating, review_count = rating_map.get(p.product_id, (None, 0))
+        product_list.append(ProductResponse(
+            product_id=p.product_id,
+            farmer_id=p.farmer_id,
+            farmer_name=farmer.name_en,
+            farmer_photo_url=farmer.profile_photo_url,
+            title_en=p.title_en,
+            title_bn=p.title_bn,
+            category=p.category,
+            description_en=p.description_en,
+            quantity_kg=p.quantity_kg,
+            unit_price_bdt=p.unit_price_bdt,
+            quality_grade=p.quality_grade,
+            district=p.district,
+            is_organic=p.is_organic,
+            image_url=p.image_url,
+            ai_fair_price_min=p.ai_fair_price_min,
+            ai_fair_price_max=p.ai_fair_price_max,
+            status=p.status,
+            views_count=p.views_count,
+            created_at=p.created_at,
+            average_rating=avg_rating,
+            review_count=review_count,
+        ))
+
+    # farmer-এর সব review (তার সব product মিলিয়ে) থেকে overall rating
+    agg = db.query(
+        func.avg(Review.rating).label("avg_rating"),
+        func.count(Review.review_id).label("cnt")
+    ).filter(Review.farmer_id == farmer_id).first()
+    overall_rating = round(float(agg.avg_rating), 1) if agg and agg.avg_rating is not None else None
+    overall_count = agg.cnt if agg else 0
+
+    return FarmerProfileResponse(
+        farmer_id=farmer.user_id,
+        name_en=farmer.name_en,
+        name_bn=farmer.name_bn,
+        profile_photo_url=farmer.profile_photo_url,
+        district=farmer.district,
+        is_verified=farmer.is_verified,
+        member_since=farmer.created_at,
+        average_rating=overall_rating,
+        review_count=overall_count,
+        active_listings=len(product_list),
+        products=product_list,
+    )
 @router.get("/my", response_model=List[ProductResponse])
 async def get_my_products(
     current_user: User = Depends(get_current_user),

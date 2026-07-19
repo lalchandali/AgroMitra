@@ -3,7 +3,7 @@
 # ============================================================
 
 from pydantic import BaseModel, Field  # type: ignore[import]
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 from backend.database.models.product import QualityGrade, ProductStatus
@@ -57,6 +57,23 @@ class ProductResponse(BaseModel):
     created_at     : datetime
     average_rating : Optional[float] = None   # reviews থেকে aggregate করা, review না থাকলে None
     review_count   : int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class FarmerProfileResponse(BaseModel):
+    farmer_id        : UUID
+    name_en          : str
+    name_bn          : Optional[str] = None
+    profile_photo_url: Optional[str] = None
+    district         : Optional[str] = None
+    is_verified      : bool = False
+    member_since     : datetime
+    average_rating   : Optional[float] = None
+    review_count     : int = 0
+    active_listings  : int = 0
+    products         : List[ProductResponse] = []
 
     class Config:
         from_attributes = True

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getAllProducts, getMyOrders, placeOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, createReview, getProductReviews, getReviewableItems } from '../api/agromitra'
+import { getAllProducts, getMyOrders, placeOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, createReview, getProductReviews, getReviewableItems, getFarmerProfile } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
@@ -71,6 +71,10 @@ export default function BuyerMarketplace() {
   })
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)  // for detail modal
+  const [selectedFarmerId, setSelectedFarmerId] = useState(null) // for farmer profile modal
+  const [farmerProfile, setFarmerProfile] = useState(null)
+  const [farmerProfileLoading, setFarmerProfileLoading] = useState(false)
+  const [farmerProfileError, setFarmerProfileError] = useState(false)
 
   // ── Reviews state ────────────────────────────────────────────
   const [reviewableItemIds, setReviewableItemIds] = useState(new Set())  // যেসব order_item এখনো review করা হয়নি
@@ -150,6 +154,19 @@ export default function BuyerMarketplace() {
       .catch(() => setProductReviews([]))
       .finally(() => setProductReviewsLoading(false))
   }, [selectedProduct])
+
+  // Farmer Profile Modal খুললে সেই farmer-এর profile + active listings লোড করো
+  useEffect(() => {
+    if (!selectedFarmerId) { setFarmerProfile(null); return }
+    let cancelled = false
+    setFarmerProfileLoading(true)
+    setFarmerProfileError(false)
+    getFarmerProfile(selectedFarmerId)
+      .then(res => { if (!cancelled) setFarmerProfile(res.data) })
+      .catch(() => { if (!cancelled) setFarmerProfileError(true) })
+      .finally(() => { if (!cancelled) setFarmerProfileLoading(false) })
+    return () => { cancelled = true }
+  }, [selectedFarmerId])
 
   // ── Derived stats ───────────────────────────────────────────
   const uniqueDistricts = [...new Set(products.map(p => p.district).filter(Boolean))]
@@ -457,17 +474,23 @@ export default function BuyerMarketplace() {
                         </div>
                         <div className="product-location" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span>📍 {p.district} •</span>
-                          {p.farmer_photo_url ? (
-                            <img
-                              src={resolveImageUrl(p.farmer_photo_url)}
-                              alt={p.farmer_name || 'Farmer'}
-                              style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }}
-                              onError={(e) => { e.target.style.display = 'none' }}
-                            />
-                          ) : (
-                            <span>👨‍🌾</span>
-                          )}
-                          <span>{p.farmer_name || 'Farmer'}</span>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); setSelectedFarmerId(p.farmer_id) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                            title={lang === 'bn' ? 'Farmer profile দেখুন' : "View farmer's profile"}
+                          >
+                            {p.farmer_photo_url ? (
+                              <img
+                                src={resolveImageUrl(p.farmer_photo_url)}
+                                alt={p.farmer_name || 'Farmer'}
+                                style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }}
+                                onError={(e2) => { e2.target.style.display = 'none' }}
+                              />
+                            ) : (
+                              <span>👨‍🌾</span>
+                            )}
+                            <span style={{ textDecoration: 'underline dotted' }}>{p.farmer_name || 'Farmer'}</span>
+                          </span>
                         </div>
                         {p.average_rating != null && (
                           <div style={{ fontSize: 12, color: '#E65100', fontWeight: 600, marginTop: 2 }}>
@@ -1087,17 +1110,23 @@ export default function BuyerMarketplace() {
                     <div className="product-name">{p.title_en}</div>
                     <div className="product-location" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>📍 {p.district} ·</span>
-                      {p.farmer_photo_url ? (
-                        <img
-                          src={resolveImageUrl(p.farmer_photo_url)}
-                          alt={p.farmer_name || 'Farmer'}
-                          style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }}
-                          onError={(e) => { e.target.style.display = 'none' }}
-                        />
-                      ) : (
-                        <span>👨‍🌾</span>
-                      )}
-                      <span>{p.farmer_name || 'Farmer'}</span>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); setSelectedFarmerId(p.farmer_id) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                        title={lang === 'bn' ? 'Farmer profile দেখুন' : "View farmer's profile"}
+                      >
+                        {p.farmer_photo_url ? (
+                          <img
+                            src={resolveImageUrl(p.farmer_photo_url)}
+                            alt={p.farmer_name || 'Farmer'}
+                            style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }}
+                            onError={(e2) => { e2.target.style.display = 'none' }}
+                          />
+                        ) : (
+                          <span>👨‍🌾</span>
+                        )}
+                        <span style={{ textDecoration: 'underline dotted' }}>{p.farmer_name || 'Farmer'}</span>
+                      </span>
                     </div>
                     <div className="product-price" style={{ marginTop: 8 }}>৳{p.unit_price_bdt}<span>/kg</span></div>
                     <div style={{ fontSize: 13, color: '#546E7A' }}>{p.quantity_kg?.toLocaleString()} kg available</div>
@@ -1349,10 +1378,14 @@ export default function BuyerMarketplace() {
                   </div>
                 </div>
 
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 12px', background: '#F9FBF9', borderRadius: 10, marginBottom: 14
-                }}>
+                <div
+                  onClick={() => setSelectedFarmerId(p.farmer_id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                    padding: '10px 12px', background: '#F9FBF9', borderRadius: 10, marginBottom: 14
+                  }}
+                  title={lang === 'bn' ? 'Farmer profile দেখুন' : "View farmer's profile"}
+                >
                   {p.farmer_photo_url ? (
                     <img
                       src={resolveImageUrl(p.farmer_photo_url)}
@@ -1367,7 +1400,7 @@ export default function BuyerMarketplace() {
                   }}>👨‍🌾</span>
                   <div>
                     <div style={{ fontSize: 11, color: '#546E7A' }}>{T('farmerLabel')}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2E2E2E' }}>{p.farmer_name || 'Verified Farmer'}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2E2E2E', textDecoration: 'underline dotted' }}>{p.farmer_name || 'Verified Farmer'}</div>
                   </div>
                 </div>
 
@@ -1452,6 +1485,133 @@ export default function BuyerMarketplace() {
           </div>
         )
       })()}
+
+      {/* ════ Farmer Profile Modal (page-level, always accessible) ════ */}
+      {selectedFarmerId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: 16,
+          }}
+          onClick={() => setSelectedFarmerId(null)}
+        >
+          <div
+            style={{
+              background: 'white', borderRadius: 16, maxWidth: 520, width: '100%',
+              maxHeight: '85vh', overflowY: 'auto', position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedFarmerId(null)}
+              style={{
+                position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.4)',
+                color: 'white', border: 'none', borderRadius: '50%', width: 32, height: 32,
+                cursor: 'pointer', fontSize: 16, zIndex: 1,
+              }}
+            >✕</button>
+
+            {farmerProfileLoading && (
+              <div style={{ padding: 50, textAlign: 'center', color: '#9E9E9E' }}>
+                <div className="spinner" style={{ margin: '0 auto 12px' }} />
+                {lang === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+              </div>
+            )}
+
+            {!farmerProfileLoading && farmerProfileError && (
+              <div style={{ padding: 50, textAlign: 'center', color: '#9E9E9E' }}>
+                {lang === 'bn' ? 'Profile লোড করা যায়নি।' : 'Could not load this profile.'}
+              </div>
+            )}
+
+            {!farmerProfileLoading && !farmerProfileError && farmerProfile && (
+              <>
+                {/* Header */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #2E7D32, #66BB6A)', padding: '32px 24px 24px',
+                  color: 'white', textAlign: 'center', borderRadius: '16px 16px 0 0',
+                }}>
+                  {farmerProfile.profile_photo_url ? (
+                    <img
+                      src={resolveImageUrl(farmerProfile.profile_photo_url)}
+                      alt={farmerProfile.name_en}
+                      style={{
+                        width: 84, height: 84, borderRadius: '50%', objectFit: 'cover',
+                        border: '3px solid rgba(255,255,255,0.6)', margin: '0 auto 12px',
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: 84, height: 84, borderRadius: '50%', background: 'rgba(255,255,255,0.2)',
+                      fontSize: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '3px solid rgba(255,255,255,0.6)', margin: '0 auto 12px',
+                    }}>👨‍🌾</div>
+                  )}
+                  <div style={{ fontSize: 20, fontWeight: 800 }}>
+                    {farmerProfile.name_en}
+                    {farmerProfile.is_verified && <span title="Verified" style={{ marginLeft: 6 }}>✅</span>}
+                  </div>
+                  {farmerProfile.name_bn && <div style={{ fontSize: 14, opacity: 0.85 }}>{farmerProfile.name_bn}</div>}
+                  <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6 }}>
+                    📍 {farmerProfile.district || '—'} · {lang === 'bn' ? 'যুক্ত হয়েছেন' : 'Member since'} {new Date(farmerProfile.member_since).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: '20px 24px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>
+                      {farmerProfile.average_rating != null ? `⭐ ${farmerProfile.average_rating}` : '—'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#546E7A' }}>{farmerProfile.review_count} {lang === 'bn' ? 'রিভিউ' : 'reviews'}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>{farmerProfile.active_listings}</div>
+                    <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'সক্রিয় পণ্য' : 'active listings'}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>{farmerProfile.is_verified ? '✅' : '—'}</div>
+                    <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'যাচাইকৃত' : 'verified'}</div>
+                  </div>
+                </div>
+
+                {/* Other listings from this farmer */}
+                <div style={{ padding: '0 24px 24px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#546E7A', marginBottom: 10 }}>
+                    {lang === 'bn' ? '🌿 এই কৃষকের অন্যান্য পণ্য' : "🌿 Other listings from this farmer"}
+                  </div>
+                  {farmerProfile.products.length === 0 ? (
+                    <div style={{ fontSize: 13, color: '#9E9E9E', textAlign: 'center', padding: 16 }}>
+                      {lang === 'bn' ? 'এই মুহূর্তে কোনো সক্রিয় পণ্য নেই।' : 'No active listings right now.'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {farmerProfile.products.map(fp => (
+                        <div
+                          key={fp.product_id}
+                          onClick={() => { setSelectedFarmerId(null); setSelectedProduct(fp) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                            padding: 10, borderRadius: 10, border: '1px solid #F0F0F0',
+                          }}
+                        >
+                          <span style={{ fontSize: 24 }}>{getEmoji(fp)}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{fp.title_en}</div>
+                            <div style={{ fontSize: 12, color: '#546E7A' }}>{fp.quantity_kg} kg {lang === 'bn' ? 'পাওয়া যাচ্ছে' : 'available'}</div>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#2E7D32' }}>৳{fp.unit_price_bdt}/kg</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   )

@@ -154,6 +154,7 @@ export const resetPassword  = (mobile, otp, newPassword) => API.post('/api/v1/au
 export const getMyProducts    = ()           => API.get('/api/v1/products/my')
 export const getAllProducts    = (params)     => API.get('/api/v1/products/', { params })
 export const getProduct        = (id)         => API.get(`/api/v1/products/${id}`)
+export const getFarmerProfile  = (farmerId)   => API.get(`/api/v1/products/farmer/${farmerId}`)
 // createProduct/updateProduct এখন সবসময় FormData নেয় (ছবি থাকতে পারে বলে)।
 // axios instance-এর default Content-Type: application/json থাকায় সেটা override
 // করে multipart/form-data + boundary নিজে থেকে বসাতে দেওয়া হচ্ছে (Content-Type: undefined ট্রিক)।

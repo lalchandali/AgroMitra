@@ -3,7 +3,7 @@
 ### AI-Powered Smart Agriculture Marketplace for Bangladesh
 
 <p align="center">
-  <img src="AgroMitra\frontend\src\assets\icone.png" width="100%" alt="AgroMitra Logo">
+  <img src="AgroMitra\frontend\src\assets\icone.png" width="100%">
 </p>
 <p align="center">
 <img src="AgroMitra\frontend\src\assets\banner.png" width="100%">

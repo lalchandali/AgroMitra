@@ -292,8 +292,8 @@ export default function AdminPanel() {
           {/* Header */}
           <div className="page-header flex justify-between">
             <div>
-              <div className="page-title">⚙️ Admin Panel</div>
-              <div className="page-subtitle">AgroMitra Platform Management</div>
+              <div className="page-title">{T('adminTitle')}</div>
+              <div className="page-subtitle">{T('adminSub')}</div>
             </div>
             <div className="flex gap-8 flex-center">
               <span className={`badge ${apiStatus?.status === 'healthy' ? 'badge-green' : 'badge-red'}`}>
@@ -404,7 +404,6 @@ export default function AdminPanel() {
                   { name: T('priceAPIName'), status: T('healthy') },
                   { name: T('demandAPIName'), status: T('healthy') },
                   { name: T('cropAPIName'), status: T('healthy') },
-                  { name: T('diseaseAPIName'), status: T('healthy') },
                   { name: 'FastAPI Server', status: apiStatus?.status === 'healthy' ? 'Online' : 'Offline', offline: apiStatus?.status !== 'healthy' },
                 ].map((m, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>

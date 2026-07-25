@@ -1,121 +1,165 @@
-# 🌾 AgroMitra – AI-Powered Agricultural Marketplace
+# 🌾 AgroMitra
+
+### AI-Powered Smart Agriculture Marketplace for Bangladesh
 
 <p align="center">
-  <img src="AgroMitra\frontend\src\assets\icone.png" alt="AgroMitra Logo" width="140">
-
+  <img src="AgroMitra\frontend\src\assets\icone.png" width="130" alt="AgroMitra Logo">
+</p>
+<p align="center">
+<img src="AgroMitra\frontend\src\assets\banner.png" width="100%">
+</p>
+<p align="center">
+<b>Empowering Farmers with Artificial Intelligence, Fair Trade, and Digital Agriculture.</b>
 </p>
 
 <p align="center">
-  <strong>Empowering Farmers Through Fair Trade, Smart Logistics, and AI-Driven Agriculture</strong>
-</p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11-blue?logo=python">
-  <img src="https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react">
-  <img src="https://img.shields.io/badge/Vite-8-purple?logo=vite">
-  <img src="https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql">
-  <img src="https://img.shields.io/badge/License-MIT-green">
+<img src="https://img.shields.io/badge/Python-3.11-blue?logo=python">
+<img src="https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi">
+<img src="https://img.shields.io/badge/React-19-61DAFB?logo=react">
+<img src="https://img.shields.io/badge/Vite-Frontend-purple?logo=vite">
+<img src="https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql">
+<img src="https://img.shields.io/badge/TensorFlow-AI-orange?logo=tensorflow">
+<img src="https://img.shields.io/badge/License-MIT-success">
+
 </p>
 
 ---
 
-# 📖 About
+# 🚀 Overview
 
-AgroMitra is a modern AI-powered agricultural marketplace developed to connect farmers and buyers through a secure, transparent, and intelligent platform.
+AgroMitra is an AI-powered smart agriculture marketplace that connects farmers directly with buyers through a secure, transparent, and intelligent digital platform.
 
-The platform enables farmers to sell products directly to buyers while utilizing AI-powered services such as crop price prediction, weather alerts, demand forecasting, and smart agricultural recom[...]
+The system eliminates unnecessary middlemen while helping farmers make data-driven decisions using Artificial Intelligence.
 
-This project was developed as a Final Year CSE Project.
+The platform integrates modern web technologies with Machine Learning models to provide crop recommendations, price prediction, weather intelligence, demand forecasting, and smart farming assistance.
+
+Developed as a **Final Year B.Sc. in Computer Science & Engineering Project** at **Uttara University**.
 
 ---
 
-# ✨ Features
+# ✨ Key Features
 
 ## 👨‍🌾 Farmer Dashboard
 
-- Product Management (CRUD)
-- Order Management
-- AI Crop Recommendations
+- Product Management
+- Add / Update / Delete Products
+- AI Crop Recommendation
 - Price Prediction
-- Weather Alerts
+- Weather Intelligence
+- Order Management
 - Sales Analytics
 - Dashboard Statistics
+- Inventory Management
 
 ---
 
 ## 🛒 Buyer Marketplace
 
-- Browse Products
+- Modern Marketplace UI
 - Product Search
-- Filter by Category
-- Filter by District
-- Place Orders
+- Category Filter
+- District Filter
+- Wishlist
+- Shopping Cart
+- Checkout
+- Order Tracking
 - Order History
+- Product Review & Rating
 
 ---
 
-## 👨‍💼 Admin Panel
+## ⚙️ Admin Dashboard
 
 - User Management
 - Product Monitoring
-- Order Monitoring
-- Dashboard Analytics
+- Marketplace Analytics
+- Order Management
 - Platform Fee Management
-- System Settings
+- Reports
+- System Configuration
 
 ---
 
-## 🤖 AI Features
+## 🤖 Artificial Intelligence
 
+- Crop Recommendation
 - Crop Price Prediction
-- Weather Forecast Integration
-- Smart Farming Suggestions
+- Weather Forecast
 - Demand Forecasting
-- Market Analysis
+- Smart Farming Suggestions
+- Fair Price Analysis
+- Market Intelligence
 
 ---
 
-## 🌐 General Features
+## 🌐 Platform Features
 
 - JWT Authentication
 - Role-Based Access Control
-- Bengali & English Language Support
+- Responsive Design
 - Dark Mode
-- Responsive UI
+- English & Bengali Support
+- Secure REST API
 - Profile Management
 - Notification Settings
-- Secure API
+- AI Integration
 
 ---
 
-# 🏗️ Project Structure
+# 🏗 System Architecture
+
+```
+                 AgroMitra Platform
+
+                        │
+
+        ┌───────────────┼───────────────┐
+        │                               │
+
+ React Frontend                FastAPI Backend
+
+        │                               │
+
+        │                 AI Prediction Engine
+
+        │                               │
+
+        └──────────── PostgreSQL Database
+```
+
+---
+
+# 📂 Project Structure
 
 ```
 AgroMitra
 │
 ├── backend
-│   ├── app
+│   ├── ai
+│   ├── database
 │   ├── models
 │   ├── routers
 │   ├── services
-│   ├── database
-│   ├── ai
+│   ├── schemas
+│   ├── utils
 │   └── main.py
 │
 ├── frontend
 │   ├── src
-│   │   ├── assets
-│   │   ├── api
-│   │   ├── components
-│   │   ├── hooks
-│   │   ├── pages
-│   │   └── styles
-│   └── package.json
+│   │
+│   ├── assets
+│   ├── api
+│   ├── components
+│   ├── hooks
+│   ├── pages
+│   ├── context
+│   ├── styles
+│   └── App.jsx
 │
 ├── README.md
 ├── LICENSE
-└── .gitignore
+└── requirements.txt
 ```
 
 ---
@@ -152,7 +196,7 @@ AgroMitra
 - XGBoost
 - Pandas
 - NumPy
-- Scikit-Learn
+- Scikit-learn
 
 ---
 
@@ -161,20 +205,24 @@ AgroMitra
 ## Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/AgroMitra.git
+git clone https://github.com/lalchandali/AgroMitra-project.git
 
-cd AgroMitra
+cd AgroMitra-project
 ```
 
 ---
 
-# Backend Setup
+# Backend
 
 ```bash
 cd backend
 
 python -m venv .venv
+```
 
+Linux
+
+```bash
 source .venv/bin/activate
 ```
 
@@ -184,7 +232,7 @@ Windows
 .venv\Scripts\activate
 ```
 
-Install Dependencies
+Install Packages
 
 ```bash
 pip install -r requirements.txt
@@ -193,10 +241,10 @@ pip install -r requirements.txt
 Run Server
 
 ```bash
-uvicorn app.main:app --reload
+uvicorn main:app --reload
 ```
 
-Backend
+Server
 
 ```
 http://127.0.0.1:8000
@@ -210,7 +258,7 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# Frontend Setup
+# Frontend
 
 ```bash
 cd frontend
@@ -228,102 +276,175 @@ http://localhost:5173
 
 ---
 
-# Production Build
-
-```bash
-npm run build
-```
-
----
-
 # API Documentation
 
-Swagger UI
-
-```
-http://127.0.0.1:8000/docs
-```
-
-ReDoc
-
-```
-http://127.0.0.1:8000/redoc
-```
+| Documentation | URL    |
+| ------------- | ------ |
+| Swagger       | /docs  |
+| ReDoc         | /redoc |
 
 ---
 
-# Screenshots
+# 🤖 AI Modules
 
-## Home Page
-
-> Add screenshot here
-
----
-
-## Farmer Dashboard
-
-> Add screenshot here
-
----
-
-## Buyer Marketplace
-
-> Add screenshot here
+| Module              | Description                  |
+| ------------------- | ---------------------------- |
+| Crop Recommendation | Suggest suitable crops       |
+| Price Prediction    | Predict future market price  |
+| Weather Forecast    | Weather intelligence         |
+| Demand Forecast     | Estimate market demand       |
+| Smart Suggestion    | AI farming recommendations   |
+| Fair Price Analysis | Buyer/Farmer pricing support |
 
 ---
 
-## Admin Dashboard
+# 📸 Screenshots
 
-> Add screenshot here
+## 🏠 Home
+
+> docs/home.png
 
 ---
 
-# Contributors
+## 👨‍🌾 Farmer Dashboard
+
+> docs/farmer-dashboard.png
+
+---
+
+## 🛒 Marketplace
+
+> docs/marketplace.png
+
+---
+
+## 👨‍💼 Admin Dashboard
+
+> docs/admin-dashboard.png
+
+---
+
+## 🌙 Dark Mode
+
+> docs/darkmode.png
+
+---
+
+# 👨‍💻 Team
 
 ## Project Lead
 
-**MD LAL CHAND ALI**
+### MD. LAL CHAND ALI
 
-- Full Stack Developer
-- AI/ML Engineer
-- System Architect
+**Lead Full Stack Developer**
+
+**AI/ML Engineer**
+
+**System Architect**
+
+GitHub
+
+https://github.com/lalchandali
+
+LinkedIn
+
+(Add Your LinkedIn)
 
 ---
 
 ## Team Members
 
 - Md. Zahedul Islam
-- Md Shakil Khan
+- Md. Shakil Khan
 - Adit Arabi
 - Most. Annika Parvin
 
 ---
 
-# Future Improvements
+## Supervisor
 
-- Mobile Application
-- AI Chatbot
-- Voice Assistant
-- IoT Integration
-- Drone Monitoring
-- Satellite Crop Analysis
-- Real-Time Logistics Tracking
-- Payment Gateway Expansion
+**Md. Ashraful Kabir**
+
+Department of Computer Science & Engineering
+
+Uttara University
 
 ---
 
-# License
+# 📈 Future Roadmap
 
-This project is licensed under the MIT License.
+- [x] AI Marketplace
+- [x] Crop Recommendation
+- [x] Price Prediction
+- [x] Weather Forecast
+- [x] Buyer Marketplace
+- [x] Admin Dashboard
+- [ ] Mobile App
+- [ ] AI Chatbot
+- [ ] Voice Assistant
+- [ ] IoT Sensor Integration
+- [ ] Drone Monitoring
+- [ ] Satellite Crop Analysis
+- [ ] Real-time Logistics
+- [ ] Online Payment Gateway
 
 ---
 
-# Acknowledgements
+# 🏆 Project Highlights
+
+✔ AI Powered Agriculture
+
+✔ Smart Marketplace
+
+✔ Fair Price Prediction
+
+✔ Farmer to Buyer Direct Trading
+
+✔ Secure Authentication
+
+✔ Responsive UI
+
+✔ Dark Mode
+
+✔ Bengali & English Support
+
+✔ Production Ready Architecture
+
+---
+
+# 🎓 Academic Information
+
+**Project Type**
+
+Final Year Project
+
+**Department**
+
+Computer Science & Engineering
+
+**University**
+
+Uttara University
+
+**Session**
+
+2025–2026
+
+---
+
+# 📜 License
+
+This project is licensed under the **MIT License**.
+
+---
+
+# ❤️ Acknowledgements
 
 - Uttara University
-- Department of Computer Science & Engineering
+- Department of CSE
 - FastAPI
 - React
+- TensorFlow
 - PostgreSQL
 - Open Source Community
 
@@ -331,10 +452,18 @@ This project is licensed under the MIT License.
 
 # ⭐ Support
 
-If you like this project, please give it a ⭐ on GitHub.
+If you like this project,
+
+please consider giving it a ⭐ on GitHub.
+
+It motivates future development.
 
 ---
 
 <p align="center">
-Made with ❤️ for Bangladeshi Farmers
+
+### 🌾 Made with ❤️ for Bangladeshi Farmers 🇧🇩
+
+**AgroMitra — Smart Agriculture Powered by Artificial Intelligence**
+
 </p>

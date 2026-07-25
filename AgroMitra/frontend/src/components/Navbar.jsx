@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clearAuthSession, getStoredUser } from '../api/agromitra'
 import { useLanguage } from '../hooks/useLanguage'
 import logo from '../assets/icone.png'
+import { useTheme } from '../context/ThemeContext'
+import { FiSun, FiMoon } from "react-icons/fi";
 
 const Navbar = () => {
   const location = useLocation()
@@ -17,6 +19,7 @@ const Navbar = () => {
     location.pathname === path ? 'nav-link active' : 'nav-link'
 
   const closeMenu = () => setMenuOpen(false)
+  const { darkMode, toggleDarkMode } = useTheme()
 
   const L = {
     home: lang === 'bn' ? 'হোম' : 'Home',
@@ -105,28 +108,63 @@ const Navbar = () => {
 
         <button
           onClick={toggleLang}
-          title="Switch Language / ভাষা পরিবর্তন"
+          title="Switch Language"
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '4px',
+            borderRadius: 999,
             background: 'rgba(255,255,255,0.12)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            color: 'white',
-            borderRadius: 8,
-            padding: '6px 12px',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,.2)',
             cursor: 'pointer',
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: 0.5,
-            transition: 'background 0.2s',
+            transition: 'all .25s ease',
           }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.22)'
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,.18)';
+            e.currentTarget.style.transform = 'translateY(-3px)';
           }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.12)'
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,.12)';
+            e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
-          {lang === 'en' ? '🇧🇩 বাংলা' : '🇬🇧 English'}
+          <span
+            style={{
+              padding: '6px 12px',
+              borderRadius: 999,
+              fontWeight: 700,
+              fontSize: 13,
+              background: lang === 'en' ? '#22C55E' : 'transparent',
+              color: lang === 'en' ? '#fff' : 'rgba(255,255,255,.75)',
+              transition: '.25s',
+            }}
+          >
+            EN
+          </span>
+
+          <span
+            style={{
+              padding: '6px 12px',
+              borderRadius: 999,
+              fontWeight: 700,
+              fontSize: 13,
+              background: lang === 'bn' ? '#22C55E' : 'transparent',
+              color: lang === 'bn' ? '#fff' : 'rgba(255,255,255,.75)',
+              transition: '.25s',
+            }}
+          >
+            BN
+          </span>
         </button>
+        <button
+          onClick={toggleDarkMode}
+          className="theme-toggle"
+        >
+          {darkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
+        </button>
+        
 
         {user ? (
           <>

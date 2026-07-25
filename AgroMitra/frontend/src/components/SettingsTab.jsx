@@ -3,6 +3,7 @@ import { clearAuthSession, getPlatformFee, updatePlatformFee } from '../api/agro
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useState, useEffect, useCallback } from 'react'
+import { useTheme } from '../context/ThemeContext'
 
 // ── Helpers ──────────────────────────────────────────────────
 const PREF_KEY = 'agromitra_prefs'
@@ -46,9 +47,7 @@ export default function SettingsTab({ userRole }) {
 
   // prefs state
   const [prefs, setPrefs] = useState(getPrefs)
-  const [darkMode, setDarkMode] = useState(
-    () => localStorage.getItem('agromitra_dark') === '1'
-  )
+  const { darkMode, toggleDarkMode } = useTheme()
 
   // password change
   const [showPassForm, setShowPassForm] = useState(false)
@@ -76,16 +75,6 @@ export default function SettingsTab({ userRole }) {
     setPrefs(next)
     savePrefs(next)
   }
-
-  // Dark mode toggle
-  const toggleDark = () => {
-    const next = !darkMode
-    setDarkMode(next)
-    document.body.classList.toggle('dark-mode', next)
-    localStorage.setItem('agromitra_dark', next ? '1' : '0')
-    toast.success(next ? T('Dark mode on 🌙', 'ডার্ক মোড চালু 🌙') : T('Light mode on ☀️', 'লাইট মোড চালু ☀️'))
-  }
-
   // Load dark mode on mount
   useEffect(() => {
     document.body.classList.toggle('dark-mode', darkMode)
@@ -163,9 +152,20 @@ export default function SettingsTab({ userRole }) {
         />
         <Toggle
           on={darkMode}
-          onChange={toggleDark}
+          onChange={() => {
+            toggleDarkMode()
+
+            toast.success(
+              !darkMode
+                ? T('Dark mode enabled 🌙', 'ডার্ক মোড চালু হয়েছে 🌙')
+                : T('Light mode enabled ☀️', 'লাইট মোড চালু হয়েছে ☀️')
+            )
+          }}
           label={T('Dark Mode', 'ডার্ক মোড')}
-          sub={T('Use dark theme across all dashboards', 'সব ড্যাশবোর্ডে ডার্ক থিম ব্যবহার করুন')}
+          sub={T(
+            'Switch to a premium dark interface',
+            'প্রিমিয়াম ডার্ক ইন্টারফেস ব্যবহার করুন'
+          )}
         />
       </div>
 

@@ -165,7 +165,7 @@ adminSub: {en: 'Monitor, Manage & Optimize the AgroMitra Ecosystem',bn: 'AgroMit
   deleteProduct:    { en: '🗑️ Delete',             bn: '🗑️ মুছুন' },
   showing:          { en: 'Showing',                bn: 'দেখানো হচ্ছে' },
   of:               { en: 'of',                     bn: 'এর মধ্যে' },
-  testimonials:     { en: '💬 Testimonials',         bn: '💬 মতামত' },
+  testimonials:     { en: ' Testimonials',         bn: ' মতামত' },
   testimonialsMgmt: { en: '💬 Testimonial Moderation', bn: '💬 মতামত অনুমোদন' },
   thQuote:          { en: 'Quote',                   bn: 'মতামত' },
   thRating:         { en: 'Rating',                  bn: 'রেটিং' },

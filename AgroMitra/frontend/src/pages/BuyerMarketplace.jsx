@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
 import { tr } from '../translations'
+import { useTheme } from '../context/ThemeContext'
 
 // existing code...
 

@@ -89871,7 +89871,6 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Potato,Bogura,Bogura Main Bazar,15.66,20.04,18.43,kg,1871,Sunny,Winter
 2024-12-30,Potato,Bogura,Bogura Main Bazar,15.06,19.47,17.92,kg,1928,Cloudy,Winter
 2024-12-31,Potato,Bogura,Bogura Main Bazar,16.06,21.29,18.31,kg,1880,Sunny,Winter
-2026-07-25,Potato,Bogura,Bogura Bazar,18.0,22.0,20.0,kg,300,Cloudy,Winter
 2022-01-01,Potato,Chattogram,Chattogram Main Bazar,18.16,23.8,20.76,kg,2414,Sunny,Winter
 2022-01-02,Potato,Chattogram,Chattogram Main Bazar,17.87,22.61,20.25,kg,2380,Cloudy,Winter
 2022-01-03,Potato,Chattogram,Chattogram Main Bazar,19.24,25.27,22.8,kg,2360,Cloudy,Winter
@@ -107408,7 +107407,6 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Potato,Thakurgaon,Thakurgaon Main Bazar,11.45,14.87,13.16,kg,1910,Cloudy,Winter
 2024-12-30,Potato,Thakurgaon,Thakurgaon Main Bazar,9.08,11.79,10.43,kg,1743,Sunny,Winter
 2024-12-31,Potato,Thakurgaon,Thakurgaon Main Bazar,6.51,8.46,7.48,kg,1848,Foggy,Winter
-2026-07-25,Potato,khulna,Khulna Bazar,18.0,22.0,20.0,kg,300,Cloudy,Winter
 2022-01-01,Rice,Bagerhat,Bagerhat Main Bazar,19.5,25.33,22.42,kg,2368,Rainy,Winter
 2022-01-02,Rice,Bagerhat,Bagerhat Main Bazar,19.54,25.39,22.46,kg,1513,Foggy,Winter
 2022-01-03,Rice,Bagerhat,Bagerhat Main Bazar,21.44,27.85,24.65,kg,2674,Cloudy,Winter
@@ -181937,7 +181935,7 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Tomato,Dhaka,Dhaka Main Bazar,25.96,32.91,28.99,kg,1886,Sunny,Winter
 2024-12-30,Tomato,Dhaka,Dhaka Main Bazar,22.43,30.59,26.19,kg,1919,Sunny,Winter
 2024-12-31,Tomato,Dhaka,Dhaka Main Bazar,26.86,33.51,29.23,kg,1876,Cloudy,Winter
-2026-07-25,Tomato,Dhaka,Karwan Bazar,30.0,40.0,35.0,kg,150,Sunny,Summer
+2026-07-25,Tomato,Dhaka,,,,35.0,,150,,
 2022-01-01,Tomato,Dinajpur,Dinajpur Main Bazar,18.19,23.62,20.9,kg,928,Rainy,Winter
 2022-01-02,Tomato,Dinajpur,Dinajpur Main Bazar,20.07,26.05,23.06,kg,1116,Windy,Winter
 2022-01-03,Tomato,Dinajpur,Dinajpur Main Bazar,17.93,23.27,20.6,kg,678,Windy,Winter

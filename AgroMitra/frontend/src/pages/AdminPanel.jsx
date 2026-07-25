@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial } from '../api/agromitra'
+import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
@@ -53,6 +53,18 @@ export default function AdminPanel() {
   const [testimonials, setTestimonials]             = useState([])
   const [testimonialsLoading, setTestimonialsLoading] = useState(false)
   const [testimonialStatusFilter, setTestimonialStatusFilter] = useState('pending')
+
+  // Retrain data (Price Prediction + Demand Forecast)
+  const [dataStatus, setDataStatus]           = useState(null)
+  const [dataStatusLoading, setDataStatusLoading] = useState(false)
+  const [retrainFile, setRetrainFile]         = useState(null)
+  const [retrainMode, setRetrainMode]         = useState('append')
+  const [retraining, setRetraining]           = useState(false)
+  const [retrainResult, setRetrainResult]     = useState(null)
+  const [retrainLog, setRetrainLog]           = useState([])
+  const [retrainLogLoading, setRetrainLogLoading] = useState(false)
+  const [showRetrainLog, setShowRetrainLog]   = useState(false)
+  const [templateDownloading, setTemplateDownloading] = useState(false)
 
   // Profile
   const [user, setUser]                   = useState(getStoredUser())
@@ -110,11 +122,21 @@ export default function AdminPanel() {
     finally { setTestimonialsLoading(false) }
   }, [testimonialStatusFilter])
 
+  const fetchDataStatus = useCallback(async () => {
+    setDataStatusLoading(true)
+    try {
+      const res = await getTrainingDataStatus()
+      setDataStatus(res.data)
+    } catch { toast.error('Could not load data status') }
+    finally { setDataStatusLoading(false) }
+  }, [])
+
   useEffect(() => { if (activeTab === 'users')    fetchUsers()   }, [activeTab, fetchUsers])
   useEffect(() => { if (activeTab === 'orders')  { fetchOrders(); fetchUsers() } }, [activeTab, fetchOrders, fetchUsers])
   useEffect(() => { if (activeTab === 'products') fetchProducts() }, [activeTab, fetchProducts])
   useEffect(() => { if (activeTab === 'overview') { fetchOrders(); fetchProducts() } }, [activeTab, fetchOrders, fetchProducts])
   useEffect(() => { if (activeTab === 'testimonials') fetchTestimonials() }, [activeTab, fetchTestimonials])
+  useEffect(() => { if (activeTab === 'retrain') fetchDataStatus() }, [activeTab, fetchDataStatus])
 
   // ── User actions ─────────────────────────────────────────────
   const handleToggleStatus = async (user) => {
@@ -158,6 +180,58 @@ export default function AdminPanel() {
       toast.success('Testimonial deleted')
       fetchTestimonials()
     } catch (e) { toast.error(e?.response?.data?.detail || 'Could not delete testimonial') }
+  }
+
+  const fetchRetrainLog = useCallback(async () => {
+    setRetrainLogLoading(true)
+    try {
+      const res = await getRetrainLog()
+      setRetrainLog(res.data?.entries || [])
+    } catch { toast.error('Could not load retrain history') }
+    finally { setRetrainLogLoading(false) }
+  }, [])
+
+  const handleDownloadTemplate = async () => {
+    setTemplateDownloading(true)
+    try {
+      const res = await downloadRetrainTemplate()
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'agromitra_retrain_template.csv')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Template download করা যায়নি।')
+    } finally {
+      setTemplateDownloading(false)
+    }
+  }
+
+  const handleRetrain = async () => {
+    if (!retrainFile) { toast.error('আগে একটা CSV file বাছাই করুন।'); return }
+    if (retrainMode === 'replace' && !globalThis.confirm(
+      'Replace mode-এ পুরনো সব data মুছে নতুন data দিয়ে বদলে যাবে (backup রাখা হবে)। Continue করবেন?'
+    )) return
+
+    setRetraining(true)
+    setRetrainResult(null)
+    try {
+      const res = await retrainModelData(retrainFile, retrainMode)
+      setRetrainResult({ success: true, data: res.data })
+      toast.success('Data update হয়ে গেছে — live prediction এখন নতুন data ব্যবহার করবে।')
+      setRetrainFile(null)
+      fetchDataStatus()
+      if (showRetrainLog) fetchRetrainLog()
+    } catch (e) {
+      const detail = e?.response?.data?.detail || 'Retrain করা যায়নি।'
+      setRetrainResult({ success: false, error: detail })
+      toast.error(detail)
+    } finally {
+      setRetraining(false)
+    }
   }
 
   // ── Derived stats ────────────────────────────────────────────
@@ -206,7 +280,8 @@ export default function AdminPanel() {
             { key: 'users',     icon: '👥', label: T('users') },
             { key: 'orders',    icon: '📦', label: T('orders'),   badge: orders.length || null },
             { key: 'products',  icon: '🌿', label: T('products'), badge: products.length || null },
-            { key: 'testimonials', icon: '💬', label: T('testimonials') },
+            { key: 'testimonials', icon: '💬', label: T('Testimonials') },
+            { key: 'retrain', icon: '🔄', label: lang === 'bn' ? 'Retrain Data' : 'Retrain Data' },
             { key: 'api',       icon: '🤖', label: T('aiStatus') },
             { key: 'profile',   icon: '👤', label: T('profile') },
             { key: 'settings',  icon: '⚙️', label: T('settings') },
@@ -694,6 +769,215 @@ export default function AdminPanel() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ════ Retrain Data Tab ════ */}
+      {activeTab === 'retrain' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="card">
+            <div className="section-title" style={{ marginBottom: 4 }}>
+              {lang === 'bn' ? '🔄 Price Prediction ও Demand Forecast Data' : '🔄 Price Prediction & Demand Forecast Data'}
+            </div>
+            <p style={{ fontSize: 13, color: '#546E7A', marginBottom: 16 }}>
+              {lang === 'bn'
+                ? 'এই দুটো AI feature সরাসরি নিচের data থেকে prediction বানায় — নতুন data upload করলে সাথে সাথে live prediction-এ প্রতিফলিত হবে।'
+                : "These two AI features generate predictions directly from the data below — uploading new data reflects in live predictions immediately."}
+            </p>
+
+            {dataStatusLoading ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton skeleton-badge" style={{ width: 100, height: 50 }} />)}
+              </div>
+            ) : dataStatus ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
+                <div style={{ background: '#F1F8E9', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>{dataStatus.total_rows?.toLocaleString()}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'মোট row' : 'total rows'}</div>
+                </div>
+                <div style={{ background: '#E3F2FD', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1565C0' }}>{dataStatus.date_from} → {dataStatus.date_to}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'তারিখ পরিসর' : 'date range'}</div>
+                </div>
+                <div style={{ background: '#FFF3E0', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#E65100' }}>{dataStatus.crop_count}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'ফসলের ধরন' : 'crops'}</div>
+                </div>
+                <div style={{ background: '#F3E5F5', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#6A1B9A' }}>{dataStatus.district_count}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'জেলা' : 'districts'}</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: '#9E9E9E', fontSize: 13 }}>{lang === 'bn' ? 'Data status লোড করা যায়নি।' : 'Could not load data status.'}</div>
+            )}
+            {dataStatus?.last_updated && (
+              <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 10 }}>
+                {lang === 'bn' ? 'শেষ আপডেট' : 'Last updated'}: {new Date(dataStatus.last_updated).toLocaleString('en-GB')}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="flex justify-between" style={{ alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <div className="section-title" style={{ marginBottom: 0 }}>
+                {lang === 'bn' ? '📤 নতুন Data দিয়ে Retrain' : '📤 Retrain with New Data'}
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={handleDownloadTemplate} disabled={templateDownloading}>
+                {templateDownloading
+                  ? (lang === 'bn' ? '⏳ Downloading...' : '⏳ Downloading...')
+                  : (lang === 'bn' ? '📥 Template CSV Download' : '📥 Download Template CSV')}
+              </button>
+            </div>
+
+            <div style={{ background: '#F9FBF9', border: '1px dashed #DCEFE0', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 12, color: '#546E7A' }}>
+              <strong>{lang === 'bn' ? 'Required columns' : 'Required columns'}:</strong> date, crop_name, district, avg_price, quantity_available<br />
+              <strong>{lang === 'bn' ? 'Optional columns' : 'Optional columns'}:</strong> market_name, min_price, max_price, unit, weather_condition, season
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  {lang === 'bn' ? 'CSV file বাছাই করুন' : 'Choose CSV file'}
+                </label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => { setRetrainFile(e.target.files?.[0] || null); setRetrainResult(null) }}
+                  style={{ fontSize: 13 }}
+                />
+                {retrainFile && (
+                  <div style={{ fontSize: 12, color: '#2E7D32', marginTop: 6 }}>✓ {retrainFile.name}</div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  {lang === 'bn' ? 'Mode' : 'Mode'}
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setRetrainMode('append')}
+                    style={{
+                      padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600,
+                      background: retrainMode === 'append' ? '#2E7D32' : '#F5F5F5',
+                      color: retrainMode === 'append' ? '#fff' : '#546E7A',
+                      border: retrainMode === 'append' ? '1px solid #2E7D32' : '1px solid #E0E0E0',
+                    }}
+                  >
+                    {lang === 'bn' ? '➕ Append (merge/upsert)' : '➕ Append (merge/upsert)'}
+                  </button>
+                  <button
+                    onClick={() => setRetrainMode('replace')}
+                    style={{
+                      padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600,
+                      background: retrainMode === 'replace' ? '#C62828' : '#F5F5F5',
+                      color: retrainMode === 'replace' ? '#fff' : '#546E7A',
+                      border: retrainMode === 'replace' ? '1px solid #C62828' : '1px solid #E0E0E0',
+                    }}
+                  >
+                    {lang === 'bn' ? '♻️ Replace (সব বদলে দাও)' : '♻️ Replace (overwrite all)'}
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 6 }}>
+                  {retrainMode === 'append'
+                    ? (lang === 'bn' ? 'একই date+crop+district থাকলে নতুন value-টাই থাকবে, বাকি পুরনো data থাকবে।' : 'Existing rows with the same date+crop+district are updated; everything else stays.')
+                    : (lang === 'bn' ? 'পুরনো সব data মুছে শুধু নতুন CSV-এর data থাকবে। (Backup রাখা হবে)' : 'All old data is replaced with only the new CSV data. (A backup is kept.)')}
+                </div>
+              </div>
+
+              <button
+                className="btn btn-primary"
+                disabled={!retrainFile || retraining}
+                onClick={handleRetrain}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                {retraining ? (lang === 'bn' ? '⏳ Retrain হচ্ছে...' : '⏳ Retraining...') : (lang === 'bn' ? '🔄 Retrain করুন' : '🔄 Retrain')}
+              </button>
+            </div>
+
+            {retrainResult && (
+              <div style={{
+                marginTop: 16, padding: 14, borderRadius: 10,
+                background: retrainResult.success ? '#F1F8E9' : '#FFEBEE',
+                border: `1px solid ${retrainResult.success ? '#C8E6C9' : '#FFCDD2'}`,
+              }}>
+                {retrainResult.success ? (
+                  <div style={{ fontSize: 13, color: '#2E7D32' }}>
+                    ✅ {lang === 'bn' ? 'সফল!' : 'Success!'} {retrainResult.data.rows_uploaded} {lang === 'bn' ? 'টা row upload হয়েছে' : 'rows uploaded'},
+                    {' '}{lang === 'bn' ? 'মোট এখন' : 'total now'} {retrainResult.data.total_rows_now?.toLocaleString()} rows
+                    {' '}({retrainResult.data.date_range?.from} → {retrainResult.data.date_range?.to}).
+                    {retrainResult.data.backup_file && (
+                      <div style={{ fontSize: 11, color: '#546E7A', marginTop: 4 }}>
+                        {lang === 'bn' ? 'Backup রাখা হয়েছে' : 'Backup saved'}: {retrainResult.data.backup_file}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: '#C62828' }}>❌ {retrainResult.error}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="flex justify-between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div className="section-title" style={{ marginBottom: 0 }}>
+                {lang === 'bn' ? '📜 Retrain History' : '📜 Retrain History'}
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => { const next = !showRetrainLog; setShowRetrainLog(next); if (next) fetchRetrainLog() }}
+              >
+                {showRetrainLog ? (lang === 'bn' ? '🔼 লুকান' : '🔼 Hide') : (lang === 'bn' ? '🔽 History দেখুন' : '🔽 Show History')}
+              </button>
+            </div>
+
+            {showRetrainLog && (
+              retrainLogLoading ? (
+                <div style={{ padding: '12px 0' }}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="skeleton skeleton-text" style={{ marginBottom: 8 }} />
+                  ))}
+                </div>
+              ) : retrainLog.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 24, color: '#9E9E9E', fontSize: 13 }}>
+                  {lang === 'bn' ? 'এখনো কোনো retrain history নেই।' : 'No retrain history yet.'}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                  {retrainLog.map((entry, i) => (
+                    <div key={i} style={{
+                      border: '1px solid #EEE', borderRadius: 10, padding: '12px 14px',
+                      display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>
+                          {entry.admin_name} · <span style={{
+                            fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 99,
+                            background: entry.mode === 'replace' ? '#FFEBEE' : '#E8F5E9',
+                            color: entry.mode === 'replace' ? '#C62828' : '#2E7D32',
+                          }}>{entry.mode}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#546E7A', marginTop: 2 }}>{entry.filename}</div>
+                        <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
+                          {entry.crops_in_upload?.join(', ')}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>
+                          +{entry.rows_uploaded} rows ({entry.total_rows_after?.toLocaleString()} total)
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
+                          {new Date(entry.timestamp).toLocaleString('en-GB')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
         </div>
       )}
 

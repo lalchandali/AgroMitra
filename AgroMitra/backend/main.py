@@ -30,8 +30,9 @@ if sys.platform == "win32":
 from fastapi import HTTPException
 from typing import Optional
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import pandas as pd
@@ -39,6 +40,8 @@ import numpy as np
 import pickle
 import json
 import os
+import io
+import shutil
 import warnings
 import requests
 from dotenv import load_dotenv
@@ -90,14 +93,14 @@ db_text = None
 try:
     from sqlalchemy import text as db_text
     from backend.database.database import engine as db_engine, Base as db_base
-    from backend.database.models.user import User
+    from backend.database.models.user import User, UserRole
     from backend.database.models.product import Product
     from backend.database.models.order import Order
     from backend.database.models.order_item import OrderItem
     from backend.database.models.settings import PlatformSettings
     from backend.database.models.review import Review
     from backend.database.models.testimonial import Testimonial
-    from backend.database.routes.auth_routes import router as auth_router
+    from backend.database.routes.auth_routes import router as auth_router, get_current_user
     from backend.database.routes.product_routes import router as product_router
     from backend.database.routes.order_routes import router as order_router
     from backend.database.routes.weather_routes import router as db_weather_router
@@ -146,6 +149,15 @@ class CropRecommendationRequest(BaseModel):
     experience: str = Field(..., json_schema_extra={"example": "Intermediate"})
     planting_month: int = Field(
         default=datetime.now().month, json_schema_extra={"example": 11})
+
+
+class CropYieldRequest(BaseModel):
+    crop_name: str = Field(..., json_schema_extra={"example": "Tomato"})
+    district: str = Field(..., json_schema_extra={"example": "Bogura"})
+    soil_type: str = Field(..., json_schema_extra={"example": "Loam"})
+    land_acres: float = Field(..., gt=0, json_schema_extra={"example": 2.5})
+    planting_month: int = Field(
+        default=datetime.now().month, ge=1, le=12, json_schema_extra={"example": 11})
 
 
 class PricePredictionItem(BaseModel):
@@ -763,6 +775,7 @@ async def root():
             "price_prediction":  "/api/v1/ai/price-prediction",
             "demand_forecast":   "/api/v1/ai/demand-forecast",
             "crop_recommend":    "/api/v1/ai/crop-recommendation",
+            "crop_yield":        "/api/v1/ai/crop-yield",
             "auth":              "/api/v1/auth",
             "products":          "/api/v1/products",
             "orders":            "/api/v1/orders",
@@ -802,6 +815,7 @@ async def health_check():
             "price_prediction":  "✅ Ready (Statistical)",
             "demand_forecasting": "✅ Ready (Statistical)",
             "crop_recommendation": "✅ Ready (Rule-Based)",
+            "crop_yield":         "✅ Ready (Rule-Based)",
         }
     }
 
@@ -1026,6 +1040,103 @@ async def crop_recommendation(req: CropRecommendationRequest):
     }
 
 
+# ── CROP YIELD PREDICTION ──────────────────────────────────────
+@app.post("/api/v1/ai/crop-yield", tags=["AI Models"])
+async def crop_yield_prediction(req: CropYieldRequest):
+    """
+    🌾 প্রত্যাশিত ফলন (yield) predict করে — নির্দিষ্ট crop, district, soil,
+    আর জমির পরিমাণ অনুযায়ী। CROP_DB-এর base avg_yield_kg (per acre) থেকে
+    শুরু করে soil suitability, বপনের মাস (season), আর district suitability
+    অনুযায়ী adjust করা হয় — score_crop_api-এ ব্যবহৃত একই suitability logic।
+    """
+    valid_soils = ['Loam', 'Sandy Loam', 'Clay Loam', 'Clay']
+    if req.crop_name not in CROP_DB:
+        raise HTTPException(status_code=400,
+                            detail=f"Crop not found. Available: {list(CROP_DB.keys())}")
+    if req.district not in DISTRICT_PROFILES:
+        raise HTTPException(status_code=400,
+                            detail=f"District not found. Available: {list(DISTRICT_PROFILES.keys())}")
+    if req.soil_type not in valid_soils:
+        raise HTTPException(status_code=400,
+                            detail=f"Soil type must be one of: {valid_soils}")
+
+    crop_info = CROP_DB[req.crop_name]
+    base_yield_per_acre = crop_info['avg_yield_kg']
+
+    # ── Soil suitability multiplier ──
+    if req.soil_type in crop_info['soil_types']:
+        soil_mult, soil_note = 1.00, "✅ Ideal soil for this crop"
+    elif req.soil_type == 'Loam':
+        soil_mult, soil_note = 0.85, "🟡 Loam is generally workable, but not this crop's ideal soil"
+    else:
+        soil_mult, soil_note = 0.65, "🔴 Not a well-suited soil type for this crop"
+
+    # ── Season/planting-month suitability multiplier ──
+    best_months = crop_info.get('best_months', [])
+    if req.planting_month in best_months:
+        season_mult, season_note = 1.00, "✅ Planting in the ideal season"
+    elif any(abs(req.planting_month - m) <= 1 or abs(req.planting_month - m) == 11 for m in best_months):
+        season_mult, season_note = 0.85, "🟡 Close to the ideal planting window"
+    else:
+        season_mult, season_note = 0.60, "🔴 Off-season planting — yield will likely suffer"
+
+    # ── District suitability multiplier ──
+    if req.district in crop_info.get('districts', []):
+        district_mult, district_note = 1.00, "✅ A region known for this crop"
+    else:
+        district_mult, district_note = 0.85, "🟡 Growable here, but not a prime-producing district"
+
+    combined_mult = soil_mult * season_mult * district_mult
+    adjusted_yield_per_acre = base_yield_per_acre * combined_mult
+    estimated_total_yield_kg = adjusted_yield_per_acre * req.land_acres
+
+    # যত বেশি factor সুবিধাজনক না, ততই estimate-এ uncertainty বেশি ধরা হচ্ছে
+    uncertainty_pct = 10 + (1 - combined_mult) * 25
+    lower_kg = estimated_total_yield_kg * (1 - uncertainty_pct / 100)
+    upper_kg = estimated_total_yield_kg * (1 + uncertainty_pct / 100)
+
+    estimated_revenue_bdt = estimated_total_yield_kg * crop_info['avg_price_bdt']
+    estimated_cost_bdt = crop_info['input_cost_bdt'] * req.land_acres
+    estimated_profit_bdt = estimated_revenue_bdt - estimated_cost_bdt
+
+    if combined_mult >= 0.90:
+        grade, grade_label = "A", "🟢 Excellent conditions"
+    elif combined_mult >= 0.72:
+        grade, grade_label = "B", "🟡 Good conditions"
+    elif combined_mult >= 0.55:
+        grade, grade_label = "C", "🟠 Fair conditions — some risk"
+    else:
+        grade, grade_label = "D", "🔴 Poor conditions — high risk"
+
+    return {
+        "crop":                     req.crop_name,
+        "name_bn":                  crop_info['name_bn'],
+        "district":                 req.district,
+        "soil_type":                req.soil_type,
+        "land_acres":               req.land_acres,
+        "planting_month":           req.planting_month,
+        "base_yield_per_acre_kg":   round(base_yield_per_acre, 1),
+        "adjusted_yield_per_acre_kg": round(adjusted_yield_per_acre, 1),
+        "estimated_total_yield_kg": round(estimated_total_yield_kg, 1),
+        "yield_range_kg": {
+            "lower": round(lower_kg, 1),
+            "upper": round(upper_kg, 1),
+        },
+        "estimated_revenue_bdt":    round(estimated_revenue_bdt, 0),
+        "estimated_cost_bdt":       round(estimated_cost_bdt, 0),
+        "estimated_profit_bdt":     round(estimated_profit_bdt, 0),
+        "suitability_grade":        grade,
+        "suitability_label":        grade_label,
+        "factors": {
+            "soil":     {"multiplier": soil_mult, "note": soil_note},
+            "season":   {"multiplier": season_mult, "note": season_note},
+            "district": {"multiplier": district_mult, "note": district_note},
+        },
+        "grow_days":   crop_info['grow_days'],
+        "generated_at": datetime.now().isoformat(),
+    }
+
+
 # ── FAIR PRICE CHECK ─────────────────────────────────────────
 @app.get("/api/v1/ai/fair-price", tags=["AI Models"])
 async def fair_price(crop_name: str, district: str):
@@ -1165,3 +1276,201 @@ async def get_sowing_calendar(month: Optional[int] = None):
 
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+
+# ── ADMIN: RETRAIN DATA (Price Prediction + Demand Forecast) ──
+# এই দুটো model লাইভে কোনো আলাদা trained model file load করে না —
+# সরাসরি DATA_FILE (CSV) থেকে rolling-average/seasonal ফর্মুলা দিয়ে
+# prediction বানায়। তাই এখানে নতুন data upload করলেই সেটা সাথে সাথে
+# live prediction-এ প্রতিফলিত হয় — এটাই "retrain" এর কাজ করে।
+if DATABASE_ENABLED:
+    REQUIRED_DATA_COLUMNS = {'date', 'crop_name', 'district', 'avg_price', 'quantity_available'}
+    REQUIRED_DATA_COLUMNS_ORDERED = ['date', 'crop_name', 'district', 'avg_price', 'quantity_available']
+    OPTIONAL_DATA_COLUMNS = ['market_name', 'min_price', 'max_price', 'unit', 'weather_condition', 'season']
+    DATA_BACKUP_DIR = os.path.join(BASE_DIR, 'ai_models', 'data', 'raw', 'backups')
+    RETRAIN_LOG_FILE = os.path.join(BASE_DIR, 'ai_models', 'data', 'raw', 'retrain_log.json')
+    RETRAIN_LOG_MAX_ENTRIES = 200
+
+    def _read_retrain_log():
+        if not os.path.exists(RETRAIN_LOG_FILE):
+            return []
+        try:
+            with open(RETRAIN_LOG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _append_retrain_log(entry: dict):
+        log = _read_retrain_log()
+        log.append(entry)
+        # সবচেয়ে পুরনো entry গুলো ফেলে দিয়ে file-টা যেন খুব বড় না হয়
+        log = log[-RETRAIN_LOG_MAX_ENTRIES:]
+        try:
+            with open(RETRAIN_LOG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(log, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass  # log write fail করলেও retrain-টা আটকাবে না
+
+    def _require_admin(current_user: "User"):
+        if current_user.role != UserRole.admin:
+            raise HTTPException(status_code=403, detail="Admin access required.")
+
+    @app.get("/api/v1/admin/data-status", tags=["Admin"])
+    async def get_training_data_status(current_user: User = Depends(get_current_user)):
+        """বর্তমানে live prediction যে data ব্যবহার করছে তার সারসংক্ষেপ।"""
+        _require_admin(current_user)
+        try:
+            df = pd.read_csv(DATA_FILE)
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            return {
+                "total_rows":      int(len(df)),
+                "date_from":       df['date'].min().strftime('%Y-%m-%d') if df['date'].notna().any() else None,
+                "date_to":         df['date'].max().strftime('%Y-%m-%d') if df['date'].notna().any() else None,
+                "crop_count":      int(df['crop_name'].nunique()),
+                "district_count":  int(df['district'].nunique()),
+                "last_updated":    datetime.fromtimestamp(os.path.getmtime(DATA_FILE)).isoformat(),
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Could not read data file: {e}")
+
+    @app.get("/api/v1/admin/retrain-log", tags=["Admin"])
+    async def get_retrain_log(current_user: User = Depends(get_current_user)):
+        """কে কবে কী data upload করে retrain করেছে তার history (নতুনগুলো আগে)।"""
+        _require_admin(current_user)
+        log = _read_retrain_log()
+        return {"count": len(log), "entries": list(reversed(log))}
+
+    @app.get("/api/v1/admin/retrain-template", tags=["Admin"])
+    async def download_retrain_template():
+        """সঠিক column format-এর একটা sample CSV template download করার জন্য।"""
+        header = REQUIRED_DATA_COLUMNS_ORDERED + OPTIONAL_DATA_COLUMNS
+        sample_rows = [
+            ["2026-07-25", "Tomato", "Dhaka", "35", "150", "Karwan Bazar", "30", "40", "kg", "Sunny", "Summer"],
+            ["2026-07-25", "Potato", "Bogura", "20", "300", "Bogura Bazar", "18", "22", "kg", "Cloudy", "Winter"],
+        ]
+        buf = io.StringIO()
+        buf.write(",".join(header) + "\n")
+        for row in sample_rows:
+            buf.write(",".join(row) + "\n")
+        buf.seek(0)
+        return StreamingResponse(
+            iter([buf.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=agromitra_retrain_template.csv"},
+        )
+
+    @app.post("/api/v1/admin/retrain", tags=["Admin"])
+    async def retrain_with_new_data(
+        file: UploadFile = File(...),
+        mode: str = Form("append"),  # 'append' (upsert by date+crop+district) or 'replace'
+        current_user: User = Depends(get_current_user),
+    ):
+        """
+        🔄 নতুন CSV data দিয়ে Price Prediction ও Demand Forecast-এর জন্য
+        live data refresh করো। Admin-only। Required columns:
+        date, crop_name, district, avg_price, quantity_available
+        """
+        _require_admin(current_user)
+
+        if mode not in ("append", "replace"):
+            raise HTTPException(status_code=400, detail="mode must be 'append' or 'replace'.")
+
+        if not file.filename.lower().endswith('.csv'):
+            raise HTTPException(status_code=400, detail="শুধু .csv file upload করা যাবে।")
+
+        contents = await file.read()
+        try:
+            # encoding='utf-8-sig' → Excel/Windows-এ save করা CSV-তে প্রায়ই একটা
+            # invisible BOM character থাকে যেটা প্রথম column-এর নামের সাথে জুড়ে
+            # যায় (যেমন 'date' হয়ে যায় '\ufeffdate') — এটা সেটা handle করে।
+            # sep=None, engine='python' → comma ছাড়া semicolon/tab দিয়ে save করা
+            # CSV (অনেক সময় Bangladeshi Excel locale-এ হয়) হলেও auto-detect করবে।
+            new_df = pd.read_csv(io.BytesIO(contents), encoding='utf-8-sig', sep=None, engine='python')
+        except Exception:
+            raise HTTPException(status_code=400, detail="CSV file পড়া যায়নি। ফরম্যাট ঠিক আছে কিনা দেখুন।")
+
+        if len(new_df) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded CSV file-এ কোনো data নেই।")
+
+        # column নামের সামনে/পিছনে space বা ভুল case (Date, CROP_NAME ইত্যাদি)
+        # থাকলেও যেন মিলে যায়
+        new_df.columns = [str(c).strip().lower() for c in new_df.columns]
+
+        missing = REQUIRED_DATA_COLUMNS - set(new_df.columns)
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"CSV-তে এই column গুলো নেই: {', '.join(sorted(missing))}. "
+                       f"পাওয়া column গুলো: {', '.join(new_df.columns)}. "
+                       f"Required columns: {', '.join(sorted(REQUIRED_DATA_COLUMNS))}"
+            )
+
+        try:
+            new_df['date'] = pd.to_datetime(new_df['date'], errors='raise')
+        except Exception:
+            raise HTTPException(status_code=400, detail="'date' column-এ কিছু value ঠিক তারিখ না (YYYY-MM-DD ফরম্যাট ব্যবহার করুন)।")
+
+        for col in ('avg_price', 'quantity_available'):
+            new_df[col] = pd.to_numeric(new_df[col], errors='coerce')
+        bad_rows = new_df[['avg_price', 'quantity_available']].isna().any(axis=1).sum()
+        if bad_rows > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{int(bad_rows)}টা row-তে avg_price/quantity_available সংখ্যা হিসেবে ঠিক না।"
+            )
+        if (new_df['avg_price'] <= 0).any() or (new_df['quantity_available'] < 0).any():
+            raise HTTPException(status_code=400, detail="avg_price অবশ্যই 0-এর বেশি এবং quantity_available ঋণাত্মক হতে পারবে না।")
+
+        for col in OPTIONAL_DATA_COLUMNS:
+            if col not in new_df.columns:
+                new_df[col] = None
+
+        # ── আগের data backup করে রাখো (mode যাই হোক, সবসময়) ──
+        os.makedirs(DATA_BACKUP_DIR, exist_ok=True)
+        backup_name = f"crop_prices_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        try:
+            shutil.copy(DATA_FILE, os.path.join(DATA_BACKUP_DIR, backup_name))
+        except Exception:
+            backup_name = None  # backup fail করলেও retrain আটকাবে না, শুধু warn করা হবে না এখানে
+
+        if mode == "replace":
+            final_df = new_df
+        else:
+            existing_df = pd.read_csv(DATA_FILE)
+            existing_df['date'] = pd.to_datetime(existing_df['date'], errors='coerce')
+            combined = pd.concat([existing_df, new_df], ignore_index=True)
+            # একই date+crop+district-এর জন্য নতুন uploaded row-টাই থাকবে (keep='last')
+            combined = combined.drop_duplicates(subset=['date', 'crop_name', 'district'], keep='last')
+            final_df = combined.sort_values(['crop_name', 'district', 'date']).reset_index(drop=True)
+
+        final_df['date'] = pd.to_datetime(final_df['date']).dt.strftime('%Y-%m-%d')
+        final_df.to_csv(DATA_FILE, index=False)
+
+        log_entry = {
+            "timestamp":       datetime.now().isoformat(),
+            "admin_id":        str(current_user.user_id),
+            "admin_name":      current_user.name_en,
+            "filename":        file.filename,
+            "mode":            mode,
+            "rows_uploaded":   int(len(new_df)),
+            "total_rows_after": int(len(final_df)),
+            "date_range_from": final_df['date'].min(),
+            "date_range_to":   final_df['date'].max(),
+            "crops_in_upload": sorted(new_df['crop_name'].dropna().unique().tolist()),
+            "backup_file":     backup_name,
+        }
+        _append_retrain_log(log_entry)
+
+        return {
+            "message":        "✅ Data update হয়ে গেছে — live prediction এখন এই নতুন data ব্যবহার করবে।",
+            "mode":            mode,
+            "rows_uploaded":   int(len(new_df)),
+            "total_rows_now":  int(len(final_df)),
+            "date_range": {
+                "from": final_df['date'].min(),
+                "to":   final_df['date'].max(),
+            },
+            "crops_in_upload":     sorted(new_df['crop_name'].dropna().unique().tolist()),
+            "districts_in_upload": sorted(new_df['district'].dropna().unique().tolist()),
+            "backup_file":     backup_name,
+        }

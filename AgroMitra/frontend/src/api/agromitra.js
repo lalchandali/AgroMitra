@@ -180,6 +180,9 @@ export const getDemandForecast     = (cropName, district, days = 7) =>
 export const getCropRecommendation = (profile) =>
   API.post('/api/v1/ai/crop-recommendation', profile)
 
+export const getCropYield = (payload) =>
+  API.post('/api/v1/ai/crop-yield', payload)
+
 export const getFairPrice          = (cropName, district) =>
   API.get('/api/v1/ai/fair-price', { params: { crop_name: cropName, district } })
 
@@ -256,6 +259,22 @@ export const adminSetTestimonialStatus = (testimonialId, isApproved) =>
 
 export const adminDeleteTestimonial = (testimonialId) =>
   API.delete(`/api/v1/testimonials/admin/${testimonialId}`)
+
+// ── Admin: AI Model Data Retrain ───────────────────────────────
+export const getTrainingDataStatus = () => API.get('/api/v1/admin/data-status')
+
+export const retrainModelData = (file, mode = 'append') => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('mode', mode)
+  return API.post('/api/v1/admin/retrain', formData, {
+    headers: { 'Content-Type': undefined }
+  })
+}
+
+export const getRetrainLog = () => API.get('/api/v1/admin/retrain-log')
+
+export const downloadRetrainTemplate = () => API.get('/api/v1/admin/retrain-template', { responseType: 'blob' })
 
 // ── Misc ─────────────────────────────────────────────────────
 export const getCrops     = () => API.get('/api/v1/crops')

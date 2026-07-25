@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-07-25T23:15:04.345381",
+    "admin_id": "c3050aab-31ba-45b9-9a65-70a823cca45b",
+    "admin_name": "Admin Lal Chand Ali",
+    "filename": "agromitra_retrain_template.csv",
+    "mode": "append",
+    "rows_uploaded": 3,
+    "total_rows_after": 198379,
+    "date_range_from": "2022-01-01",
+    "date_range_to": "2026-07-25",
+    "crops_in_upload": [
+      "Potato",
+      "Tomato"
+    ],
+    "backup_file": "crop_prices_backup_20260725_231458.csv"
+  }
+]

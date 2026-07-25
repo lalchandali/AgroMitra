@@ -4,7 +4,7 @@ import {
   Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts'
 import {
-  getPricePrediction, getDemandForecast, getCropRecommendation,
+  getPricePrediction, getDemandForecast, getCropRecommendation, getCropYield,
   getMyProducts, createProduct, updateProduct, deleteProduct,
   getMyOrders, updateOrderStatus,
   getStoredUser, uploadProfilePhoto, updateProfile, resolveImageUrl
@@ -46,6 +46,11 @@ const CROP_EMOJIS = {
 const AI_PRICE_CROPS = [
   "Tomato", "Onion", "Potato", "Brinjal", "Cabbage", "Garlic", "Rice",
   "Ginger", "Maize", "Wheat", "Chili", "Watermelon", "Mustard", "Jute"
+]
+
+const MONTH_NAMES = [
+  "", "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
 ]
 
 const BLANK_PRODUCT = {
@@ -246,6 +251,15 @@ export default function FarmerDashboard() {
   const [demandData, setDemandData] = useState(null)
   const [recData, setRecData] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [yieldForm, setYieldForm] = useState({
+    crop_name: 'Tomato',
+    district: 'Bogura',
+    soil_type: 'Loam',
+    land_acres: 2.5,
+    planting_month: new Date().getMonth() + 1,
+  })
+  const [yieldData, setYieldData] = useState(null)
+  const [yieldLoading, setYieldLoading] = useState(false)
   const [recForm, setRecForm] = useState({
     farmer_name: user?.full_name || 'Mohammad Rahim',
     district: 'Bogura',
@@ -485,6 +499,17 @@ const fetchRecommendations = async () => {
   } finally { setAiLoading(false) }
 }
 
+const fetchCropYield = async () => {
+  setYieldLoading(true)
+  try {
+    const res = await getCropYield(yieldForm)
+    setYieldData(res.data)
+    toast.success('Yield estimate ready!')
+  } catch (e) {
+    toast.error(e?.response?.data?.detail || 'Failed to get yield estimate')
+  } finally { setYieldLoading(false) }
+}
+
 // ── Filter orders ────────────────────────────────────────────
 const filteredOrders = orderFilter === 'all'
   ? orders
@@ -515,6 +540,7 @@ return (
           { key: 'price',      icon: '🤖', label: T('priceAI') },
           { key: 'demand',     icon: '📈', label: T('demandAI') },
           { key: 'recommend',  icon: '🌱', label: T('cropAI') },
+          { key: 'yield',      icon: '🌾', label: lang === 'bn' ? '🌾 ফলন অনুমান' : '🌾 Crop Yield' },
           { key: 'listings',   icon: '📦', label: T('myListings') },
           { key: 'orders',     icon: '🛒', label: T('orders'), badge: pendingOrders > 0 ? pendingOrders : null },
           { key: 'profile',    icon: '👤', label: T('profile') },
@@ -909,7 +935,6 @@ return (
           ))}
           {[
             ['district', 'District', DISTRICTS],
-            ['soil_type', T('soilType'), [T('soilTypeLoam'), T('soilTypeSandy'), T('soilTypeClayLoam'), T('soilTypeClay')]],
             ['experience', 'Experience', ['Beginner', 'Intermediate', 'Expert']],
           ].map(([field, label, opts]) => (
             <div className="form-group" key={field}>
@@ -920,6 +945,18 @@ return (
               </select>
             </div>
           ))}
+          <div className="form-group">
+            <label className="form-label">{T('soilType')}</label>
+            <select className="form-select" value={recForm.soil_type}
+              onChange={e => setRecForm({ ...recForm, soil_type: e.target.value })}>
+              {[
+                ['Loam', T('soilTypeLoam')],
+                ['Sandy Loam', T('soilTypeSandy')],
+                ['Clay Loam', T('soilTypeClayLoam')],
+                ['Clay', T('soilTypeClay')],
+              ].map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+            </select>
+          </div>
           <button className="btn btn-primary btn-full" onClick={fetchRecommendations} disabled={aiLoading}>
             {aiLoading ? '⏳ Analyzing…' : '🌱 Get AI Recommendations'}
           </button>
@@ -961,6 +998,118 @@ return (
               <div style={{ fontSize: 64, marginBottom: 16 }}>🌱</div>
               <div style={{ fontSize: 18, fontWeight: 600, color: '#546E7A' }}>Fill your profile and click</div>
               <div style={{ fontSize: 15, color: '#9E9E9E', marginTop: 8 }}>"Get AI Recommendations"</div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
+    {/* ════ Crop Yield Tab ════ */}
+    {activeTab === 'yield' && (
+      <div className="grid-2">
+        <div className="card">
+          <div className="card-title">🌾 {lang === 'bn' ? 'ফলন অনুমানের জন্য তথ্য দিন' : 'Yield Estimate Inputs'}</div>
+
+          <div className="form-group">
+            <label className="form-label">{lang === 'bn' ? 'ফসল' : 'Crop'}</label>
+            <select className="form-select" value={yieldForm.crop_name}
+              onChange={e => setYieldForm({ ...yieldForm, crop_name: e.target.value })}>
+              {AI_PRICE_CROPS.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">District</label>
+            <select className="form-select" value={yieldForm.district}
+              onChange={e => setYieldForm({ ...yieldForm, district: e.target.value })}>
+              {DISTRICTS.map(d => <option key={d}>{d}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">{T('soilType')}</label>
+            <select className="form-select" value={yieldForm.soil_type}
+              onChange={e => setYieldForm({ ...yieldForm, soil_type: e.target.value })}>
+              {[
+                ['Loam', T('soilTypeLoam')],
+                ['Sandy Loam', T('soilTypeSandy')],
+                ['Clay Loam', T('soilTypeClayLoam')],
+                ['Clay', T('soilTypeClay')],
+              ].map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">{lang === 'bn' ? 'জমির পরিমাণ (acres)' : 'Land (acres)'}</label>
+            <input className="form-input" type="number" min="0.1" step="0.1" value={yieldForm.land_acres}
+              onChange={e => setYieldForm({ ...yieldForm, land_acres: Number(e.target.value) })} />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">{lang === 'bn' ? 'বপনের মাস' : 'Planting Month'}</label>
+            <select className="form-select" value={yieldForm.planting_month}
+              onChange={e => setYieldForm({ ...yieldForm, planting_month: Number(e.target.value) })}>
+              {MONTH_NAMES.map((m, i) => i > 0 && <option key={i} value={i}>{m}</option>)}
+            </select>
+          </div>
+
+          <button className="btn btn-primary btn-full" onClick={fetchCropYield} disabled={yieldLoading}>
+            {yieldLoading ? '⏳ Calculating…' : `🌾 ${lang === 'bn' ? 'ফলন অনুমান করুন' : 'Estimate Yield'}`}
+          </button>
+        </div>
+
+        <div>
+          {yieldData ? (
+            <div>
+              <div className="card mb-20" style={{ textAlign: 'center', padding: 24 }}>
+                <div style={{ fontSize: 40, marginBottom: 4 }}>{CROP_EMOJIS[yieldData.crop] || '🌾'}</div>
+                <div style={{ fontSize: 14, color: '#546E7A' }}>{yieldData.crop} ({yieldData.name_bn})</div>
+                <div style={{ fontSize: 34, fontWeight: 800, color: '#2E7D32', marginTop: 6 }}>
+                  {yieldData.estimated_total_yield_kg?.toLocaleString()} kg
+                </div>
+                <div style={{ fontSize: 12, color: '#9E9E9E' }}>
+                  {lang === 'bn' ? 'সম্ভাব্য পরিসর' : 'Likely range'}: {yieldData.yield_range_kg?.lower?.toLocaleString()} – {yieldData.yield_range_kg?.upper?.toLocaleString()} kg
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <span className={`badge ${yieldData.suitability_grade === 'A' ? 'badge-green' : yieldData.suitability_grade === 'B' ? 'badge-blue' : yieldData.suitability_grade === 'C' ? 'badge-gold' : 'badge-red'}`}>
+                    {lang === 'bn' ? 'গ্রেড' : 'Grade'} {yieldData.suitability_grade} — {yieldData.suitability_label}
+                  </span>
+                </div>
+              </div>
+
+              <div className="card mb-20">
+                <div className="card-title" style={{ fontSize: 14 }}>{lang === 'bn' ? '💰 আর্থিক হিসাব' : '💰 Financial Breakdown'}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 13, marginTop: 10 }}>
+                  <div>
+                    <div style={{ color: '#9E9E9E', fontSize: 11 }}>{lang === 'bn' ? 'আয় (Revenue)' : 'Revenue'}</div>
+                    <strong>৳{yieldData.estimated_revenue_bdt?.toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9E9E9E', fontSize: 11 }}>{lang === 'bn' ? 'খরচ (Cost)' : 'Cost'}</div>
+                    <strong>৳{yieldData.estimated_cost_bdt?.toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9E9E9E', fontSize: 11 }}>{lang === 'bn' ? 'লাভ (Profit)' : 'Profit'}</div>
+                    <strong style={{ color: '#2E7D32' }}>৳{yieldData.estimated_profit_bdt?.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="card-title" style={{ fontSize: 14 }}>{lang === 'bn' ? '📋 কারণ বিশ্লেষণ' : '📋 Suitability Factors'}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, fontSize: 13 }}>
+                  <div>🌱 {lang === 'bn' ? 'মাটি' : 'Soil'}: {yieldData.factors?.soil?.note}</div>
+                  <div>📅 {lang === 'bn' ? 'মৌসুম' : 'Season'}: {yieldData.factors?.season?.note}</div>
+                  <div>📍 {lang === 'bn' ? 'জেলা' : 'District'}: {yieldData.factors?.district?.note}</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+              <div style={{ fontSize: 64, marginBottom: 16 }}>🌾</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: '#546E7A' }}>
+                {lang === 'bn' ? 'তথ্য দিয়ে "ফলন অনুমান করুন"-এ ক্লিক করুন' : 'Fill inputs and click "Estimate Yield"'}
+              </div>
             </div>
           )}
         </div>

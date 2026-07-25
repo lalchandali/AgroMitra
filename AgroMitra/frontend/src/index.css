@@ -122,14 +122,17 @@ body {
 
 .nav-user {
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   max-width: 150px;
+  max-height: 46px;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 10px 10px;
+  margin: 2;
+  border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.12);
 }
 

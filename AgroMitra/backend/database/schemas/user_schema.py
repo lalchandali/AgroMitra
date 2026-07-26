@@ -107,4 +107,9 @@ class PasswordResetConfirm(BaseModel):
     new_password:  str = Field(..., min_length=6)
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., example="oldPass123")
+    new_password:      str = Field(..., min_length=6, example="newPass456")
+
+
 Token.model_rebuild()

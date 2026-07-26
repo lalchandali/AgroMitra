@@ -147,6 +147,11 @@ export const loginUser      = (credentials) => API.post('/api/v1/auth/login', cr
 export const registerUser   = (payload)     => API.post('/api/v1/auth/register', payload)
 export const getCurrentUser = ()            => API.get('/api/v1/auth/me')
 export const updateProfile  = (data)        => API.put('/api/v1/auth/profile', data)
+
+export const changePassword = (currentPassword, newPassword) =>
+  API.put('/api/v1/auth/change-password', { current_password: currentPassword, new_password: newPassword })
+
+export const deactivateAccount = () => API.delete('/api/v1/auth/account')
 export const forgotPassword = (mobile)      => API.post('/api/v1/auth/forgot-password', { mobile_number: mobile })
 export const resetPassword  = (mobile, otp, newPassword) => API.post('/api/v1/auth/reset-password', { mobile_number: mobile, otp, new_password: newPassword })
 

@@ -54,12 +54,12 @@ export const t = {
   settings:       { en: 'Settings',        bn: 'সেটিংস' },
 
   // ── Page titles ───────────────────────────────────────────
-farmerDashTitle: {en: '🌾 Smart Farmer Dashboard',bn: '🌾 স্মার্ট কৃষক ড্যাশবোর্ড'},
-farmerDashSub: {en: 'Empowering Farmers with AI-Driven Agriculture',bn: 'AI-ভিত্তিক প্রযুক্তির মাধ্যমে স্মার্ট কৃষি ব্যবস্থাপনা'},
-buyerTitle: {en: '🛒 Smart Agriculture Marketplace',bn: '🛒 স্মার্ট কৃষি মার্কেটপ্লেস'},
-buyerSub: { en: 'Connecting Buyers with Trusted Farmers Across Bangladesh',bn: 'বাংলাদেশজুড়ে বিশ্বস্ত কৃষকদের সাথে ক্রেতাদের সংযুক্ত করছে'},
-adminTitle: {en: '⚙️ Platform Management Dashboard',bn: '⚙️ প্ল্যাটফর্ম ম্যানেজমেন্ট ড্যাশবোর্ড'},
-adminSub: {en: 'Monitor, Manage & Optimize the AgroMitra Ecosystem',bn: 'AgroMitra প্ল্যাটফর্ম পর্যবেক্ষণ, পরিচালনা ও উন্নয়ন করুন'},
+  farmerDashTitle:  { en: '👨‍🌾 Farmer Dashboard',   bn: '👨‍🌾 কৃষক ড্যাশবোর্ড' },
+  farmerDashSub:    { en: 'AI-powered insights by AgroMitra', bn: 'AgroMitra-এর AI ভিত্তিক তথ্য' },
+  buyerTitle:       { en: '🛒 Buyer Marketplace',  bn: '🛒 ক্রেতা মার্কেটপ্লেস' },
+  buyerSub:         { en: 'Fresh produce directly from Bangladeshi farmers — zero middlemen', bn: 'বাংলাদেশের কৃষকদের কাছ থেকে সরাসরি তাজা পণ্য — কোনো মধ্যস্থতাকারী নেই' },
+  adminTitle:       { en: '⚙️ Admin Panel',        bn: '⚙️ প্রশাসন প্যানেল' },
+  adminSub:         { en: 'AgroMitra Platform Management', bn: 'AgroMitra প্ল্যাটফর্ম ব্যবস্থাপনা' },
 
   // ── Farmer Dashboard ──────────────────────────────────────
   welcomeFarmer:    { en: 'Welcome',               bn: 'স্বাগতম' },
@@ -165,7 +165,7 @@ adminSub: {en: 'Monitor, Manage & Optimize the AgroMitra Ecosystem',bn: 'AgroMit
   deleteProduct:    { en: '🗑️ Delete',             bn: '🗑️ মুছুন' },
   showing:          { en: 'Showing',                bn: 'দেখানো হচ্ছে' },
   of:               { en: 'of',                     bn: 'এর মধ্যে' },
-  testimonials:     { en: ' Testimonials',         bn: ' মতামত' },
+  testimonials:     { en: '💬 Testimonials',         bn: '💬 মতামত' },
   testimonialsMgmt: { en: '💬 Testimonial Moderation', bn: '💬 মতামত অনুমোদন' },
   thQuote:          { en: 'Quote',                   bn: 'মতামত' },
   thRating:         { en: 'Rating',                  bn: 'রেটিং' },
@@ -264,7 +264,6 @@ adminSub: {en: 'Monitor, Manage & Optimize the AgroMitra Ecosystem',bn: 'AgroMit
   thListed:         { en: 'Listed',      bn: 'তালিকাভুক্ত' },
 
   // ── Settings ──────────────────────────────────────────────
-  settings:           { en: 'Settings',                bn: 'সেটিংস' },
   settingsTitle:      { en: '⚙️ Settings',             bn: '⚙️ সেটিংস' },
   settingsSub:        { en: 'Manage your account preferences', bn: 'আপনার অ্যাকাউন্ট পছন্দ পরিচালনা করুন' },
   languageSection:    { en: '🌐 Language',              bn: '🌐 ভাষা' },

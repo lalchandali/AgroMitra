@@ -7,19 +7,18 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import UploadFile, File
 import uuid
 import os
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List, Optional
 from fastapi import Query
-from backend.database.models.user import User, UserRole
 
 from backend.database import get_db
-from backend.database.models.user import User
+from backend.database.models.user import User, UserRole
 from backend.database.schemas.user_schema import (
     UserRegister, UserLogin, OTPRequest, OTPVerify,
     Token, TokenRefresh, UserResponse, UserUpdate,
-    PasswordResetRequest, PasswordResetConfirm
+    PasswordResetRequest, PasswordResetConfirm, ChangePasswordRequest
 )
 from backend.database.utils.security import (
     hash_password, verify_password,
@@ -174,6 +173,23 @@ async def reset_password(req: PasswordResetConfirm, db: Session = Depends(get_db
     user.password_hash = hash_password(req.new_password)
     db.commit()
     return {"message": "Password reset successfully."}
+
+
+# ── PUT /api/v1/auth/change-password ─────────────────────────
+@router.put("/change-password")
+async def change_password(
+    req: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Login করা অবস্থায় নিজের password বদলানো — current password verify করেই।"""
+    if not verify_password(req.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="বর্তমান পাসওয়ার্ড ভুল।")
+    if req.current_password == req.new_password:
+        raise HTTPException(status_code=400, detail="নতুন পাসওয়ার্ড আগেরটার থেকে আলাদা হতে হবে।")
+    current_user.password_hash = hash_password(req.new_password)
+    db.commit()
+    return {"message": "Password changed successfully."}
 
 
 # ── DELETE /api/v1/auth/account ──────────────────────────────

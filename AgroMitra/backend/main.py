@@ -27,17 +27,14 @@ if sys.platform == "win32":
     except Exception:
         pass  # খুব পুরনো Python version হলে reconfigure না থাকতে পারে — silently skip
 
-from fastapi import HTTPException
-from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
 import pandas as pd
 import numpy as np
-import pickle
 import json
 import os
 import io
@@ -45,7 +42,6 @@ import shutil
 import warnings
 import requests
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
 from fastapi.staticfiles import StaticFiles
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -565,7 +561,6 @@ def simple_price_forecast(df: pd.DataFrame, days: int):
         trend = 0
 
     # Seasonal adjustment
-    month = last_date.month
     seasonal_factors = {
         1: 1.05, 2: 1.03, 3: 0.95, 4: 0.92, 5: 0.90,
         6: 0.88, 7: 0.85, 8: 0.88, 9: 0.92, 10: 1.00,
@@ -577,7 +572,7 @@ def simple_price_forecast(df: pd.DataFrame, days: int):
         future_date = last_date + timedelta(days=d)
         future_month = future_date.month
         seasonal_adj = seasonal_factors.get(future_month, 1.0)
-        predicted = (roll_7 * 0.5 + roll_30 * 0.3 + last_price * 0.2)
+        predicted = (roll_7 * 0.4 + roll_30 * 0.3 + roll_90 * 0.2 + last_price * 0.1)
         predicted = predicted + (trend * d * 0.3)
         predicted = predicted * seasonal_adj
         predicted = max(predicted, last_price * 0.5)
@@ -617,7 +612,6 @@ def simple_demand_forecast(df: pd.DataFrame, days: int):
     roll_30 = np.mean(demand[-30:]) if len(demand) >= 30 else last_dem
     mean_dem = np.mean(demand)
 
-    month = last_date.month
     seasonal = {
         1: 1.10, 2: 1.05, 3: 0.90, 4: 0.88, 5: 0.92,
         6: 0.80, 7: 0.78, 8: 0.82, 9: 0.90, 10: 1.05,

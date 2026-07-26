@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-import sys
 
 # Windows console UTF-8 fix এখন main.py-এর একদম শুরুতে একবারই করা হয়
 # (sys.stdout.reconfigure) — তাই এখানে আলাদা করে stdout wrap করার
@@ -275,13 +274,33 @@ async def update_order_status(
     farmer_actions = [OrderStatus.confirmed, OrderStatus.ready,
                       OrderStatus.dispatched, OrderStatus.shipped, OrderStatus.in_transit,
                       OrderStatus.out_for_delivery, OrderStatus.delivered]
-    buyer_actions = [OrderStatus.cancelled]
 
-    if new_status in farmer_actions and str(order.farmer_id) != str(current_user.user_id):
+    is_farmer = str(order.farmer_id) == str(current_user.user_id)
+    is_buyer = str(order.buyer_id) == str(current_user.user_id)
+
+    if new_status in farmer_actions and not is_farmer:
         raise HTTPException(status_code=403, detail="Only the farmer can update to this status.")
 
-    if new_status in buyer_actions and str(order.buyer_id) != str(current_user.user_id):
-        raise HTTPException(status_code=403, detail="Only the buyer can update to this status.")
+    # cancel: buyer নিজের অর্ডার বাতিল করতে পারে, farmer ও 'placed' অর্ডার reject করতে পারে
+    # (যেমন stock হঠাৎ শেষ হয়ে গেলে) — কিন্তু অন্য কেউ না
+    if new_status == OrderStatus.cancelled and not (is_farmer or is_buyer):
+        raise HTTPException(status_code=403, detail="Only the buyer or farmer can cancel this order.")
+
+    # ── Terminal states আর বদলানো যাবে না ──
+    # (delivered/cancelled order-কে re-trigger করলে escrow দ্বিতীয়বার release/refund
+    #  হতে পারে — এই check ছাড়া payment integrity ভেঙে যাবে)
+    if order.status in (OrderStatus.delivered, OrderStatus.cancelled):
+        raise HTTPException(
+            status_code=400,
+            detail=f"This order is already '{order.status.value}' and cannot be changed further."
+        )
+
+    # ── Cancel শুধু 'placed' অবস্থায় করা যাবে (buyer বা farmer, দুজনের জন্যই) ──
+    if new_status == OrderStatus.cancelled and order.status != OrderStatus.placed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel order with status '{order.status.value}'. Only 'placed' orders can be cancelled."
+        )
 
     order.status = new_status
 

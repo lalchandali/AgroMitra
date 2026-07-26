@@ -1,9 +1,8 @@
 import { useLanguage } from '../hooks/useLanguage'
-import { clearAuthSession, getPlatformFee, updatePlatformFee } from '../api/agromitra'
+import { clearAuthSession, getPlatformFee, updatePlatformFee, changePassword, deactivateAccount } from '../api/agromitra'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useState, useEffect, useCallback } from 'react'
-import { useTheme } from '../context/ThemeContext'
 
 // ── Helpers ──────────────────────────────────────────────────
 const PREF_KEY = 'agromitra_prefs'
@@ -47,16 +46,20 @@ export default function SettingsTab({ userRole }) {
 
   // prefs state
   const [prefs, setPrefs] = useState(getPrefs)
-  const { darkMode, toggleDarkMode } = useTheme()
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem('agromitra_dark') === '1'
+  )
 
   // password change
   const [showPassForm, setShowPassForm] = useState(false)
   const [passForm, setPassForm] = useState({ current: '', newPass: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
+  const [passSaving, setPassSaving] = useState(false)
 
   // delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteInput, setDeleteInput] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   // platform fee (admin only)
   const [platformFee, setPlatformFee] = useState(null)      // বর্তমানে server-এ যা সেভ আছে
@@ -75,6 +78,16 @@ export default function SettingsTab({ userRole }) {
     setPrefs(next)
     savePrefs(next)
   }
+
+  // Dark mode toggle
+  const toggleDark = () => {
+    const next = !darkMode
+    setDarkMode(next)
+    document.body.classList.toggle('dark-mode', next)
+    localStorage.setItem('agromitra_dark', next ? '1' : '0')
+    toast.success(next ? T('Dark mode on 🌙', 'ডার্ক মোড চালু 🌙') : T('Light mode on ☀️', 'লাইট মোড চালু ☀️'))
+  }
+
   // Load dark mode on mount
   useEffect(() => {
     document.body.classList.toggle('dark-mode', darkMode)
@@ -120,22 +133,37 @@ export default function SettingsTab({ userRole }) {
     }
   }
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault()
     if (!passForm.current) { toast.error(T('Enter current password', 'বর্তমান পাসওয়ার্ড দিন')); return }
     if (passForm.newPass.length < 6) { toast.error(T('Min 6 characters', 'কমপক্ষে ৬ অক্ষর')); return }
     if (passForm.newPass !== passForm.confirm) { toast.error(T('Passwords do not match', 'পাসওয়ার্ড মিলছে না')); return }
-    // TODO: connect to backend /api/v1/auth/change-password
-    toast.success(T('Password changed!', 'পাসওয়ার্ড পরিবর্তন হয়েছে!'))
-    setPassForm({ current: '', newPass: '', confirm: '' })
-    setShowPassForm(false)
+    setPassSaving(true)
+    try {
+      await changePassword(passForm.current, passForm.newPass)
+      toast.success(T('Password changed!', 'পাসওয়ার্ড পরিবর্তন হয়েছে!'))
+      setPassForm({ current: '', newPass: '', confirm: '' })
+      setShowPassForm(false)
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || T('Could not change password', 'পাসওয়ার্ড পরিবর্তন করা যায়নি'))
+    } finally {
+      setPassSaving(false)
+    }
   }
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (deleteInput !== 'DELETE') { toast.error(T('Type DELETE to confirm', '"DELETE" টাইপ করুন')); return }
-    toast.success(T('Account deleted. Goodbye!', 'অ্যাকাউন্ট মুছে ফেলা হয়েছে!'))
-    clearAuthSession()
-    navigate('/auth')
+    setDeleting(true)
+    try {
+      await deactivateAccount()
+      toast.success(T('Account deleted. Goodbye!', 'অ্যাকাউন্ট মুছে ফেলা হয়েছে!'))
+      clearAuthSession()
+      navigate('/auth')
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || T('Could not delete account', 'অ্যাকাউন্ট মুছে ফেলা যায়নি'))
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -152,20 +180,9 @@ export default function SettingsTab({ userRole }) {
         />
         <Toggle
           on={darkMode}
-          onChange={() => {
-            toggleDarkMode()
-
-            toast.success(
-              !darkMode
-                ? T('Dark mode enabled 🌙', 'ডার্ক মোড চালু হয়েছে 🌙')
-                : T('Light mode enabled ☀️', 'লাইট মোড চালু হয়েছে ☀️')
-            )
-          }}
+          onChange={toggleDark}
           label={T('Dark Mode', 'ডার্ক মোড')}
-          sub={T(
-            'Switch to a premium dark interface',
-            'প্রিমিয়াম ডার্ক ইন্টারফেস ব্যবহার করুন'
-          )}
+          sub={T('Use dark theme across all dashboards', 'সব ড্যাশবোর্ডে ডার্ক থিম ব্যবহার করুন')}
         />
       </div>
 
@@ -292,8 +309,8 @@ export default function SettingsTab({ userRole }) {
                 )}
               </div>
             ))}
-            <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: 8 }}>
-              🔑 {T('Update Password', 'পাসওয়ার্ড আপডেট করুন')}
+            <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: 8 }} disabled={passSaving}>
+              {passSaving ? '⏳ ' + T('Updating...', 'আপডেট হচ্ছে...') : `🔑 ${T('Update Password', 'পাসওয়ার্ড আপডেট করুন')}`}
             </button>
           </form>
         )}
@@ -350,14 +367,14 @@ export default function SettingsTab({ userRole }) {
               <button
                 className="btn"
                 onClick={handleDeleteAccount}
-                disabled={deleteInput !== 'DELETE'}
+                disabled={deleteInput !== 'DELETE' || deleting}
                 style={{
                   background: deleteInput === 'DELETE' ? '#C62828' : '#E0E0E0',
                   color: deleteInput === 'DELETE' ? 'white' : '#9E9E9E',
                   border: 'none', fontWeight: 600
                 }}
               >
-                🗑️ {T('Confirm Delete', 'মুছে ফেলুন')}
+                {deleting ? '⏳ ' + T('Deleting...', 'মুছে ফেলা হচ্ছে...') : `🗑️ ${T('Confirm Delete', 'মুছে ফেলুন')}`}
               </button>
               <button className="btn btn-secondary" onClick={() => { setShowDeleteConfirm(false); setDeleteInput('') }}>
                 {T('Cancel', 'বাতিল')}

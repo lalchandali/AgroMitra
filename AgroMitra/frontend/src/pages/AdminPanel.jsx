@@ -17,12 +17,12 @@ const orderBadge = (status) => {
 }
 
 const paymentBadge = (s) => s === 'released' ? 'badge-green' : s === 'refunded' ? 'badge-red' : 'badge-gold'
-const roleBadge = (r) => ({ farmer: 'badge-green', buyer: 'badge-blue', consumer: 'badge-gold', admin: 'badge-red' }[r] || 'badge-blue')
+const roleBadge = (r) => ({ farmer:'badge-green', buyer:'badge-blue', consumer:'badge-gold', admin:'badge-red' }[r] || 'badge-blue')
 
 const CROP_EMOJIS = {
-  Tomato: '🍅', Onion: '🧅', Potato: '🥔', Brinjal: '🍆', Cabbage: '🥬',
-  Rice: '🌾', Wheat: '🌾', Corn: '🌽', Garlic: '🧄', Ginger: '🫚',
-  Chili: '🌶️', Carrot: '🥕', Cucumber: '🥒', Pumpkin: '🎃',
+  Tomato:'🍅', Onion:'🧅', Potato:'🥔', Brinjal:'🍆', Cabbage:'🥬',
+  Rice:'🌾', Wheat:'🌾', Corn:'🌽', Garlic:'🧄', Ginger:'🫚',
+  Chili:'🌶️', Carrot:'🥕', Cucumber:'🥒', Pumpkin:'🎃',
 }
 
 export default function AdminPanel() {
@@ -32,46 +32,46 @@ export default function AdminPanel() {
   const [apiStatus, setApiStatus] = useState(null)
 
   // Users
-  const [users, setUsers] = useState([])
-  const [usersLoading, setUsersLoading] = useState(false)
-  const [userSearch, setUserSearch] = useState('')
+  const [users, setUsers]                   = useState([])
+  const [usersLoading, setUsersLoading]     = useState(false)
+  const [userSearch, setUserSearch]         = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('')
 
   // Orders
-  const [orders, setOrders] = useState([])
-  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [orders, setOrders]                   = useState([])
+  const [ordersLoading, setOrdersLoading]     = useState(false)
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
-  const [orderSearch, setOrderSearch] = useState('')
+  const [orderSearch, setOrderSearch]         = useState('')
 
   // Products
-  const [products, setProducts] = useState([])
+  const [products, setProducts]               = useState([])
   const [productsLoading, setProductsLoading] = useState(false)
-  const [productSearch, setProductSearch] = useState('')
+  const [productSearch, setProductSearch]     = useState('')
   const [productStatusFilter, setProductStatusFilter] = useState('all')
 
   // Testimonials
-  const [testimonials, setTestimonials] = useState([])
+  const [testimonials, setTestimonials]             = useState([])
   const [testimonialsLoading, setTestimonialsLoading] = useState(false)
   const [testimonialStatusFilter, setTestimonialStatusFilter] = useState('pending')
 
   // Retrain data (Price Prediction + Demand Forecast)
-  const [dataStatus, setDataStatus] = useState(null)
+  const [dataStatus, setDataStatus]           = useState(null)
   const [dataStatusLoading, setDataStatusLoading] = useState(false)
-  const [retrainFile, setRetrainFile] = useState(null)
-  const [retrainMode, setRetrainMode] = useState('append')
-  const [retraining, setRetraining] = useState(false)
-  const [retrainResult, setRetrainResult] = useState(null)
-  const [retrainLog, setRetrainLog] = useState([])
+  const [retrainFile, setRetrainFile]         = useState(null)
+  const [retrainMode, setRetrainMode]         = useState('append')
+  const [retraining, setRetraining]           = useState(false)
+  const [retrainResult, setRetrainResult]     = useState(null)
+  const [retrainLog, setRetrainLog]           = useState([])
   const [retrainLogLoading, setRetrainLogLoading] = useState(false)
-  const [showRetrainLog, setShowRetrainLog] = useState(false)
+  const [showRetrainLog, setShowRetrainLog]   = useState(false)
   const [templateDownloading, setTemplateDownloading] = useState(false)
 
   // Profile
-  const [user, setUser] = useState(getStoredUser())
-  const [photoKey, setPhotoKey] = useState(Date.now())
+  const [user, setUser]                   = useState(getStoredUser())
+  const [photoKey, setPhotoKey]           = useState(Date.now())
   const [profileEditMode, setProfileEditMode] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
-  const [profileForm, setProfileForm] = useState({
+  const [profileForm, setProfileForm]     = useState({
     name_en: user?.name_en || '',
     name_bn: user?.name_bn || '',
     mobile_number: user?.mobile_number || '',
@@ -131,8 +131,8 @@ export default function AdminPanel() {
     finally { setDataStatusLoading(false) }
   }, [])
 
-  useEffect(() => { if (activeTab === 'users') fetchUsers() }, [activeTab, fetchUsers])
-  useEffect(() => { if (activeTab === 'orders') { fetchOrders(); fetchUsers() } }, [activeTab, fetchOrders, fetchUsers])
+  useEffect(() => { if (activeTab === 'users')    fetchUsers()   }, [activeTab, fetchUsers])
+  useEffect(() => { if (activeTab === 'orders')  { fetchOrders(); fetchUsers() } }, [activeTab, fetchOrders, fetchUsers])
   useEffect(() => { if (activeTab === 'products') fetchProducts() }, [activeTab, fetchProducts])
   useEffect(() => { if (activeTab === 'overview') { fetchOrders(); fetchProducts() } }, [activeTab, fetchOrders, fetchProducts])
   useEffect(() => { if (activeTab === 'testimonials') fetchTestimonials() }, [activeTab, fetchTestimonials])
@@ -235,12 +235,12 @@ export default function AdminPanel() {
   }
 
   // ── Derived stats ────────────────────────────────────────────
-  const totalFarmers = users.filter(u => u.role === 'farmer').length
-  const totalBuyers = users.filter(u => u.role === 'buyer' || u.role === 'consumer').length
-  const totalRevenue = orders.filter(o => o.payment_status === 'released').reduce((s, o) => s + (o.platform_fee || 0), 0)
+  const totalFarmers    = users.filter(u => u.role === 'farmer').length
+  const totalBuyers     = users.filter(u => u.role === 'buyer' || u.role === 'consumer').length
+  const totalRevenue    = orders.filter(o => o.payment_status === 'released').reduce((s, o) => s + (o.platform_fee || 0), 0)
   const completedOrders = orders.filter(o => o.status === 'delivered').length
-  const completionRate = orders.length ? ((completedOrders / orders.length) * 100).toFixed(1) : 0
-  const activeProducts = products.filter(p => p.status === 'active').length
+  const completionRate  = orders.length ? ((completedOrders / orders.length) * 100).toFixed(1) : 0
+  const activeProducts  = products.filter(p => p.status === 'active').length
 
   // ── User map for name lookup ─────────────────────────────────
   const userMap = {}
@@ -276,15 +276,15 @@ export default function AdminPanel() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           tabs={[
-            { key: 'overview', icon: '📊', label: T('overview') },
-            { key: 'users', icon: '👥', label: T('users') },
-            { key: 'orders', icon: '📦', label: T('orders'), badge: orders.length || null },
-            { key: 'products', icon: '🌿', label: T('products'), badge: products.length || null },
+            { key: 'overview',  icon: '📊', label: T('overview') },
+            { key: 'users',     icon: '👥', label: T('users') },
+            { key: 'orders',    icon: '📦', label: T('orders'),   badge: orders.length || null },
+            { key: 'products',  icon: '🌿', label: T('products'), badge: products.length || null },
             { key: 'testimonials', icon: '💬', label: T('testimonials') },
             { key: 'retrain', icon: '🔄', label: lang === 'bn' ? 'Retrain Data' : 'Retrain Data' },
-            { key: 'api', icon: '🤖', label: T('aiStatus') },
-            { key: 'profile', icon: '👤', label: T('profile') },
-            { key: 'settings', icon: '⚙️', label: T('settings') },
+            { key: 'api',       icon: '🤖', label: T('aiStatus') },
+            { key: 'profile',   icon: '👤', label: T('profile') },
+            { key: 'settings',  icon: '⚙️', label: T('settings') },
           ]}
         />
         <div className="dashboard-content">
@@ -292,8 +292,8 @@ export default function AdminPanel() {
           {/* Header */}
           <div className="page-header flex justify-between">
             <div>
-              <div className="page-title">{T('adminTitle')}</div>
-              <div className="page-subtitle">{T('adminSub')}</div>
+              <div className="page-title">⚙️ Admin Panel</div>
+              <div className="page-subtitle">AgroMitra Platform Management</div>
             </div>
             <div className="flex gap-8 flex-center">
               <span className={`badge ${apiStatus?.status === 'healthy' ? 'badge-green' : 'badge-red'}`}>
@@ -306,12 +306,12 @@ export default function AdminPanel() {
           {/* Stats */}
           <div className="stats-grid">
             {[
-              { icon: '👨‍🌾', label: T('totalFarmers'), val: users.length ? totalFarmers : '…', color: '#E8F5E9', border: '#2E7D32' },
-              { icon: '🛒', label: T('totalBuyers'), val: users.length ? totalBuyers : '…', color: '#E3F2FD', border: '#1976D2' },
-              { icon: '📦', label: T('totalOrdersStat'), val: orders.length || (ordersLoading ? '…' : 0), color: '#FFF3E0', border: '#E65100' },
-              { icon: '🌿', label: T('activeProducts'), val: products.length ? activeProducts : '…', color: '#E8F5E9', border: '#388E3C' },
-              { icon: '💰', label: T('platformFees'), val: `৳${totalRevenue.toLocaleString()}`, color: '#F3E5F5', border: '#6A1B9A' },
-              { icon: '📊', label: T('completionRate'), val: `${completionRate}%`, color: '#E0F2F1', border: '#00695C' },
+              { icon: '👨‍🌾', label: T('totalFarmers'),    val: users.length ? totalFarmers : '…',   color: '#E8F5E9', border: '#2E7D32' },
+              { icon: '🛒',   label: T('totalBuyers'),     val: users.length ? totalBuyers : '…',    color: '#E3F2FD', border: '#1976D2' },
+              { icon: '📦',   label: T('totalOrdersStat'),     val: orders.length || (ordersLoading ? '…' : 0), color: '#FFF3E0', border: '#E65100' },
+              { icon: '🌿',   label: T('activeProducts'),  val: products.length ? activeProducts : '…', color: '#E8F5E9', border: '#388E3C' },
+              { icon: '💰',   label: T('platformFees'),    val: `৳${totalRevenue.toLocaleString()}`, color: '#F3E5F5', border: '#6A1B9A' },
+              { icon: '📊',   label: T('completionRate'),  val: `${completionRate}%`,                color: '#E0F2F1', border: '#00695C' },
             ].map((s, i) => (
               <div key={i} className="stat-card" style={{ borderLeftColor: s.border }}>
                 <div className="stat-icon" style={{ background: s.color, fontSize: 24 }}>{s.icon}</div>
@@ -322,831 +322,832 @@ export default function AdminPanel() {
               </div>
             ))}
           </div>
-          {/* ════ Overview Tab ════ */}
-          {activeTab === 'overview' && (
-            <div>
-              <div className="card">
-                <div className="card-title">📦 Recent Orders (Live)</div>
-                {ordersLoading ? (
-                  <div style={{ padding: '8px 0' }}>
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="skeleton-row">
-                        <div className="skeleton skeleton-text" style={{ width: 60 }} />
-                        <div className="skeleton skeleton-text" style={{ width: 80 }} />
-                        <div className="skeleton skeleton-badge" />
-                        <div className="skeleton skeleton-badge" style={{ width: 80 }} />
-                        <div className="skeleton skeleton-text" style={{ flex: 1 }} />
-                      </div>
+      {/* ════ Overview Tab ════ */}
+      {activeTab === 'overview' && (
+        <div>
+          <div className="card">
+            <div className="card-title">📦 Recent Orders (Live)</div>
+            {ordersLoading ? (
+              <div style={{ padding: '8px 0' }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="skeleton-row">
+                    <div className="skeleton skeleton-text" style={{ width: 60 }} />
+                    <div className="skeleton skeleton-text" style={{ width: 80 }} />
+                    <div className="skeleton skeleton-badge" />
+                    <div className="skeleton skeleton-badge" style={{ width: 80 }} />
+                    <div className="skeleton skeleton-text" style={{ flex: 1 }} />
+                  </div>
+                ))}
+              </div>
+            ) : orders.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No orders yet</div>
+            ) : (
+              <div className="table-container">
+                <table>
+                  <thead><tr><th>{T('thOrderID')}</th><th>{T('thAmount')}</th><th>{T('thFee')}</th><th>{T('thStatus')}</th><th>{T('thPayment')}</th><th>{T('thDate')}</th></tr></thead>
+                  <tbody>
+                    {orders.slice(0, 10).map(o => (
+                      <tr key={o.order_id}>
+                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>#{o.order_id?.slice(-6)}</td>
+                        <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{o.total_amount?.toLocaleString()}</td>
+                        <td style={{ color: '#546E7A' }}>৳{o.platform_fee?.toLocaleString()}</td>
+                        <td><span className={`badge ${orderBadge(o.status)}`}>{o.status}</span></td>
+                        <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{o.payment_status}</span></td>
+                        <td style={{ color: '#546E7A', fontSize: 13 }}>{o.created_at?.slice(0, 10)}</td>
+                      </tr>
                     ))}
-                  </div>
-                ) : orders.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No orders yet</div>
-                ) : (
-                  <div className="table-container">
-                    <table>
-                      <thead><tr><th>{T('thOrderID')}</th><th>{T('thAmount')}</th><th>{T('thFee')}</th><th>{T('thStatus')}</th><th>{T('thPayment')}</th><th>{T('thDate')}</th></tr></thead>
-                      <tbody>
-                        {orders.slice(0, 10).map(o => (
-                          <tr key={o.order_id}>
-                            <td style={{ fontFamily: 'monospace', fontSize: 12 }}>#{o.order_id?.slice(-6)}</td>
-                            <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{o.total_amount?.toLocaleString()}</td>
-                            <td style={{ color: '#546E7A' }}>৳{o.platform_fee?.toLocaleString()}</td>
-                            <td><span className={`badge ${orderBadge(o.status)}`}>{o.status}</span></td>
-                            <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{o.payment_status}</span></td>
-                            <td style={{ color: '#546E7A', fontSize: 13 }}>{o.created_at?.slice(0, 10)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
+            )}
+          </div>
 
-              <div className="card mt-20">
-                <div className="card-title">🌿 Recent Products</div>
-                {productsLoading ? (
-                  <div style={{ padding: '8px 0' }}>
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="skeleton-row">
-                        <div className="skeleton skeleton-text" style={{ width: 120 }} />
-                        <div className="skeleton skeleton-text" style={{ width: 60 }} />
-                        <div className="skeleton skeleton-badge" />
-                        <div className="skeleton skeleton-text" style={{ flex: 1 }} />
-                      </div>
+          <div className="card mt-20">
+            <div className="card-title">🌿 Recent Products</div>
+            {productsLoading ? (
+              <div style={{ padding: '8px 0' }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="skeleton-row">
+                    <div className="skeleton skeleton-text" style={{ width: 120 }} />
+                    <div className="skeleton skeleton-text" style={{ width: 60 }} />
+                    <div className="skeleton skeleton-badge" />
+                    <div className="skeleton skeleton-text" style={{ flex: 1 }} />
+                  </div>
+                ))}
+              </div>
+            ) : products.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No products yet</div>
+            ) : (
+              <div className="table-container">
+                <table>
+                  <thead><tr><th>{T('thProduct')}</th><th>{T('thQty')}</th><th>{T('thPricePerKg')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th></tr></thead>
+                  <tbody>
+                    {products.slice(0, 8).map(p => (
+                      <tr key={p.product_id}>
+                        <td><strong>{CROP_EMOJIS[p.crop_name] || '🌿'} {p.title_en}</strong></td>
+                        <td>{p.quantity_kg} kg</td>
+                        <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
+                        <td style={{ fontSize: 13, color: '#546E7A' }}>{p.district}</td>
+                        <td>{p.is_organic ? '🌱 Yes' : '—'}</td>
+                        <td><span className={`badge ${p.status === 'active' ? 'badge-green' : p.status === 'sold_out' ? 'badge-gold' : 'badge-red'}`}>{p.status}</span></td>
+                      </tr>
                     ))}
-                  </div>
-                ) : products.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No products yet</div>
-                ) : (
-                  <div className="table-container">
-                    <table>
-                      <thead><tr><th>{T('thProduct')}</th><th>{T('thQty')}</th><th>{T('thPricePerKg')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th></tr></thead>
-                      <tbody>
-                        {products.slice(0, 8).map(p => (
-                          <tr key={p.product_id}>
-                            <td><strong>{CROP_EMOJIS[p.crop_name] || '🌿'} {p.title_en}</strong></td>
-                            <td>{p.quantity_kg} kg</td>
-                            <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
-                            <td style={{ fontSize: 13, color: '#546E7A' }}>{p.district}</td>
-                            <td>{p.is_organic ? '🌱 Yes' : '—'}</td>
-                            <td><span className={`badge ${p.status === 'active' ? 'badge-green' : p.status === 'sold_out' ? 'badge-gold' : 'badge-red'}`}>{p.status}</span></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
+            )}
+          </div>
 
-              <div className="card mt-20">
-                <div className="card-title">🤖 AI Model Status</div>
-                {[
-                  { name: T('priceAPIName'), status: T('healthy') },
-                  { name: T('demandAPIName'), status: T('healthy') },
-                  { name: T('cropAPIName'), status: T('healthy') },
-                  { name: 'FastAPI Server', status: apiStatus?.status === 'healthy' ? 'Online' : 'Offline', offline: apiStatus?.status !== 'healthy' },
-                ].map((m, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
-                    <span style={{ fontSize: 14 }}>{m.name}</span>
-                    <span className="badge" style={{ background: (m.offline ? '#C62828' : '#2E7D32') + '22', color: m.offline ? '#C62828' : '#2E7D32' }}>
-                      ● {m.status}
-                    </span>
-                  </div>
-                ))}
+          <div className="card mt-20">
+            <div className="card-title">🤖 AI Model Status</div>
+            {[
+              { name: T('priceAPIName'),    status: T('healthy') },
+              { name: T('demandAPIName'),  status: T('healthy') },
+              { name: T('cropAPIName'), status: T('healthy') },
+              { name: T('diseaseAPIName'),   status: T('healthy') },
+              { name: 'FastAPI Server', status: apiStatus?.status === 'healthy' ? 'Online' : 'Offline', offline: apiStatus?.status !== 'healthy' },
+            ].map((m, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
+                <span style={{ fontSize: 14 }}>{m.name}</span>
+                <span className="badge" style={{ background: (m.offline ? '#C62828' : '#2E7D32') + '22', color: m.offline ? '#C62828' : '#2E7D32' }}>
+                  ● {m.status}
+                </span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ════ Users Tab ════ */}
+      {activeTab === 'users' && (
+        <div className="card">
+          <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="section-title">👥 User Management</div>
+            <div className="flex gap-8">
+              <input className="form-input" style={{ width: 220 }}
+                placeholder={T('searchUser')}
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && fetchUsers()} />
+              <select className="form-select" style={{ width: 140 }} value={userRoleFilter} onChange={e => setUserRoleFilter(e.target.value)}>
+                <option value="">All Roles</option>
+                <option value="farmer">Farmer</option>
+                <option value="buyer">Buyer</option>
+                <option value="consumer">Consumer</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button className="btn btn-primary btn-sm" onClick={fetchUsers}>Search</button>
             </div>
-          )}
-
-          {/* ════ Users Tab ════ */}
-          {activeTab === 'users' && (
-            <div className="card">
-              <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
-                <div className="section-title">👥 User Management</div>
-                <div className="flex gap-8">
-                  <input className="form-input" style={{ width: 220 }}
-                    placeholder={T('searchUser')}
-                    value={userSearch}
-                    onChange={e => setUserSearch(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && fetchUsers()} />
-                  <select className="form-select" style={{ width: 140 }} value={userRoleFilter} onChange={e => setUserRoleFilter(e.target.value)}>
-                    <option value="">All Roles</option>
-                    <option value="farmer">Farmer</option>
-                    <option value="buyer">Buyer</option>
-                    <option value="consumer">Consumer</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <button className="btn btn-primary btn-sm" onClick={fetchUsers}>Search</button>
+          </div>
+          {usersLoading ? (
+            <div style={{ padding: '8px 0' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-row">
+                  <div className="skeleton skeleton-text" style={{ width: 100, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-text" style={{ width: 90, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-badge" />
+                  <div className="skeleton skeleton-text" style={{ flex: 1 }} />
+                  <div className="skeleton skeleton-badge" />
                 </div>
-              </div>
-              {usersLoading ? (
-                <div style={{ padding: '8px 0' }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="skeleton-row">
-                      <div className="skeleton skeleton-text" style={{ width: 100, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-text" style={{ width: 90, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-badge" />
-                      <div className="skeleton skeleton-text" style={{ flex: 1 }} />
-                      <div className="skeleton skeleton-badge" />
-                    </div>
-                  ))}
-                </div>
-              ) : users.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No users found</div>
-              ) : (
-                <div className="table-container">
-                  <table>
-                    <thead><tr><th>{T('thName')}</th><th>{T('thMobile')}</th><th>{T('thRole')}</th><th>{T('thDistrict')}</th><th>{T('thVerified')}</th><th>{T('thTrust')}</th><th>{T('thStatus')}</th><th>{T('thAction')}</th></tr></thead>
-                    <tbody>
-                      {users.map(u => (
-                        <tr key={u.user_id}>
-                          <td><strong>{u.name_en}</strong>{u.name_bn && <div style={{ fontSize: 11, color: '#888' }}>{u.name_bn}</div>}</td>
-                          <td style={{ color: '#546E7A' }}>{u.mobile_number}</td>
-                          <td><span className={`badge ${roleBadge(u.role)}`}>{u.role}</span></td>
-                          <td>{u.district || '—'}</td>
-                          <td>{u.is_verified ? T('verified') : T('pending')}</td>
-                          <td>{u.trust_score}/100</td>
-                          <td><span className={`badge ${u.is_active ? 'badge-green' : 'badge-red'}`}>{u.is_active ? 'Active' : 'Suspended'}</span></td>
-                          <td>
-                            <div className="flex gap-8">
-                              {!u.is_verified && (
-                                <button className="btn btn-sm btn-secondary" onClick={() => handleVerify(u)}>✅ Verify</button>
-                              )}
-                              <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-primary'}`}
-                                onClick={() => handleToggleStatus(u)}>
-                                {u.is_active ? `🚫 ${T('suspend')}` : `✅ ${T('activate')}`}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              ))}
             </div>
-          )}
-
-          {/* ════ Orders Tab ════ */}
-          {activeTab === 'orders' && (
-            <div className="card">
-              <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
-                <div className="section-title">📦 All Orders</div>
-                <div className="flex gap-8">
-                  <input className="form-input" style={{ width: 200 }}
-                    placeholder={T('searchOrder')}
-                    value={orderSearch}
-                    onChange={e => setOrderSearch(e.target.value)} />
-                  <select className="form-select" style={{ width: 150 }} value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
-                    <option value="all">All Status</option>
-                    <option value="placed">Placed</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                  <button className="btn btn-secondary btn-sm" onClick={fetchOrders}>🔄 Refresh</button>
-                </div>
-              </div>
-
-              {/* Order count pills */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                {[
-                  ['all', 'All', orders.length],
-                  ['placed', 'New', orders.filter(o => o.status === 'placed').length],
-                  ['confirmed', 'Confirmed', orders.filter(o => o.status === 'confirmed').length],
-                  ['shipped', 'Shipped', orders.filter(o => o.status === 'shipped').length],
-                  ['delivered', 'Delivered', orders.filter(o => o.status === 'delivered').length],
-                  ['cancelled', 'Cancelled', orders.filter(o => o.status === 'cancelled').length],
-                ].map(([key, label, count]) => (
-                  <button key={key}
-                    onClick={() => setOrderStatusFilter(key)}
-                    style={{
-                      padding: '4px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer', fontWeight: 500,
-                      background: orderStatusFilter === key ? '#2E7D32' : '#F5F5F5',
-                      color: orderStatusFilter === key ? '#fff' : '#546E7A',
-                      border: orderStatusFilter === key ? '1px solid #2E7D32' : '1px solid #E0E0E0',
-                    }}>
-                    {label} {count > 0 && <span style={{ fontWeight: 700 }}>({count})</span>}
-                  </button>
-                ))}
-              </div>
-
-              {ordersLoading ? (
-                <div style={{ padding: '8px 0' }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="skeleton-row">
-                      <div className="skeleton skeleton-text" style={{ width: 60, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-text" style={{ width: 100, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-text" style={{ width: 80, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-badge" />
-                      <div className="skeleton skeleton-text" style={{ flex: 1 }} />
-                    </div>
-                  ))}
-                </div>
-              ) : filteredOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No orders found</div>
-              ) : (
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr><th>{T('thOrderID')}</th><th>{T('thFarmer')}</th><th>{T('thBuyer')}</th><th>{T('thQty')}</th><th>{T('thAmount')}</th><th>{T('thFee')}</th><th>{T('thStatus')}</th><th>{T('thPayment')}</th><th>{T('thDelivery')}</th><th>{T('thDate')}</th></tr>
-                    </thead>
-                    <tbody>
-                      {filteredOrders.map(o => (
-                        <tr key={o.order_id}>
-                          <td style={{ fontFamily: 'monospace', fontSize: 12 }}>#{o.order_id?.slice(-6)}</td>
-                          <td style={{ fontSize: 13 }}>{nameFor(o.farmer_id) || <span style={{ fontFamily: 'monospace', color: '#9E9E9E' }}>#{o.farmer_id?.slice(-6)}</span>}</td>
-                          <td style={{ fontSize: 13 }}>{nameFor(o.buyer_id) || <span style={{ fontFamily: 'monospace', color: '#9E9E9E' }}>#{o.buyer_id?.slice(-6)}</span>}</td>
-                          <td>{(o.items || []).reduce((sum, it) => sum + Number(it.quantity_kg || 0), 0)} kg</td>
-                          <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{o.total_amount?.toLocaleString()}</td>
-                          <td style={{ color: '#546E7A' }}>৳{o.platform_fee?.toLocaleString()}</td>
-                          <td><span className={`badge ${orderBadge(o.status)}`}>{o.status}</span></td>
-                          <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{o.payment_status}</span></td>
-                          <td>
-                            <span className="badge badge-blue" style={{ textTransform: 'capitalize' }}>{o.delivery_type}</span>
-                            {o.delivery_address && (
-                              <div style={{ color: '#9E9E9E', fontSize: 11, marginTop: 3, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.delivery_address}>
-                                📍 {o.delivery_address}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ color: '#546E7A', fontSize: 13 }}>{o.created_at?.slice(0, 10)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div style={{ marginTop: 12, color: '#9E9E9E', fontSize: 13 }}>
-                Showing {filteredOrders.length} of {orders.length} orders
-              </div>
-            </div>
-          )}
-
-          {/* ════ Products Tab ════ */}
-          {activeTab === 'products' && (
-            <div className="card">
-              <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
-                <div className="section-title">🌿 All Products</div>
-                <div className="flex gap-8">
-                  <input className="form-input" style={{ width: 220 }}
-                    placeholder={T('searchProduct')}
-                    value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)} />
-                  <select className="form-select" style={{ width: 150 }} value={productStatusFilter} onChange={e => setProductStatusFilter(e.target.value)}>
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="sold_out">Sold Out</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                  <button className="btn btn-secondary btn-sm" onClick={fetchProducts}>🔄 Refresh</button>
-                </div>
-              </div>
-
-              {/* Product count pills */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                {[
-                  ['all', 'All', products.length],
-                  ['active', 'Active', products.filter(p => p.status === 'active').length],
-                  ['sold_out', T('soldOut'), products.filter(p => p.status === 'sold_out').length],
-                  ['inactive', 'Inactive', products.filter(p => p.status === 'inactive').length],
-                ].map(([key, label, count]) => (
-                  <button key={key}
-                    onClick={() => setProductStatusFilter(key)}
-                    style={{
-                      padding: '4px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer', fontWeight: 500,
-                      background: productStatusFilter === key ? '#2E7D32' : '#F5F5F5',
-                      color: productStatusFilter === key ? '#fff' : '#546E7A',
-                      border: productStatusFilter === key ? '1px solid #2E7D32' : '1px solid #E0E0E0',
-                    }}>
-                    {label} {count > 0 && <span style={{ fontWeight: 700 }}>({count})</span>}
-                  </button>
-                ))}
-              </div>
-
-              {productsLoading ? (
-                <div style={{ padding: '8px 0' }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="skeleton-row">
-                      <div className="skeleton skeleton-text" style={{ width: 130, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-text" style={{ width: 70, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-text" style={{ width: 60, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-badge" />
-                      <div className="skeleton skeleton-text" style={{ flex: 1 }} />
-                    </div>
-                  ))}
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No products found</div>
-              ) : (
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr><th>{T('thProduct')}</th><th>{T('thCrop')}</th><th>{T('thQtyKg')}</th><th>{T('thPricePerKg')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th><th>{T('thListed')}</th><th>{T('thAction')}</th></tr>
-                    </thead>
-                    <tbody>
-                      {filteredProducts.map(p => (
-                        <tr key={p.product_id}>
-                          <td>
-                            <strong>{CROP_EMOJIS[p.crop_name] || '🌿'} {p.title_en}</strong>
-                            {p.title_bn && <div style={{ fontSize: 11, color: '#888' }}>{p.title_bn}</div>}
-                          </td>
-                          <td style={{ fontSize: 13, color: '#546E7A' }}>{p.crop_name}</td>
-                          <td><strong>{p.quantity_kg}</strong></td>
-                          <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
-                          <td style={{ fontSize: 13 }}>{p.district}</td>
-                          <td>{p.is_organic ? <span className="badge badge-green">🌱 Organic</span> : <span style={{ color: '#9E9E9E' }}>—</span>}</td>
-                          <td>
-                            <span className={`badge ${p.status === 'active' ? 'badge-green' : p.status === 'sold_out' ? 'badge-gold' : 'badge-red'}`}>
-                              {p.status}
-                            </span>
-                          </td>
-                          <td style={{ color: '#546E7A', fontSize: 13 }}>{p.created_at?.slice(0, 10)}</td>
-                          <td>
-                            <button className="btn btn-sm btn-danger" onClick={() => handleDeleteProduct(p)}>
-                              🗑️ Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div style={{ marginTop: 12, color: '#9E9E9E', fontSize: 13 }}>
-                Showing {filteredProducts.length} of {products.length} products
-              </div>
-            </div>
-          )}
-
-          {/* ════ Testimonials Tab ════ */}
-          {activeTab === 'testimonials' && (
-            <div className="card">
-              <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
-                <div className="section-title">{T('testimonialsMgmt')}</div>
-                <button className="btn btn-secondary btn-sm" onClick={fetchTestimonials}>🔄 Refresh</button>
-              </div>
-
-              {/* Status filter pills */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                {[
-                  ['pending', T('pending')],
-                  ['approved', T('approvedStatus')],
-                  ['all', T('allTestimonials')],
-                ].map(([key, label]) => (
-                  <button key={key}
-                    onClick={() => setTestimonialStatusFilter(key)}
-                    style={{
-                      padding: '4px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer', fontWeight: 500,
-                      background: testimonialStatusFilter === key ? '#2E7D32' : '#F5F5F5',
-                      color: testimonialStatusFilter === key ? '#fff' : '#546E7A',
-                      border: testimonialStatusFilter === key ? '1px solid #2E7D32' : '1px solid #E0E0E0',
-                    }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {testimonialsLoading ? (
-                <div style={{ padding: '8px 0' }}>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="skeleton-row">
-                      <div className="skeleton skeleton-text" style={{ width: 130, flexShrink: 0 }} />
-                      <div className="skeleton skeleton-text" style={{ flex: 1 }} />
-                      <div className="skeleton skeleton-badge" />
-                    </div>
-                  ))}
-                </div>
-              ) : testimonials.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>{T('noTestimonials')}</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {testimonials.map(t => (
-                    <div key={t.testimonial_id} style={{
-                      border: '1px solid #EEE', borderRadius: 10, padding: 16,
-                      display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
-                    }}>
-                      <div style={{ flex: 1, minWidth: 240, display: 'flex', gap: 12 }}>
-                        {t.profile_photo_url ? (
-                          <img
-                            src={resolveImageUrl(t.profile_photo_url)}
-                            alt={t.name}
-                            style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                          />
-                        ) : (
-                          <span style={{ fontSize: 28, flexShrink: 0 }}>🧑</span>
-                        )}
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                            <strong>{t.name}</strong>
-                            <span style={{ fontSize: 12, color: '#546E7A' }}>{t.role}{t.district ? `, ${t.district}` : ''}</span>
-                            <span className={`badge ${t.is_approved ? 'badge-green' : 'badge-gold'}`}>
-                              {t.is_approved ? T('approvedStatus') : T('pending')}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: 14, marginBottom: 4 }}>{'⭐'.repeat(t.rating)}</div>
-                          <p style={{ fontSize: 14, color: '#546E7A', fontStyle: 'italic', margin: 0 }}>"{t.quote}"</p>
-                          <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 6 }}>{t.created_at?.slice(0, 10)}</div>
+          ) : users.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No users found</div>
+          ) : (
+            <div className="table-container">
+              <table>
+                <thead><tr><th>{T('thName')}</th><th>{T('thMobile')}</th><th>{T('thRole')}</th><th>{T('thDistrict')}</th><th>{T('thVerified')}</th><th>{T('thTrust')}</th><th>{T('thStatus')}</th><th>{T('thAction')}</th></tr></thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.user_id}>
+                      <td><strong>{u.name_en}</strong>{u.name_bn && <div style={{ fontSize: 11, color: '#888' }}>{u.name_bn}</div>}</td>
+                      <td style={{ color: '#546E7A' }}>{u.mobile_number}</td>
+                      <td><span className={`badge ${roleBadge(u.role)}`}>{u.role}</span></td>
+                      <td>{u.district || '—'}</td>
+                      <td>{u.is_verified ? T('verified') : T('pending')}</td>
+                      <td>{u.trust_score}/100</td>
+                      <td><span className={`badge ${u.is_active ? 'badge-green' : 'badge-red'}`}>{u.is_active ? 'Active' : 'Suspended'}</span></td>
+                      <td>
+                        <div className="flex gap-8">
+                          {!u.is_verified && (
+                            <button className="btn btn-sm btn-secondary" onClick={() => handleVerify(u)}>✅ Verify</button>
+                          )}
+                          <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-primary'}`}
+                            onClick={() => handleToggleStatus(u)}>
+                            {u.is_active ? `🚫 ${T('suspend')}` : `✅ ${T('activate')}`}
+                          </button>
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 130 }}>
-                        {!t.is_approved && (
-                          <button className="btn btn-sm btn-primary" onClick={() => handleTestimonialStatus(t, true)}>
-                            {T('approveBtn')}
-                          </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════ Orders Tab ════ */}
+      {activeTab === 'orders' && (
+        <div className="card">
+          <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="section-title">📦 All Orders</div>
+            <div className="flex gap-8">
+              <input className="form-input" style={{ width: 200 }}
+                placeholder={T('searchOrder')}
+                value={orderSearch}
+                onChange={e => setOrderSearch(e.target.value)} />
+              <select className="form-select" style={{ width: 150 }} value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="placed">Placed</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <button className="btn btn-secondary btn-sm" onClick={fetchOrders}>🔄 Refresh</button>
+            </div>
+          </div>
+
+          {/* Order count pills */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {[
+              ['all', 'All', orders.length],
+              ['placed', 'New', orders.filter(o => o.status === 'placed').length],
+              ['confirmed', 'Confirmed', orders.filter(o => o.status === 'confirmed').length],
+              ['shipped', 'Shipped', orders.filter(o => o.status === 'shipped').length],
+              ['delivered', 'Delivered', orders.filter(o => o.status === 'delivered').length],
+              ['cancelled', 'Cancelled', orders.filter(o => o.status === 'cancelled').length],
+            ].map(([key, label, count]) => (
+              <button key={key}
+                onClick={() => setOrderStatusFilter(key)}
+                style={{
+                  padding: '4px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                  background: orderStatusFilter === key ? '#2E7D32' : '#F5F5F5',
+                  color: orderStatusFilter === key ? '#fff' : '#546E7A',
+                  border: orderStatusFilter === key ? '1px solid #2E7D32' : '1px solid #E0E0E0',
+                }}>
+                {label} {count > 0 && <span style={{ fontWeight: 700 }}>({count})</span>}
+              </button>
+            ))}
+          </div>
+
+          {ordersLoading ? (
+            <div style={{ padding: '8px 0' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-row">
+                  <div className="skeleton skeleton-text" style={{ width: 60, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-text" style={{ width: 100, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-text" style={{ width: 80, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-badge" />
+                  <div className="skeleton skeleton-text" style={{ flex: 1 }} />
+                </div>
+              ))}
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No orders found</div>
+          ) : (
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr><th>{T('thOrderID')}</th><th>{T('thFarmer')}</th><th>{T('thBuyer')}</th><th>{T('thQty')}</th><th>{T('thAmount')}</th><th>{T('thFee')}</th><th>{T('thStatus')}</th><th>{T('thPayment')}</th><th>{T('thDelivery')}</th><th>{T('thDate')}</th></tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.map(o => (
+                    <tr key={o.order_id}>
+                      <td style={{ fontFamily: 'monospace', fontSize: 12 }}>#{o.order_id?.slice(-6)}</td>
+                      <td style={{ fontSize: 13 }}>{nameFor(o.farmer_id) || <span style={{ fontFamily: 'monospace', color: '#9E9E9E' }}>#{o.farmer_id?.slice(-6)}</span>}</td>
+                      <td style={{ fontSize: 13 }}>{nameFor(o.buyer_id) || <span style={{ fontFamily: 'monospace', color: '#9E9E9E' }}>#{o.buyer_id?.slice(-6)}</span>}</td>
+                      <td>{(o.items || []).reduce((sum, it) => sum + Number(it.quantity_kg || 0), 0)} kg</td>
+                      <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{o.total_amount?.toLocaleString()}</td>
+                      <td style={{ color: '#546E7A' }}>৳{o.platform_fee?.toLocaleString()}</td>
+                      <td><span className={`badge ${orderBadge(o.status)}`}>{o.status}</span></td>
+                      <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{o.payment_status}</span></td>
+                      <td>
+                        <span className="badge badge-blue" style={{ textTransform: 'capitalize' }}>{o.delivery_type}</span>
+                        {o.delivery_address && (
+                          <div style={{ color: '#9E9E9E', fontSize: 11, marginTop: 3, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.delivery_address}>
+                            📍 {o.delivery_address}
+                          </div>
                         )}
-                        {t.is_approved && (
-                          <button className="btn btn-sm btn-secondary" onClick={() => handleTestimonialStatus(t, false)}>
-                            {T('rejectBtn')}
-                          </button>
-                        )}
-                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTestimonial(t)}>
-                          {T('deleteBtn')}
+                      </td>
+                      <td style={{ color: '#546E7A', fontSize: 13 }}>{o.created_at?.slice(0, 10)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{ marginTop: 12, color: '#9E9E9E', fontSize: 13 }}>
+            Showing {filteredOrders.length} of {orders.length} orders
+          </div>
+        </div>
+      )}
+
+      {/* ════ Products Tab ════ */}
+      {activeTab === 'products' && (
+        <div className="card">
+          <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="section-title">🌿 All Products</div>
+            <div className="flex gap-8">
+              <input className="form-input" style={{ width: 220 }}
+                placeholder={T('searchProduct')}
+                value={productSearch}
+                onChange={e => setProductSearch(e.target.value)} />
+              <select className="form-select" style={{ width: 150 }} value={productStatusFilter} onChange={e => setProductStatusFilter(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="sold_out">Sold Out</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button className="btn btn-secondary btn-sm" onClick={fetchProducts}>🔄 Refresh</button>
+            </div>
+          </div>
+
+          {/* Product count pills */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {[
+              ['all', 'All', products.length],
+              ['active', 'Active', products.filter(p => p.status === 'active').length],
+              ['sold_out', T('soldOut'), products.filter(p => p.status === 'sold_out').length],
+              ['inactive', 'Inactive', products.filter(p => p.status === 'inactive').length],
+            ].map(([key, label, count]) => (
+              <button key={key}
+                onClick={() => setProductStatusFilter(key)}
+                style={{
+                  padding: '4px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                  background: productStatusFilter === key ? '#2E7D32' : '#F5F5F5',
+                  color: productStatusFilter === key ? '#fff' : '#546E7A',
+                  border: productStatusFilter === key ? '1px solid #2E7D32' : '1px solid #E0E0E0',
+                }}>
+                {label} {count > 0 && <span style={{ fontWeight: 700 }}>({count})</span>}
+              </button>
+            ))}
+          </div>
+
+          {productsLoading ? (
+            <div style={{ padding: '8px 0' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-row">
+                  <div className="skeleton skeleton-text" style={{ width: 130, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-text" style={{ width: 70, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-text" style={{ width: 60, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-badge" />
+                  <div className="skeleton skeleton-text" style={{ flex: 1 }} />
+                </div>
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>No products found</div>
+          ) : (
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr><th>{T('thProduct')}</th><th>{T('thCrop')}</th><th>{T('thQtyKg')}</th><th>{T('thPricePerKg')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th><th>{T('thListed')}</th><th>{T('thAction')}</th></tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map(p => (
+                    <tr key={p.product_id}>
+                      <td>
+                        <strong>{CROP_EMOJIS[p.crop_name] || '🌿'} {p.title_en}</strong>
+                        {p.title_bn && <div style={{ fontSize: 11, color: '#888' }}>{p.title_bn}</div>}
+                      </td>
+                      <td style={{ fontSize: 13, color: '#546E7A' }}>{p.crop_name}</td>
+                      <td><strong>{p.quantity_kg}</strong></td>
+                      <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
+                      <td style={{ fontSize: 13 }}>{p.district}</td>
+                      <td>{p.is_organic ? <span className="badge badge-green">🌱 Organic</span> : <span style={{ color: '#9E9E9E' }}>—</span>}</td>
+                      <td>
+                        <span className={`badge ${p.status === 'active' ? 'badge-green' : p.status === 'sold_out' ? 'badge-gold' : 'badge-red'}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td style={{ color: '#546E7A', fontSize: 13 }}>{p.created_at?.slice(0, 10)}</td>
+                      <td>
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteProduct(p)}>
+                          🗑️ Delete
                         </button>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
           )}
+          <div style={{ marginTop: 12, color: '#9E9E9E', fontSize: 13 }}>
+            Showing {filteredProducts.length} of {products.length} products
+          </div>
+        </div>
+      )}
 
-          {/* ════ Retrain Data Tab ════ */}
-          {activeTab === 'retrain' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div className="card">
-                <div className="section-title" style={{ marginBottom: 4 }}>
-                  {lang === 'bn' ? '🔄 Price Prediction ও Demand Forecast Data' : '🔄 Price Prediction & Demand Forecast Data'}
+      {/* ════ Testimonials Tab ════ */}
+      {activeTab === 'testimonials' && (
+        <div className="card">
+          <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="section-title">{T('testimonialsMgmt')}</div>
+            <button className="btn btn-secondary btn-sm" onClick={fetchTestimonials}>🔄 Refresh</button>
+          </div>
+
+          {/* Status filter pills */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {[
+              ['pending', T('pending')],
+              ['approved', T('approvedStatus')],
+              ['all', T('allTestimonials')],
+            ].map(([key, label]) => (
+              <button key={key}
+                onClick={() => setTestimonialStatusFilter(key)}
+                style={{
+                  padding: '4px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                  background: testimonialStatusFilter === key ? '#2E7D32' : '#F5F5F5',
+                  color: testimonialStatusFilter === key ? '#fff' : '#546E7A',
+                  border: testimonialStatusFilter === key ? '1px solid #2E7D32' : '1px solid #E0E0E0',
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {testimonialsLoading ? (
+            <div style={{ padding: '8px 0' }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton-row">
+                  <div className="skeleton skeleton-text" style={{ width: 130, flexShrink: 0 }} />
+                  <div className="skeleton skeleton-text" style={{ flex: 1 }} />
+                  <div className="skeleton skeleton-badge" />
                 </div>
-                <p style={{ fontSize: 13, color: '#546E7A', marginBottom: 16 }}>
-                  {lang === 'bn'
-                    ? 'এই দুটো AI feature সরাসরি নিচের data থেকে prediction বানায় — নতুন data upload করলে সাথে সাথে live prediction-এ প্রতিফলিত হবে।'
-                    : "These two AI features generate predictions directly from the data below — uploading new data reflects in live predictions immediately."}
-                </p>
-
-                {dataStatusLoading ? (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton skeleton-badge" style={{ width: 100, height: 50 }} />)}
-                  </div>
-                ) : dataStatus ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
-                    <div style={{ background: '#F1F8E9', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>{dataStatus.total_rows?.toLocaleString()}</div>
-                      <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'মোট row' : 'total rows'}</div>
-                    </div>
-                    <div style={{ background: '#E3F2FD', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1565C0' }}>{dataStatus.date_from} → {dataStatus.date_to}</div>
-                      <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'তারিখ পরিসর' : 'date range'}</div>
-                    </div>
-                    <div style={{ background: '#FFF3E0', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#E65100' }}>{dataStatus.crop_count}</div>
-                      <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'ফসলের ধরন' : 'crops'}</div>
-                    </div>
-                    <div style={{ background: '#F3E5F5', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#6A1B9A' }}>{dataStatus.district_count}</div>
-                      <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'জেলা' : 'districts'}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: '#9E9E9E', fontSize: 13 }}>{lang === 'bn' ? 'Data status লোড করা যায়নি।' : 'Could not load data status.'}</div>
-                )}
-                {dataStatus?.last_updated && (
-                  <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 10 }}>
-                    {lang === 'bn' ? 'শেষ আপডেট' : 'Last updated'}: {new Date(dataStatus.last_updated).toLocaleString('en-GB')}
-                  </div>
-                )}
-              </div>
-
-              <div className="card">
-                <div className="flex justify-between" style={{ alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                  <div className="section-title" style={{ marginBottom: 0 }}>
-                    {lang === 'bn' ? '📤 নতুন Data দিয়ে Retrain' : '📤 Retrain with New Data'}
-                  </div>
-                  <button className="btn btn-secondary btn-sm" onClick={handleDownloadTemplate} disabled={templateDownloading}>
-                    {templateDownloading
-                      ? (lang === 'bn' ? '⏳ Downloading...' : '⏳ Downloading...')
-                      : (lang === 'bn' ? '📥 Template CSV Download' : '📥 Download Template CSV')}
-                  </button>
-                </div>
-
-                <div style={{ background: '#F9FBF9', border: '1px dashed #DCEFE0', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 12, color: '#546E7A' }}>
-                  <strong>{lang === 'bn' ? 'Required columns' : 'Required columns'}:</strong> date, crop_name, district, avg_price, quantity_available<br />
-                  <strong>{lang === 'bn' ? 'Optional columns' : 'Optional columns'}:</strong> market_name, min_price, max_price, unit, weather_condition, season
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
-                      {lang === 'bn' ? 'CSV file বাছাই করুন' : 'Choose CSV file'}
-                    </label>
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => { setRetrainFile(e.target.files?.[0] || null); setRetrainResult(null) }}
-                      style={{ fontSize: 13 }}
-                    />
-                    {retrainFile && (
-                      <div style={{ fontSize: 12, color: '#2E7D32', marginTop: 6 }}>✓ {retrainFile.name}</div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
-                      {lang === 'bn' ? 'Mode' : 'Mode'}
-                    </label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => setRetrainMode('append')}
-                        style={{
-                          padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600,
-                          background: retrainMode === 'append' ? '#2E7D32' : '#F5F5F5',
-                          color: retrainMode === 'append' ? '#fff' : '#546E7A',
-                          border: retrainMode === 'append' ? '1px solid #2E7D32' : '1px solid #E0E0E0',
-                        }}
-                      >
-                        {lang === 'bn' ? '➕ Append (merge/upsert)' : '➕ Append (merge/upsert)'}
-                      </button>
-                      <button
-                        onClick={() => setRetrainMode('replace')}
-                        style={{
-                          padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600,
-                          background: retrainMode === 'replace' ? '#C62828' : '#F5F5F5',
-                          color: retrainMode === 'replace' ? '#fff' : '#546E7A',
-                          border: retrainMode === 'replace' ? '1px solid #C62828' : '1px solid #E0E0E0',
-                        }}
-                      >
-                        {lang === 'bn' ? '♻️ Replace (সব বদলে দাও)' : '♻️ Replace (overwrite all)'}
-                      </button>
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 6 }}>
-                      {retrainMode === 'append'
-                        ? (lang === 'bn' ? 'একই date+crop+district থাকলে নতুন value-টাই থাকবে, বাকি পুরনো data থাকবে।' : 'Existing rows with the same date+crop+district are updated; everything else stays.')
-                        : (lang === 'bn' ? 'পুরনো সব data মুছে শুধু নতুন CSV-এর data থাকবে। (Backup রাখা হবে)' : 'All old data is replaced with only the new CSV data. (A backup is kept.)')}
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn btn-primary"
-                    disabled={!retrainFile || retraining}
-                    onClick={handleRetrain}
-                    style={{ alignSelf: 'flex-start' }}
-                  >
-                    {retraining ? (lang === 'bn' ? '⏳ Retrain হচ্ছে...' : '⏳ Retraining...') : (lang === 'bn' ? '🔄 Retrain করুন' : '🔄 Retrain')}
-                  </button>
-                </div>
-
-                {retrainResult && (
-                  <div style={{
-                    marginTop: 16, padding: 14, borderRadius: 10,
-                    background: retrainResult.success ? '#F1F8E9' : '#FFEBEE',
-                    border: `1px solid ${retrainResult.success ? '#C8E6C9' : '#FFCDD2'}`,
-                  }}>
-                    {retrainResult.success ? (
-                      <div style={{ fontSize: 13, color: '#2E7D32' }}>
-                        ✅ {lang === 'bn' ? 'সফল!' : 'Success!'} {retrainResult.data.rows_uploaded} {lang === 'bn' ? 'টা row upload হয়েছে' : 'rows uploaded'},
-                        {' '}{lang === 'bn' ? 'মোট এখন' : 'total now'} {retrainResult.data.total_rows_now?.toLocaleString()} rows
-                        {' '}({retrainResult.data.date_range?.from} → {retrainResult.data.date_range?.to}).
-                        {retrainResult.data.backup_file && (
-                          <div style={{ fontSize: 11, color: '#546E7A', marginTop: 4 }}>
-                            {lang === 'bn' ? 'Backup রাখা হয়েছে' : 'Backup saved'}: {retrainResult.data.backup_file}
-                          </div>
-                        )}
-                      </div>
+              ))}
+            </div>
+          ) : testimonials.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#9E9E9E' }}>{T('noTestimonials')}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {testimonials.map(t => (
+                <div key={t.testimonial_id} style={{
+                  border: '1px solid #EEE', borderRadius: 10, padding: 16,
+                  display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+                }}>
+                  <div style={{ flex: 1, minWidth: 240, display: 'flex', gap: 12 }}>
+                    {t.profile_photo_url ? (
+                      <img
+                        src={resolveImageUrl(t.profile_photo_url)}
+                        alt={t.name}
+                        style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      />
                     ) : (
-                      <div style={{ fontSize: 13, color: '#C62828' }}>❌ {retrainResult.error}</div>
+                      <span style={{ fontSize: 28, flexShrink: 0 }}>🧑</span>
                     )}
+                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <strong>{t.name}</strong>
+                      <span style={{ fontSize: 12, color: '#546E7A' }}>{t.role}{t.district ? `, ${t.district}` : ''}</span>
+                      <span className={`badge ${t.is_approved ? 'badge-green' : 'badge-gold'}`}>
+                        {t.is_approved ? T('approvedStatus') : T('pending')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 14, marginBottom: 4 }}>{'⭐'.repeat(t.rating)}</div>
+                    <p style={{ fontSize: 14, color: '#546E7A', fontStyle: 'italic', margin: 0 }}>"{t.quote}"</p>
+                    <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 6 }}>{t.created_at?.slice(0, 10)}</div>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              <div className="card">
-                <div className="flex justify-between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                  <div className="section-title" style={{ marginBottom: 0 }}>
-                    {lang === 'bn' ? '📜 Retrain History' : '📜 Retrain History'}
-                  </div>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => { const next = !showRetrainLog; setShowRetrainLog(next); if (next) fetchRetrainLog() }}
-                  >
-                    {showRetrainLog ? (lang === 'bn' ? '🔼 লুকান' : '🔼 Hide') : (lang === 'bn' ? '🔽 History দেখুন' : '🔽 Show History')}
-                  </button>
-                </div>
-
-                {showRetrainLog && (
-                  retrainLogLoading ? (
-                    <div style={{ padding: '12px 0' }}>
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="skeleton skeleton-text" style={{ marginBottom: 8 }} />
-                      ))}
-                    </div>
-                  ) : retrainLog.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 24, color: '#9E9E9E', fontSize: 13 }}>
-                      {lang === 'bn' ? 'এখনো কোনো retrain history নেই।' : 'No retrain history yet.'}
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-                      {retrainLog.map((entry, i) => (
-                        <div key={i} style={{
-                          border: '1px solid #EEE', borderRadius: 10, padding: '12px 14px',
-                          display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
-                        }}>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 700 }}>
-                              {entry.admin_name} · <span style={{
-                                fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 99,
-                                background: entry.mode === 'replace' ? '#FFEBEE' : '#E8F5E9',
-                                color: entry.mode === 'replace' ? '#C62828' : '#2E7D32',
-                              }}>{entry.mode}</span>
-                            </div>
-                            <div style={{ fontSize: 12, color: '#546E7A', marginTop: 2 }}>{entry.filename}</div>
-                            <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
-                              {entry.crops_in_upload?.join(', ')}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>
-                              +{entry.rows_uploaded} rows ({entry.total_rows_after?.toLocaleString()} total)
-                            </div>
-                            <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
-                              {new Date(entry.timestamp).toLocaleString('en-GB')}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ════ AI Status Tab ════ */}
-          {activeTab === 'api' && (
-            <div>
-              <div className="ai-section mb-20">
-                <div className="ai-section-title">🤖 AI API Status</div>
-                <div className="ai-section-sub">FastAPI Server running on localhost:8000</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-                  {Object.entries(apiStatus?.models || {}).map(([k, v], i) => (
-                    <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: 14 }}>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>{k.replace(/_/g, ' ')}</div>
-                      <div style={{ fontWeight: 600 }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="card">
-                <div className="card-title">🗄️ Database</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
-                  <span>Enabled</span>
-                  <span className={`badge ${apiStatus?.database?.enabled ? 'badge-green' : 'badge-red'}`}>
-                    {apiStatus?.database?.enabled ? 'Yes' : 'No'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
-                  <span>Connection Status</span>
-                  <span className={`badge ${apiStatus?.database?.status === 'connected' ? 'badge-green' : 'badge-red'}`}>
-                    {apiStatus?.database?.status || 'unknown'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ════ Profile Tab ════ */}
-          {activeTab === 'profile' && (
-            <div style={{ maxWidth: 600, margin: '0 auto' }}>
-
-              {/* Profile Header Card */}
-              <div className="card" style={{ textAlign: 'center', padding: 32, marginBottom: 20 }}>
-                <div style={{ position: 'relative', width: 88, height: 88, margin: '0 auto 16px' }}>
-                  {user?.profile_photo_url ? (
-                    <img
-                      src={`${resolveImageUrl(user.profile_photo_url)}?t=${photoKey}`}
-                      alt="Profile"
-                      style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--green-light)' }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: 88, height: 88, borderRadius: '50%',
-                      background: 'var(--green-pale)', fontSize: 44,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '3px solid var(--green-light)'
-                    }}>⚙️</div>
-                  )}
-                  <label style={{
-                    position: 'absolute', bottom: 0, right: 0,
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: 'var(--green)', color: 'white',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', fontSize: 14, boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                    border: '2px solid white'
-                  }}>
-                    <span>📷</span>
-                    <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
-                      onChange={async (e) => {
-                        const file = e.target.files[0]
-                        if (!file) return
-                        try {
-                          toast.loading('Uploading photo...')
-                          const res = await uploadProfilePhoto(file)
-                          const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
-                          localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
-                          setUser(updatedUser)
-                          setPhotoKey(Date.now())
-                          toast.dismiss()
-                          toast.success('Profile photo updated!')
-                        } catch {
-                          toast.dismiss()
-                          toast.error('Upload failed. Max 2MB, JPG/PNG only.')
-                        }
-                      }} />
-                  </label>
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-dark)' }}>
-                  {user?.name_en || 'Admin'}
-                </div>
-                {user?.name_bn && <div style={{ fontSize: 15, color: 'var(--gray)', marginTop: 4 }}>{user.name_bn}</div>}
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
-                  <span className="badge badge-red">⚙️ Admin</span>
-                  {user?.district && <span className="badge badge-blue">📍 {user.district}</span>}
-                  {user?.is_verified
-                    ? <span className="badge badge-green">✅ Verified</span>
-                    : <span className="badge badge-gold">⏳ Not Verified</span>
-                  }
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 10 }}>
-                  📱 {user?.mobile_number || '—'} · 🕐 Member since {user?.created_at
-                    ? new Date(user.created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-                    : '—'
-                  }
-                </div>
-              </div>
-
-              {/* Editable Info Card */}
-              <div className="card" style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <div className="card-title" style={{ marginBottom: 0 }}>📝 Personal Information</div>
-                  {!profileEditMode ? (
-                    <button className="btn btn-secondary btn-sm" onClick={() => setProfileEditMode(true)}>✏️ Edit</button>
-                  ) : (
-                    <button style={{ background: '#FFEBEE', color: '#C62828', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13 }}
-                      onClick={() => {
-                        setProfileEditMode(false)
-                        setProfileForm({ name_en: user?.name_en || '', name_bn: user?.name_bn || '', district: user?.district || 'Dhaka', mobile_number: user?.mobile_number || '' })
-                      }}>✕ Cancel</button>
-                  )}
-                </div>
-
-                {!profileEditMode ? (
-                  <div style={{ display: 'grid', gap: 14 }}>
-                    {[['Full Name (EN)', user?.name_en], ['Full Name (BN)', user?.name_bn], ['Mobile', user?.mobile_number], ['District', user?.district]].map(([label, val]) => (
-                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
-                        <span style={{ color: '#546E7A', fontSize: 14 }}>{label}</span>
-                        <span style={{ fontWeight: 600, fontSize: 14 }}>{val || '—'}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 16 }}>
-                    {[['name_en', T('fullNameEn'), 'text'], ['name_bn', T('fullNameBn'), 'text'], ['mobile_number', T('mobile'), 'text']].map(([field, label, type]) => (
-                      <div key={field} className="form-group">
-                        <label className="form-label">{label}</label>
-                        <input className="form-input" type={type} value={profileForm[field]}
-                          onChange={e => setProfileForm({ ...profileForm, [field]: e.target.value })} />
-                      </div>
-                    ))}
-                    <div className="form-group">
-                      <label className="form-label">District</label>
-                      <input className="form-input" value={profileForm.district}
-                        onChange={e => setProfileForm({ ...profileForm, district: e.target.value })} />
-                    </div>
-                    <button className="btn btn-primary btn-full" disabled={savingProfile}
-                      onClick={async () => {
-                        if (!profileForm.name_en.trim()) { toast.error(T('nameRequired')); return }
-                        setSavingProfile(true)
-                        try {
-                          const res = await updateProfile({ name_en: profileForm.name_en, name_bn: profileForm.name_bn, mobile_number: profileForm.mobile_number, district: profileForm.district })
-                          const updatedUser = { ...user, ...res.data }
-                          localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
-                          setUser(updatedUser)
-                          toast.success('Profile updated!')
-                          setProfileEditMode(false)
-                        } catch { toast.error('Could not update profile') }
-                        finally { setSavingProfile(false) }
-                      }}>
-                      {savingProfile ? '⏳ Saving…' : '✅ Save Changes'}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 130 }}>
+                    {!t.is_approved && (
+                      <button className="btn btn-sm btn-primary" onClick={() => handleTestimonialStatus(t, true)}>
+                        {T('approveBtn')}
+                      </button>
+                    )}
+                    {t.is_approved && (
+                      <button className="btn btn-sm btn-secondary" onClick={() => handleTestimonialStatus(t, false)}>
+                        {T('rejectBtn')}
+                      </button>
+                    )}
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTestimonial(t)}>
+                      {T('deleteBtn')}
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
 
-          {/* ════ Settings Tab ════ */}
-          {activeTab === 'settings' && (
-            <SettingsTab userRole="admin" />
-          )}
+      {/* ════ Retrain Data Tab ════ */}
+      {activeTab === 'retrain' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="card">
+            <div className="section-title" style={{ marginBottom: 4 }}>
+              {lang === 'bn' ? '🔄 Price Prediction ও Demand Forecast Data' : '🔄 Price Prediction & Demand Forecast Data'}
+            </div>
+            <p style={{ fontSize: 13, color: '#546E7A', marginBottom: 16 }}>
+              {lang === 'bn'
+                ? 'এই দুটো AI feature সরাসরি নিচের data থেকে prediction বানায় — নতুন data upload করলে সাথে সাথে live prediction-এ প্রতিফলিত হবে।'
+                : "These two AI features generate predictions directly from the data below — uploading new data reflects in live predictions immediately."}
+            </p>
+
+            {dataStatusLoading ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton skeleton-badge" style={{ width: 100, height: 50 }} />)}
+              </div>
+            ) : dataStatus ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
+                <div style={{ background: '#F1F8E9', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>{dataStatus.total_rows?.toLocaleString()}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'মোট row' : 'total rows'}</div>
+                </div>
+                <div style={{ background: '#E3F2FD', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1565C0' }}>{dataStatus.date_from} → {dataStatus.date_to}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'তারিখ পরিসর' : 'date range'}</div>
+                </div>
+                <div style={{ background: '#FFF3E0', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#E65100' }}>{dataStatus.crop_count}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'ফসলের ধরন' : 'crops'}</div>
+                </div>
+                <div style={{ background: '#F3E5F5', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#6A1B9A' }}>{dataStatus.district_count}</div>
+                  <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'জেলা' : 'districts'}</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: '#9E9E9E', fontSize: 13 }}>{lang === 'bn' ? 'Data status লোড করা যায়নি।' : 'Could not load data status.'}</div>
+            )}
+            {dataStatus?.last_updated && (
+              <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 10 }}>
+                {lang === 'bn' ? 'শেষ আপডেট' : 'Last updated'}: {new Date(dataStatus.last_updated).toLocaleString('en-GB')}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="flex justify-between" style={{ alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <div className="section-title" style={{ marginBottom: 0 }}>
+                {lang === 'bn' ? '📤 নতুন Data দিয়ে Retrain' : '📤 Retrain with New Data'}
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={handleDownloadTemplate} disabled={templateDownloading}>
+                {templateDownloading
+                  ? (lang === 'bn' ? '⏳ Downloading...' : '⏳ Downloading...')
+                  : (lang === 'bn' ? '📥 Template CSV Download' : '📥 Download Template CSV')}
+              </button>
+            </div>
+
+            <div style={{ background: '#F9FBF9', border: '1px dashed #DCEFE0', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 12, color: '#546E7A' }}>
+              <strong>{lang === 'bn' ? 'Required columns' : 'Required columns'}:</strong> date, crop_name, district, avg_price, quantity_available<br />
+              <strong>{lang === 'bn' ? 'Optional columns' : 'Optional columns'}:</strong> market_name, min_price, max_price, unit, weather_condition, season
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  {lang === 'bn' ? 'CSV file বাছাই করুন' : 'Choose CSV file'}
+                </label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => { setRetrainFile(e.target.files?.[0] || null); setRetrainResult(null) }}
+                  style={{ fontSize: 13 }}
+                />
+                {retrainFile && (
+                  <div style={{ fontSize: 12, color: '#2E7D32', marginTop: 6 }}>✓ {retrainFile.name}</div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  {lang === 'bn' ? 'Mode' : 'Mode'}
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setRetrainMode('append')}
+                    style={{
+                      padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600,
+                      background: retrainMode === 'append' ? '#2E7D32' : '#F5F5F5',
+                      color: retrainMode === 'append' ? '#fff' : '#546E7A',
+                      border: retrainMode === 'append' ? '1px solid #2E7D32' : '1px solid #E0E0E0',
+                    }}
+                  >
+                    {lang === 'bn' ? '➕ Append (merge/upsert)' : '➕ Append (merge/upsert)'}
+                  </button>
+                  <button
+                    onClick={() => setRetrainMode('replace')}
+                    style={{
+                      padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600,
+                      background: retrainMode === 'replace' ? '#C62828' : '#F5F5F5',
+                      color: retrainMode === 'replace' ? '#fff' : '#546E7A',
+                      border: retrainMode === 'replace' ? '1px solid #C62828' : '1px solid #E0E0E0',
+                    }}
+                  >
+                    {lang === 'bn' ? '♻️ Replace (সব বদলে দাও)' : '♻️ Replace (overwrite all)'}
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 6 }}>
+                  {retrainMode === 'append'
+                    ? (lang === 'bn' ? 'একই date+crop+district থাকলে নতুন value-টাই থাকবে, বাকি পুরনো data থাকবে।' : 'Existing rows with the same date+crop+district are updated; everything else stays.')
+                    : (lang === 'bn' ? 'পুরনো সব data মুছে শুধু নতুন CSV-এর data থাকবে। (Backup রাখা হবে)' : 'All old data is replaced with only the new CSV data. (A backup is kept.)')}
+                </div>
+              </div>
+
+              <button
+                className="btn btn-primary"
+                disabled={!retrainFile || retraining}
+                onClick={handleRetrain}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                {retraining ? (lang === 'bn' ? '⏳ Retrain হচ্ছে...' : '⏳ Retraining...') : (lang === 'bn' ? '🔄 Retrain করুন' : '🔄 Retrain')}
+              </button>
+            </div>
+
+            {retrainResult && (
+              <div style={{
+                marginTop: 16, padding: 14, borderRadius: 10,
+                background: retrainResult.success ? '#F1F8E9' : '#FFEBEE',
+                border: `1px solid ${retrainResult.success ? '#C8E6C9' : '#FFCDD2'}`,
+              }}>
+                {retrainResult.success ? (
+                  <div style={{ fontSize: 13, color: '#2E7D32' }}>
+                    ✅ {lang === 'bn' ? 'সফল!' : 'Success!'} {retrainResult.data.rows_uploaded} {lang === 'bn' ? 'টা row upload হয়েছে' : 'rows uploaded'},
+                    {' '}{lang === 'bn' ? 'মোট এখন' : 'total now'} {retrainResult.data.total_rows_now?.toLocaleString()} rows
+                    {' '}({retrainResult.data.date_range?.from} → {retrainResult.data.date_range?.to}).
+                    {retrainResult.data.backup_file && (
+                      <div style={{ fontSize: 11, color: '#546E7A', marginTop: 4 }}>
+                        {lang === 'bn' ? 'Backup রাখা হয়েছে' : 'Backup saved'}: {retrainResult.data.backup_file}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: '#C62828' }}>❌ {retrainResult.error}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="flex justify-between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div className="section-title" style={{ marginBottom: 0 }}>
+                {lang === 'bn' ? '📜 Retrain History' : '📜 Retrain History'}
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => { const next = !showRetrainLog; setShowRetrainLog(next); if (next) fetchRetrainLog() }}
+              >
+                {showRetrainLog ? (lang === 'bn' ? '🔼 লুকান' : '🔼 Hide') : (lang === 'bn' ? '🔽 History দেখুন' : '🔽 Show History')}
+              </button>
+            </div>
+
+            {showRetrainLog && (
+              retrainLogLoading ? (
+                <div style={{ padding: '12px 0' }}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="skeleton skeleton-text" style={{ marginBottom: 8 }} />
+                  ))}
+                </div>
+              ) : retrainLog.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 24, color: '#9E9E9E', fontSize: 13 }}>
+                  {lang === 'bn' ? 'এখনো কোনো retrain history নেই।' : 'No retrain history yet.'}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                  {retrainLog.map((entry, i) => (
+                    <div key={i} style={{
+                      border: '1px solid #EEE', borderRadius: 10, padding: '12px 14px',
+                      display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>
+                          {entry.admin_name} · <span style={{
+                            fontSize: 11, fontWeight: 600, padding: '1px 8px', borderRadius: 99,
+                            background: entry.mode === 'replace' ? '#FFEBEE' : '#E8F5E9',
+                            color: entry.mode === 'replace' ? '#C62828' : '#2E7D32',
+                          }}>{entry.mode}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#546E7A', marginTop: 2 }}>{entry.filename}</div>
+                        <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
+                          {entry.crops_in_upload?.join(', ')}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, color: '#2E7D32', fontWeight: 600 }}>
+                          +{entry.rows_uploaded} rows ({entry.total_rows_after?.toLocaleString()} total)
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
+                          {new Date(entry.timestamp).toLocaleString('en-GB')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ════ AI Status Tab ════ */}
+      {activeTab === 'api' && (
+        <div>
+          <div className="ai-section mb-20">
+            <div className="ai-section-title">🤖 AI API Status</div>
+            <div className="ai-section-sub">FastAPI Server running on localhost:8000</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {Object.entries(apiStatus?.models || {}).map(([k, v], i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: 14 }}>
+                  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>{k.replace(/_/g, ' ')}</div>
+                  <div style={{ fontWeight: 600 }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-title">🗄️ Database</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
+              <span>Enabled</span>
+              <span className={`badge ${apiStatus?.database?.enabled ? 'badge-green' : 'badge-red'}`}>
+                {apiStatus?.database?.enabled ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
+              <span>Connection Status</span>
+              <span className={`badge ${apiStatus?.database?.status === 'connected' ? 'badge-green' : 'badge-red'}`}>
+                {apiStatus?.database?.status || 'unknown'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════ Profile Tab ════ */}
+      {activeTab === 'profile' && (
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+
+          {/* Profile Header Card */}
+          <div className="card" style={{ textAlign: 'center', padding: 32, marginBottom: 20 }}>
+            <div style={{ position: 'relative', width: 88, height: 88, margin: '0 auto 16px' }}>
+              {user?.profile_photo_url ? (
+                <img
+                  src={`${resolveImageUrl(user.profile_photo_url)}?t=${photoKey}`}
+                  alt="Profile"
+                  style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--green-light)' }}
+                />
+              ) : (
+                <div style={{
+                  width: 88, height: 88, borderRadius: '50%',
+                  background: 'var(--green-pale)', fontSize: 44,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '3px solid var(--green-light)'
+                }}>⚙️</div>
+              )}
+              <label style={{
+                position: 'absolute', bottom: 0, right: 0,
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'var(--green)', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', fontSize: 14, boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                border: '2px solid white'
+              }}>
+                <span>📷</span>
+                <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const file = e.target.files[0]
+                    if (!file) return
+                    try {
+                      toast.loading('Uploading photo...')
+                      const res = await uploadProfilePhoto(file)
+                      const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
+                      localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      setUser(updatedUser)
+                      setPhotoKey(Date.now())
+                      toast.dismiss()
+                      toast.success('Profile photo updated!')
+                    } catch {
+                      toast.dismiss()
+                      toast.error('Upload failed. Max 2MB, JPG/PNG only.')
+                    }
+                  }} />
+              </label>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-dark)' }}>
+              {user?.name_en || 'Admin'}
+            </div>
+            {user?.name_bn && <div style={{ fontSize: 15, color: 'var(--gray)', marginTop: 4 }}>{user.name_bn}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+              <span className="badge badge-red">⚙️ Admin</span>
+              {user?.district && <span className="badge badge-blue">📍 {user.district}</span>}
+              {user?.is_verified
+                ? <span className="badge badge-green">✅ Verified</span>
+                : <span className="badge badge-gold">⏳ Not Verified</span>
+              }
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 10 }}>
+              📱 {user?.mobile_number || '—'} · 🕐 Member since {user?.created_at
+                ? new Date(user.created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+                : '—'
+              }
+            </div>
+          </div>
+
+          {/* Editable Info Card */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div className="card-title" style={{ marginBottom: 0 }}>📝 Personal Information</div>
+              {!profileEditMode ? (
+                <button className="btn btn-secondary btn-sm" onClick={() => setProfileEditMode(true)}>✏️ Edit</button>
+              ) : (
+                <button style={{ background: '#FFEBEE', color: '#C62828', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13 }}
+                  onClick={() => {
+                    setProfileEditMode(false)
+                    setProfileForm({ name_en: user?.name_en || '', name_bn: user?.name_bn || '', district: user?.district || 'Dhaka', mobile_number: user?.mobile_number || '' })
+                  }}>✕ Cancel</button>
+              )}
+            </div>
+
+            {!profileEditMode ? (
+              <div style={{ display: 'grid', gap: 14 }}>
+                {[['Full Name (EN)', user?.name_en], ['Full Name (BN)', user?.name_bn], ['Mobile', user?.mobile_number], ['District', user?.district]].map(([label, val]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F5' }}>
+                    <span style={{ color: '#546E7A', fontSize: 14 }}>{label}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{val || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 16 }}>
+                {[['name_en', T('fullNameEn'), 'text'], ['name_bn', T('fullNameBn'), 'text'], ['mobile_number', T('mobile'), 'text']].map(([field, label, type]) => (
+                  <div key={field} className="form-group">
+                    <label className="form-label">{label}</label>
+                    <input className="form-input" type={type} value={profileForm[field]}
+                      onChange={e => setProfileForm({ ...profileForm, [field]: e.target.value })} />
+                  </div>
+                ))}
+                <div className="form-group">
+                  <label className="form-label">District</label>
+                  <input className="form-input" value={profileForm.district}
+                    onChange={e => setProfileForm({ ...profileForm, district: e.target.value })} />
+                </div>
+                <button className="btn btn-primary btn-full" disabled={savingProfile}
+                  onClick={async () => {
+                    if (!profileForm.name_en.trim()) { toast.error(T('nameRequired')); return }
+                    setSavingProfile(true)
+                    try {
+                      const res = await updateProfile({ name_en: profileForm.name_en, name_bn: profileForm.name_bn, mobile_number: profileForm.mobile_number, district: profileForm.district })
+                      const updatedUser = { ...user, ...res.data }
+                      localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      setUser(updatedUser)
+                      toast.success('Profile updated!')
+                      setProfileEditMode(false)
+                    } catch { toast.error('Could not update profile') }
+                    finally { setSavingProfile(false) }
+                  }}>
+                  {savingProfile ? '⏳ Saving…' : '✅ Save Changes'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ════ Settings Tab ════ */}
+      {activeTab === 'settings' && (
+        <SettingsTab userRole="admin" />
+      )}
 
         </div>  {/* dashboard-content */}
       </div>  {/* dashboard-layout */}

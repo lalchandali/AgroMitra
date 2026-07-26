@@ -1,9 +1,7 @@
-import React from 'react';
 import lalchand from '../assets/lalchand.png'
 import ashraful from '../assets/ashraful.png'
 import shakil from '../assets/shakil.jpeg'
 import adit from '../assets/adit.jpeg'
-import ZX from '../assets/ZX.jpeg'
 
 
 
@@ -27,7 +25,7 @@ export default function TeamSection() {
             role: 'Developer & Researcher',
             details: 'Full-stack development · AI/ML integration · React + FastAPI',
             skills: ["React", "FastAPI", "Python"],
-            github: "https://github.com/Shakilkhan71",
+            github: "#",
             linkedin: "#",
             tag: 'Student',
             avatar: typeof shakil !== 'undefined' ? shakil : '👨‍💻',
@@ -43,14 +41,14 @@ export default function TeamSection() {
             avatar: typeof adit !== 'undefined' ? adit : '👨‍💻',
         },
         {
-            name: 'Zehid er EX',
-            role: 'Supplier',
-            details: 'কচি কলা চাষী · কৃষি সরবরাহকারী · কচি লাউ চাষী ',
-            skills: ["জাহিদের এক্স", "কচি কলা চাষ", "কচি লাউ চাষ"],
+            name: 'Lal Chand Ali',
+            role: 'Developer & Researcher',
+            details: 'Full-stack development · AI/ML integration · React + FastAPI',
+            skills: ["React", "FastAPI"],
             github: "#",
             linkedin: "#",
             tag: 'Student',
-            avatar: typeof ZX !== 'undefined' ? ZX : '👨‍💻',
+            avatar: typeof lalchand !== 'undefined' ? lalchand : '👨‍💻',
         },
         {
             name: 'Lal Chand Ali',

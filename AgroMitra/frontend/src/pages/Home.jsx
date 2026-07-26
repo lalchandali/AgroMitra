@@ -9,7 +9,6 @@ import {
 } from "recharts"
 import { getPricePrediction, getDemandForecast, getWeatherAlert, getSowingCalendar, getMarketPrices, getFeaturedTestimonials, submitTestimonial, getMyTestimonial, getStoredUser, resolveImageUrl } from '../api/agromitra'
 import toast from 'react-hot-toast'
-import lalchand from '../assets/lalchand.png'
 import TeamSection from '../components/TeamSection';
 
 const features = [
@@ -179,7 +178,7 @@ const Home = () => {
       .then(res => { if (!cancelled) setMyTestimonial(res.data) })
       .catch(() => { })
     return () => { cancelled = true }
-  }, [])
+  }, [currentUser])
 
   const handleTestimonialSubmit = async (e) => {
     e.preventDefault()

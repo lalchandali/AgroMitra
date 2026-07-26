@@ -20,5 +20,9 @@ xgboost
 prophet
 tensorflow
 
+# ai_models/ training script গুলোর জন্য (chart/visualization)
+matplotlib
+seaborn
+
 passlib[bcrypt]
 python-jose[cryptography]

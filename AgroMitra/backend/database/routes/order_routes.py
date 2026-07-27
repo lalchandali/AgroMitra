@@ -23,6 +23,7 @@ from backend.database.models.user import User, UserRole
 from backend.database.schemas.order_schema import OrderCreate, OrderStatusUpdate, OrderResponse, OrderItemResponse
 from backend.database.routes.auth_routes import get_current_user
 from backend.database.routes.settings_routes import get_platform_fee_percent
+from backend.database.routes.notification_routes import create_notification
 
 router = APIRouter(prefix="/api/v1/orders", tags=["Orders"])
 
@@ -208,6 +209,15 @@ async def place_order(
         if float(product.quantity_kg) <= 0:
             product.status = ProductStatus.sold_out
 
+    create_notification(
+        db,
+        user_id=new_order.farmer_id,
+        type="order_placed",
+        title="🛒 New order received",
+        message=f"{current_user.name_en} placed an order worth Tk.{total_amount} for {len(order_items_data)} item(s).",
+        link=f"/orders/{new_order.order_id}",
+    )
+
     db.commit()
     db.refresh(new_order)
 
@@ -316,6 +326,19 @@ async def update_order_status(
         order.payment_status = PaymentStatus.refunded
         _restock_order_items(order, db)
 
+    # ── Notify the other party — farmer's actions notify the buyer,
+    #    and a cancel notifies whichever side didn't request it. ──
+    recipient_id = order.buyer_id if is_farmer else order.farmer_id
+    status_label = new_status.value.replace("_", " ").title()
+    create_notification(
+        db,
+        user_id=recipient_id,
+        type="order_cancelled" if new_status == OrderStatus.cancelled else "order_status",
+        title=f"📦 Order {status_label}",
+        message=f"Order status updated to '{status_label}'.",
+        link=f"/orders/{order.order_id}",
+    )
+
     db.commit()
     db.refresh(order)
     return _build_order_response(order, db)
@@ -346,6 +369,15 @@ async def cancel_order(
     order.status = OrderStatus.cancelled
     order.payment_status = PaymentStatus.refunded
     _restock_order_items(order, db)
+
+    create_notification(
+        db,
+        user_id=order.farmer_id,
+        type="order_cancelled",
+        title="❌ Order cancelled",
+        message=f"{current_user.name_en} cancelled their order.",
+        link=f"/orders/{order.order_id}",
+    )
 
     db.commit()
     return {"message": "Order cancelled and payment refunded.", "order_id": str(order_id)}

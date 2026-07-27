@@ -17,6 +17,7 @@ from backend.database.models.product import Product
 from backend.database.models.user import User
 from backend.database.schemas.review_schema import ReviewCreate, ReviewResponse
 from backend.database.routes.auth_routes import get_current_user
+from backend.database.routes.notification_routes import create_notification
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["Reviews"])
 
@@ -70,6 +71,18 @@ async def create_review(
         comment=payload.comment,
     )
     db.add(review)
+
+    product = db.query(Product).filter(Product.product_id == order_item.product_id).first()
+    stars = "⭐" * payload.rating
+    create_notification(
+        db,
+        user_id=order.farmer_id,
+        type="new_review",
+        title=f"{stars} New review received",
+        message=f"{current_user.name_en} rated {product.title_en if product else 'your product'} {payload.rating}/5.",
+        link=f"/products/{order_item.product_id}",
+    )
+
     db.commit()
     db.refresh(review)
     return _build_review_response(review, db)

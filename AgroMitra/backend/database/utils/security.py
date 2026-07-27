@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import bcrypt
-import random
+import secrets
 import string
 import os
 
@@ -47,7 +47,7 @@ def decode_token(token: str):
 OTP_STORAGE = {}
 
 def generate_otp(mobile_number: str) -> str:
-    otp = ''.join(random.choices(string.digits, k=6))
+    otp = ''.join(secrets.choice(string.digits) for _ in range(6))
     OTP_STORAGE[mobile_number] = {
         "otp": otp,
         "expires_at": datetime.utcnow() + timedelta(minutes=5),
@@ -70,3 +70,38 @@ def verify_otp(mobile_number: str, otp_input: str):
         return False, f"Invalid OTP. {3 - record['attempts']} attempts remaining."
     del OTP_STORAGE[mobile_number]
     return True, "OTP verified successfully."
+
+
+# ── Login Brute-Force Protection ────────────────────────────────
+# OTP_STORAGE-এর মতোই in-memory dict — মনে রাখবেন এটাও শুধু single-process
+# dev/small deployment-এর জন্য কাজ করে ঠিকভাবে; একাধিক worker/instance
+# নিয়ে production-এ চালাতে হলে এটা Redis বা DB টেবিলে সরিয়ে নিতে হবে,
+# নাহলে প্রতিটা worker আলাদা count রাখবে আর lockout ঠিকভাবে কাজ করবে না।
+LOGIN_ATTEMPTS = {}
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_LOCKOUT_MINUTES = 15
+
+
+def check_login_lockout(mobile_number: str):
+    """Locked থাকলে (remaining_minutes, True) — নাহলে (0, False)।"""
+    record = LOGIN_ATTEMPTS.get(mobile_number)
+    if not record:
+        return 0, False
+    locked_until = record.get("locked_until")
+    if locked_until and datetime.utcnow() < locked_until:
+        remaining = int((locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+        return remaining, True
+    if locked_until and datetime.utcnow() >= locked_until:
+        del LOGIN_ATTEMPTS[mobile_number]
+    return 0, False
+
+
+def record_failed_login(mobile_number: str):
+    record = LOGIN_ATTEMPTS.setdefault(mobile_number, {"count": 0, "locked_until": None})
+    record["count"] += 1
+    if record["count"] >= MAX_LOGIN_ATTEMPTS:
+        record["locked_until"] = datetime.utcnow() + timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
+
+
+def reset_login_attempts(mobile_number: str):
+    LOGIN_ATTEMPTS.pop(mobile_number, None)

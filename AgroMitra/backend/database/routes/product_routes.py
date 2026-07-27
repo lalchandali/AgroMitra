@@ -55,12 +55,16 @@ def _save_product_photo(file: UploadFile, contents: bytes) -> str:
     প্রোফাইল ফটো আপলোডের মতো একই pattern — validate করে uploads/product_photos/
     এ সেভ করে, আর URL রিটার্ন করে (যেটা main.py-এর /uploads static mount দিয়ে serve হবে)।
     """
-    if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+    # ext client-এর filename থেকে না নিয়ে validate করা content_type থেকে নেওয়া
+    # হচ্ছে — filename client-controlled, তাই Content-Type spoof করে arbitrary
+    # extension-এর ফাইল বসানো ঠেকাতে (auth_routes.py-এর upload-photo-এর একই ফিক্স)।
+    CONTENT_TYPE_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+    if file.content_type not in CONTENT_TYPE_EXT:
         raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP allowed.")
     if len(contents) > 5 * 1024 * 1024:  # প্রোডাক্ট ছবি একটু বড় (5MB) অনুমতি দেওয়া হয়েছে
         raise HTTPException(status_code=400, detail="File too large. Max 5MB.")
 
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    ext = CONTENT_TYPE_EXT[file.content_type]
     filename = f"{uuid_lib.uuid4().hex}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
     with open(filepath, "wb") as f:

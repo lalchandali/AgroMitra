@@ -10,8 +10,6 @@ from backend.database.routes.auth_routes import router as auth_router
 from backend.database.routes.product_routes import router as product_router
 from backend.database.routes.order_routes import router as order_router
 from backend.database.utils.security import hash_password
-from backend.database.routes.weather_routes import router as weather_router
-print("✅ Loaded weather router from:", weather_router)
 
 Base.metadata.create_all(bind=engine)
 print("  ✅ Database tables created!")
@@ -31,7 +29,6 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(order_router)
 app.include_router(product_router)
-app.include_router(weather_router)
 @app.get("/")
 async def root():
     return {"message": "🌾 AgroMitra API v2.0", "docs": "/docs"}

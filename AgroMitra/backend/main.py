@@ -99,7 +99,6 @@ try:
     from backend.database.routes.auth_routes import router as auth_router, get_current_user
     from backend.database.routes.product_routes import router as product_router
     from backend.database.routes.order_routes import router as order_router
-    from backend.database.routes.weather_routes import router as db_weather_router
     from backend.database.routes.settings_routes import router as settings_router
     from backend.database.routes.review_routes import router as review_router
     from backend.database.routes.testimonial_routes import router as testimonial_router
@@ -108,7 +107,6 @@ try:
     app.include_router(auth_router)
     app.include_router(product_router)
     app.include_router(order_router)
-    app.include_router(db_weather_router)
     app.include_router(settings_router)
     app.include_router(review_router)
     app.include_router(testimonial_router)
@@ -1218,6 +1216,7 @@ async def get_weather_alert(district: str):
         "has_alert":     advisory_text is not None,
         "alert_title":   title,
         "alert_message": advisory_text,
+        "alert_source":  "Live · OpenWeatherMap",
         "generated_at":  datetime.now().isoformat(),
     }
 

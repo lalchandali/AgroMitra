@@ -23,7 +23,8 @@ from backend.database.schemas.user_schema import (
 from backend.database.utils.security import (
     hash_password, verify_password,
     create_access_token, create_refresh_token, decode_token,
-    generate_otp, verify_otp
+    generate_otp, verify_otp,
+    check_login_lockout, record_failed_login, reset_login_attempts
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
@@ -51,11 +52,24 @@ def get_current_user(
 
 
 # ── POST /api/v1/auth/request-otp ────────────────────────────
+# ⚠️ SECURITY: এখানে কোনো real SMS gateway integrate করা নেই (student project,
+# paid SMS API নেই), তাই dev/testing-এর জন্য OTP টা response-এ ফেরত পাঠানো হতো।
+# কিন্তু production-এ এটা থাকলে যে কেউ শুধু কারো mobile number জেনে
+# forgot-password call করে response থেকেই OTP পড়ে ফেলে পুরো account
+# takeover করতে পারত (SMS intercept করারও দরকার নেই)। তাই এখন এটা শুধু
+# non-production environment-এ ফেরত যায় — ENVIRONMENT=production সেট করলে
+# response-এ আর OTP আসবে না, শুধু server console-এর print()-এ দেখা যাবে।
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").strip().lower() == "production"
+
+
 @router.post("/request-otp")
 async def request_otp(req: OTPRequest):
     otp = generate_otp(req.mobile_number)
     print(f"  📱 OTP for {req.mobile_number}: {otp}")
-    return {"message": f"OTP sent to {req.mobile_number}", "dev_otp": otp, "expires": "5 minutes"}
+    response = {"message": f"OTP sent to {req.mobile_number}", "expires": "5 minutes"}
+    if not IS_PRODUCTION:
+        response["dev_otp"] = otp
+    return response
 
 
 # ── POST /api/v1/auth/verify-otp ─────────────────────────────
@@ -97,15 +111,24 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
 # ── POST /api/v1/auth/login ──────────────────────────────────
 @router.post("/login", response_model=Token)
 async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    remaining_min, is_locked = check_login_lockout(user_data.mobile_number)
+    if is_locked:
+        raise HTTPException(
+            status_code=429,
+            detail=f"অনেকবার ভুল পাসওয়ার্ড দেওয়া হয়েছে। {remaining_min} মিনিট পর আবার চেষ্টা করুন।"
+        )
+
     user = db.query(User).filter(User.mobile_number ==
                                  user_data.mobile_number).first()
     if not user:
         raise HTTPException(
             status_code=401, detail="Mobile number not registered.")
     if not verify_password(user_data.password, user.password_hash):
+        record_failed_login(user_data.mobile_number)
         raise HTTPException(status_code=401, detail="Incorrect password.")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account suspended.")
+    reset_login_attempts(user_data.mobile_number)
     user.last_login_at = datetime.utcnow()
     db.commit()
     token_data = {"user_id": str(
@@ -117,12 +140,25 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
 
 # ── POST /api/v1/auth/refresh-token ──────────────────────────
 @router.post("/refresh-token")
-async def refresh_token_route(req: TokenRefresh):
+async def refresh_token_route(req: TokenRefresh, db: Session = Depends(get_db)):
     payload = decode_token(req.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid refresh token.")
-    new_token = create_access_token({"user_id": payload.get(
-        "user_id"), "mobile": payload.get("mobile"), "role": payload.get("role")})
+
+    # ── DB থেকে fresh user data verify করা হচ্ছে ──
+    # আগে এখানে শুধু পুরনো token-এর payload-কে বিশ্বাস করে নতুন access
+    # token বানানো হতো — মানে admin কাউকে suspend করলেও (is_active=False)
+    # সেই user যদি আগের refresh token ধরে রাখে, সে বারবার নতুন access
+    # token বানিয়ে suspension bypass করতে পারত। এখন DB থেকে re-check হয়।
+    user = db.query(User).filter(User.user_id == payload.get("user_id")).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found.")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account suspended.")
+
+    new_token = create_access_token({
+        "user_id": str(user.user_id), "mobile": user.mobile_number, "role": user.role.value
+    })
     return {"access_token": new_token, "token_type": "bearer"}
 
 
@@ -157,7 +193,10 @@ async def forgot_password(req: PasswordResetRequest, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Mobile number not found.")
     otp = generate_otp(req.mobile_number)
     print(f"  🔑 Reset OTP for {req.mobile_number}: {otp}")
-    return {"message": "Password reset OTP sent.", "dev_otp": otp}
+    response = {"message": "Password reset OTP sent."}
+    if not IS_PRODUCTION:
+        response["dev_otp"] = otp
+    return response
 
 
 # ── POST /api/v1/auth/reset-password ─────────────────────────
@@ -284,8 +323,13 @@ async def upload_profile_photo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # File type check
-    if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+    # ── File type check ──
+    # ext client-এর পাঠানো filename থেকে না নিয়ে, validate করা content_type
+    # থেকে নেওয়া হচ্ছে — filename পুরোপুরি client-controlled, তাই Content-Type
+    # header spoof করে (যেমন image/png পাঠিয়ে filename="x.php" দিয়ে) সার্ভারে
+    # arbitrary extension-এর ফাইল বসানো ঠেকানো হলো।
+    CONTENT_TYPE_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+    if file.content_type not in CONTENT_TYPE_EXT:
         raise HTTPException(
             status_code=400, detail="Only JPG, PNG, WebP allowed.")
 
@@ -295,7 +339,7 @@ async def upload_profile_photo(
         raise HTTPException(status_code=400, detail="File too large. Max 2MB.")
 
     # Save file
-    ext = file.filename.split(".")[-1]
+    ext = CONTENT_TYPE_EXT[file.content_type]
     filename = f"{current_user.user_id}_{uuid.uuid4().hex[:8]}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { getAllProducts, getMyOrders, placeOrder, cancelOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, createReview, getProductReviews, getReviewableItems, getFarmerProfile } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
@@ -38,7 +38,12 @@ export default function BuyerMarketplace() {
 
   // ── Cart state ──────────────────────────────────────────────
   const [cart, setCart] = useState([])  // [{product, quantity_kg}]
-  const [activeTab, setActiveTab] = useState('browse')
+  const [searchParams] = useSearchParams()
+  const VALID_TABS = ['browse', 'cart', 'orders', 'wishlist', 'profile', 'settings']
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab')
+    return VALID_TABS.includes(tab) ? tab : 'browse'
+  })
 
   // ── AI Insight state (per product, on-demand) ─────────────────
   const [aiInsights, setAiInsights] = useState({})   // { [product_id]: {loading, data, error} }

@@ -215,7 +215,7 @@ async def place_order(
         type="order_placed",
         title="🛒 New order received",
         message=f"{current_user.name_en} placed an order worth Tk.{total_amount} for {len(order_items_data)} item(s).",
-        link=f"/orders/{new_order.order_id}",
+        link="/farmer?tab=orders",
     )
 
     db.commit()
@@ -329,6 +329,7 @@ async def update_order_status(
     # ── Notify the other party — farmer's actions notify the buyer,
     #    and a cancel notifies whichever side didn't request it. ──
     recipient_id = order.buyer_id if is_farmer else order.farmer_id
+    recipient_path = "/buyer" if is_farmer else "/farmer"
     status_label = new_status.value.replace("_", " ").title()
     create_notification(
         db,
@@ -336,7 +337,7 @@ async def update_order_status(
         type="order_cancelled" if new_status == OrderStatus.cancelled else "order_status",
         title=f"📦 Order {status_label}",
         message=f"Order status updated to '{status_label}'.",
-        link=f"/orders/{order.order_id}",
+        link=f"{recipient_path}?tab=orders",
     )
 
     db.commit()
@@ -376,7 +377,7 @@ async def cancel_order(
         type="order_cancelled",
         title="❌ Order cancelled",
         message=f"{current_user.name_en} cancelled their order.",
-        link=f"/orders/{order.order_id}",
+        link="/farmer?tab=orders",
     )
 
     db.commit()

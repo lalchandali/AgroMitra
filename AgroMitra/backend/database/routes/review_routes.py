@@ -80,7 +80,7 @@ async def create_review(
         type="new_review",
         title=f"{stars} New review received",
         message=f"{current_user.name_en} rated {product.title_en if product else 'your product'} {payload.rating}/5.",
-        link=f"/products/{order_item.product_id}",
+        link="/farmer?tab=listings",
     )
 
     db.commit()

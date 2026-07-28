@@ -13,7 +13,7 @@ import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
 import toast from 'react-hot-toast'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { tr } from '../translations'
 
 const CROPS = [
@@ -246,7 +246,12 @@ export default function FarmerDashboard() {
     return () => globalThis.removeEventListener('agromitra-auth-changed', syncUser)
   }, [])
 
-  const [activeTab, setActiveTab] = useState('overview')
+  const [searchParams] = useSearchParams()
+  const VALID_TABS = ['overview', 'price', 'demand', 'recommend', 'yield', 'listings', 'orders', 'profile', 'settings']
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab')
+    return VALID_TABS.includes(tab) ? tab : 'overview'
+  })
   const [crop, setCrop] = useState('Tomato')
   const [district, setDistrict] = useState(user?.district)
   const [priceData, setPriceData] = useState(null)

@@ -296,6 +296,13 @@ export const verifyUser       = (userId)            => API.put(`/api/v1/auth/adm
 export const getWeatherAlert   = (district)  => API.get('/api/v1/weather/alert', { params: { district } })
 export const getSowingCalendar = (month)     => API.get('/api/v1/crops/sowing-calendar', { params: month ? { month } : {} })
 
+// ── Notifications ────────────────────────────────────────────
+export const getNotifications          = (unreadOnly = false) =>
+  API.get('/api/v1/notifications/', { params: unreadOnly ? { unread_only: true } : {} })
+export const getUnreadNotificationCount = () => API.get('/api/v1/notifications/unread-count')
+export const markNotificationRead       = (id) => API.put(`/api/v1/notifications/${id}/read`)
+export const markAllNotificationsRead   = ()   => API.put('/api/v1/notifications/read-all')
+
 // ── Platform Settings ───────────────────────────────────────
 export const getPlatformFee    = ()              => API.get('/api/v1/admin/settings/platform-fee')
 export const updatePlatformFee = (feePercent)    => API.put('/api/v1/admin/settings/platform-fee', { platform_fee_percent: feePercent })

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clearAuthSession, getStoredUser } from '../api/agromitra'
 import { useLanguage } from '../hooks/useLanguage'
-import logo from '../assets/icone.png'
+import logo from '../assets/icone.PNG'
 import { useTheme } from '../context/ThemeContext'
 import { FiSun, FiMoon } from "react-icons/fi";
+import NotificationBell from './NotificationBell'
 
 const Navbar = () => {
   const location = useLocation()
@@ -168,6 +169,8 @@ const Navbar = () => {
 
         {user ? (
           <>
+            <NotificationBell />
+
             <span className="nav-user">
               {user.name_en || user.full_name}
             </span>
@@ -224,6 +227,10 @@ const Navbar = () => {
 
           {user ? (
             <>
+              <div style={{ padding: '10px 24px' }}>
+                <NotificationBell />
+              </div>
+
               <div className="nav-mobile-user">
                 👤 {user.name_en || user.full_name}
               </div>

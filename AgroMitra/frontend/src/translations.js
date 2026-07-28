@@ -292,6 +292,11 @@ export const t = {
   deleteAccountBtn:   { en: '🗑️ Deactivate My Account', bn: '🗑️ আমার অ্যাকাউন্ট নিষ্ক্রিয় করুন' },
   deleteAccountConfirm: { en: 'Are you absolutely sure? This will deactivate your account and you will be logged out.', bn: 'আপনি কি নিশ্চিত? এতে আপনার অ্যাকাউন্ট নিষ্ক্রিয় হয়ে যাবে এবং আপনি লগআউট হয়ে যাবেন।' },
   accountDeactivated: { en: 'Account deactivated. Logging you out…', bn: 'অ্যাকাউন্ট নিষ্ক্রিয় হয়েছে। লগ আউট করা হচ্ছে…' },
+
+  // ── Notifications ─────────────────────────────────────────
+  notifications:       { en: 'Notifications',            bn: 'নোটিফিকেশন' },
+  markAllRead:          { en: 'Mark all read',             bn: 'সব পড়া হয়েছে চিহ্নিত করুন' },
+  noNotifications:      { en: 'No notifications yet',      bn: 'এখনো কোনো নোটিফিকেশন নেই' },
 }
 
 // Helper function — tr(key, lang) returns the right string

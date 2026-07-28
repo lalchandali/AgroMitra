@@ -45,6 +45,17 @@ export default function BuyerMarketplace() {
     return VALID_TABS.includes(tab) ? tab : 'browse'
   })
 
+  // ── notification bell থেকে navigate('/buyer?tab=orders') এলে,
+  //    আগে থেকেই এই page-এ থাকলে component remount হয় না —
+  //    তাই URL-এর tab পাল্টালে activeTab-ও আলাদাভাবে sync করতে হয় ──
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (VALID_TABS.includes(tab) && tab !== activeTab) {
+      setActiveTab(tab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   // ── AI Insight state (per product, on-demand) ─────────────────
   const [aiInsights, setAiInsights] = useState({})   // { [product_id]: {loading, data, error} }
   const [openInsightId, setOpenInsightId] = useState(null)

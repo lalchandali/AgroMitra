@@ -252,6 +252,17 @@ export default function FarmerDashboard() {
     const tab = searchParams.get('tab')
     return VALID_TABS.includes(tab) ? tab : 'overview'
   })
+
+  // ── notification bell থেকে navigate('/farmer?tab=orders') এলে,
+  //    আগে থেকেই এই page-এ থাকলে component remount হয় না —
+  //    তাই URL-এর tab পাল্টালে activeTab-ও আলাদাভাবে sync করতে হয় ──
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (VALID_TABS.includes(tab) && tab !== activeTab) {
+      setActiveTab(tab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [crop, setCrop] = useState('Tomato')
   const [district, setDistrict] = useState(user?.district)
   const [priceData, setPriceData] = useState(null)

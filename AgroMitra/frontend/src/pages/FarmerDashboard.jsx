@@ -246,12 +246,24 @@ export default function FarmerDashboard() {
     return () => globalThis.removeEventListener('agromitra-auth-changed', syncUser)
   }, [])
 
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const VALID_TABS = ['overview', 'price', 'demand', 'recommend', 'yield', 'listings', 'orders', 'profile', 'settings']
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams.get('tab')
     return VALID_TABS.includes(tab) ? tab : 'overview'
   })
+
+  // ── Sidebar-এ user নিজে tab click করলে state আর URL — দুটোই sync
+  //    রাখতে হয়, নাহলে refresh দিলে URL-এর পুরোনো ?tab= অনুযায়ী
+  //    আবার আগের tab-এই ফিরে যায় ──
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('tab', tab)
+      return next
+    })
+  }
 
   // ── notification bell থেকে navigate('/farmer?tab=orders') এলে,
   //    আগে থেকেই এই page-এ থাকলে component remount হয় না —
@@ -552,7 +564,7 @@ export default function FarmerDashboard() {
           title="Farmer Menu"
           subtitle="AgroMitra"
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           tabs={[
             { key: 'overview', icon: '📊', label: T('overview') },
             { key: 'price', icon: '🤖', label: T('priceAI') },
@@ -617,9 +629,9 @@ export default function FarmerDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                     {[
                       { icon: '➕', label: T('addListing'), action: () => { openAddModal() }, color: '#E8F5E9', border: '#2E7D32', text: '#2E7D32' },
-                      { icon: '🛒', label: `${pendingOrders} ${T('pendingOrders')}`, action: () => setActiveTab('orders'), color: pendingOrders > 0 ? '#FFF3E0' : '#F5F5F5', border: pendingOrders > 0 ? '#E65100' : '#E0E0E0', text: pendingOrders > 0 ? '#E65100' : '#9E9E9E' },
-                      { icon: '📦', label: T('myListings'), action: () => setActiveTab('listings'), color: '#E3F2FD', border: '#1976D2', text: '#1976D2' },
-                      { icon: '🤖', label: T('cropAI'), action: () => setActiveTab('recommend'), color: '#F3E5F5', border: '#6A1B9A', text: '#6A1B9A' },
+                      { icon: '🛒', label: `${pendingOrders} ${T('pendingOrders')}`, action: () => handleTabChange('orders'), color: pendingOrders > 0 ? '#FFF3E0' : '#F5F5F5', border: pendingOrders > 0 ? '#E65100' : '#E0E0E0', text: pendingOrders > 0 ? '#E65100' : '#9E9E9E' },
+                      { icon: '📦', label: T('myListings'), action: () => handleTabChange('listings'), color: '#E3F2FD', border: '#1976D2', text: '#1976D2' },
+                      { icon: '🤖', label: T('cropAI'), action: () => handleTabChange('recommend'), color: '#F3E5F5', border: '#6A1B9A', text: '#6A1B9A' },
                     ].map((a, i) => (
                       <button key={i} onClick={a.action} style={{
                         background: a.color, border: `2px solid ${a.border}`,
@@ -653,9 +665,9 @@ export default function FarmerDashboard() {
               {/* ── Pending Orders Alert ── */}
               {pendingOrders > 0 && (
                 <div className="alert alert-info" style={{ marginBottom: 20, cursor: 'pointer' }}
-                  onClick={() => setActiveTab('orders')}>
+                  onClick={() => handleTabChange('orders')}>
                   🛒 {lang === 'bn' ? `আপনার` : 'You have'} <strong>{pendingOrders}</strong> {T('newOrderAlert')}{'  '}
-                  <span style={{ color: 'var(--blue)', fontWeight: 700, cursor: 'pointer' }} onClick={() => setActiveTab('orders')}>{T('viewOrders')}</span>
+                  <span style={{ color: 'var(--blue)', fontWeight: 700, cursor: 'pointer' }} onClick={() => handleTabChange('orders')}>{T('viewOrders')}</span>
                 </div>
               )}
 
@@ -749,7 +761,7 @@ export default function FarmerDashboard() {
                         )
                       })}
                       {orders.length > 5 && (
-                        <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('orders')}
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleTabChange('orders')}
                           style={{ alignSelf: 'center', marginTop: 4 }}>
                           View all {orders.length} orders →
                         </button>

@@ -38,12 +38,24 @@ export default function BuyerMarketplace() {
 
   // ── Cart state ──────────────────────────────────────────────
   const [cart, setCart] = useState([])  // [{product, quantity_kg}]
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const VALID_TABS = ['browse', 'cart', 'orders', 'wishlist', 'profile', 'settings']
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams.get('tab')
     return VALID_TABS.includes(tab) ? tab : 'browse'
   })
+
+  // ── Sidebar-এ user নিজে tab click করলে state আর URL — দুটোই sync
+  //    রাখতে হয়, নাহলে refresh দিলে URL-এর পুরোনো ?tab= অনুযায়ী
+  //    আবার আগের tab-এই ফিরে যায় ──
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('tab', tab)
+      return next
+    })
+  }
 
   // ── notification bell থেকে navigate('/buyer?tab=orders') এলে,
   //    আগে থেকেই এই page-এ থাকলে component remount হয় না —
@@ -376,7 +388,7 @@ export default function BuyerMarketplace() {
     if (results.success > 0) {
       toast.success(`✅ ${results.success} order(s) placed! Payment held in Escrow.`)
       setCart([])
-      setActiveTab('orders')
+      handleTabChange('orders')
       fetchOrders()
     }
     if (results.failed > 0) {
@@ -394,7 +406,7 @@ export default function BuyerMarketplace() {
           title="Buyer Menu"
           subtitle="AgroMitra"
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           tabs={[
             { key: 'browse',   icon: '🌾', label: T('browse') },
             { key: 'cart',     icon: '🛒', label: T('cart'), badge: cartCount > 0 ? `${cartCount} kg` : null },
@@ -655,7 +667,7 @@ export default function BuyerMarketplace() {
               <div style={{ textAlign: 'center', padding: 40, color: '#9E9E9E' }}>
                 <div style={{ fontSize: 48 }}>🛒</div>
                 <div style={{ marginTop: 12 }}>Your cart is empty</div>
-                <button className="btn btn-primary mt-16" onClick={() => setActiveTab('browse')}>
+                <button className="btn btn-primary mt-16" onClick={() => handleTabChange('browse')}>
                   Browse Products
                 </button>
               </div>
@@ -795,7 +807,7 @@ export default function BuyerMarketplace() {
             <div className="card" style={{ textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
               <div style={{ fontSize: 16, color: '#546E7A' }}>No orders yet</div>
-              <button className="btn btn-primary mt-16" onClick={() => setActiveTab('browse')}>
+              <button className="btn btn-primary mt-16" onClick={() => handleTabChange('browse')}>
                 Browse Products
               </button>
             </div>
@@ -1147,7 +1159,7 @@ export default function BuyerMarketplace() {
             <div className="card" style={{ textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🤍</div>
               <div style={{ fontSize: 16, color: '#546E7A' }}>Your wishlist is empty</div>
-              <button className="btn btn-primary mt-16" onClick={() => setActiveTab('browse')}>
+              <button className="btn btn-primary mt-16" onClick={() => handleTabChange('browse')}>
                 Browse Products
               </button>
             </div>
@@ -1321,7 +1333,7 @@ export default function BuyerMarketplace() {
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div className="card-title" style={{ marginBottom: 0 }}>❤️ Wishlist ({wishlist.length})</div>
-              <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('wishlist')}>
+              <button className="btn btn-secondary btn-sm" onClick={() => handleTabChange('wishlist')}>
                 View All →
               </button>
             </div>
@@ -1338,7 +1350,7 @@ export default function BuyerMarketplace() {
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{p.title_en}</div>
                     <div style={{ fontSize: 12, color: 'var(--gray)' }}>৳{p.unit_price_bdt}/kg · {p.district}</div>
                   </div>
-                  <button className="btn btn-primary btn-sm" onClick={() => { addToCart(p); setActiveTab('cart') }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => { addToCart(p); handleTabChange('cart') }}>
                     🛒 Add
                   </button>
                 </div>

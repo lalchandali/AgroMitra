@@ -3,10 +3,10 @@
 ### AI-Powered Smart Agriculture Marketplace for Bangladesh
 
 <p align="center">
-  <img src="AgroMitra\frontend\src\assets\icone.png" width="100%">
+  <img src="AgroMitra/frontend/src/assets/icone.PNG" width="100%">
 </p>
 <p align="center">
-<img src="AgroMitra\frontend\src\assets\banner.png" width="100%">
+<img src="AgroMitra/frontend/src/assets/banner.png" width="100%">
 </p>
 <p align="center">
 <b>Empowering Farmers with Artificial Intelligence, Fair Trade, and Digital Agriculture.</b>
@@ -205,9 +205,9 @@ AgroMitra
 ## Clone Repository
 
 ```bash
-git clone https://github.com/lalchandali/AgroMitra-project.git
+git clone https://github.com/lalchandali/AgroMitra.git
 
-cd AgroMitra-project
+cd AgroMitra
 ```
 
 ---

@@ -276,6 +276,12 @@ export default function BuyerMarketplace() {
   }
 
   const addToCart = (product) => {
+    if (user && String(product.farmer_id) === String(user.user_id)) {
+      toast.error(lang === 'bn'
+        ? 'নিজের product নিজে কিনতে পারবেন না।'
+        : 'You cannot order your own product.')
+      return
+    }
     setCart(prev => {
       const exists = prev.find(i => i.product.product_id === product.product_id)
       if (exists) return prev.map(i =>
@@ -365,6 +371,7 @@ export default function BuyerMarketplace() {
 
     setPlacingOrder(true)
     const results = { success: 0, failed: 0 }
+    const errorMessages = []
 
     for (const fid of Object.keys(groups)) {
       try {
@@ -378,8 +385,11 @@ export default function BuyerMarketplace() {
           delivery_address: deliveryAddress,
         })
         results.success++
-      } catch {
+      } catch (err) {
         results.failed++
+        const msg = err.response?.data?.detail ||
+          (lang === 'bn' ? 'অর্ডার ব্যর্থ হয়েছে' : 'Order failed')
+        errorMessages.push(msg)
       }
     }
 
@@ -392,7 +402,9 @@ export default function BuyerMarketplace() {
       fetchOrders()
     }
     if (results.failed > 0) {
-      toast.error(`${results.failed} order(s) failed`)
+      // ── ব্যাকএন্ড থেকে আসা আসল কারণ (যেমন "You cannot order your
+      //    own product.") আলাদা করে দেখাও, শুধু generic count না ──
+      errorMessages.forEach((msg) => toast.error(msg))
     }
   }
 

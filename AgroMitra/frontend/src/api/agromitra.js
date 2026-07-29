@@ -168,7 +168,7 @@ export const updateProduct     = (id, formData)   => API.put(`/api/v1/products/$
 export const deleteProduct     = (id)         => API.delete(`/api/v1/products/${id}`)
 
 // ── Orders ───────────────────────────────────────────────────
-export const getMyOrders       = ()           => API.get('/api/v1/orders/')
+export const getMyOrders       = (view) => API.get('/api/v1/orders/', { params: view ? { view } : {} })
 export const getOrder          = (id)         => API.get(`/api/v1/orders/${id}`)
 export const placeOrder        = (data)       => API.post('/api/v1/orders/', data)
 export const cancelOrder       = (id)         => API.delete(`/api/v1/orders/${id}`)

@@ -153,7 +153,7 @@ export default function BuyerMarketplace() {
   const fetchOrders = useCallback(async () => {
     setOrdersLoading(true)
     try {
-      const res = await getMyOrders()
+      const res = await getMyOrders('buyer')
       setOrders(res.data || [])
     } catch {
       toast.error('Could not load orders')

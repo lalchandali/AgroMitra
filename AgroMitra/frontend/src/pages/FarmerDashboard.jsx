@@ -353,7 +353,7 @@ export default function FarmerDashboard() {
   const fetchOrders = useCallback(async () => {
     setOrdersLoading(true)
     try {
-      const res = await getMyOrders()
+      const res = await getMyOrders('seller')
       setOrders(res.data || [])
     } catch {
       toast.error('Could not load your orders')

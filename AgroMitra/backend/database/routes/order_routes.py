@@ -229,11 +229,27 @@ async def place_order(
 @router.get("/", response_model=List[OrderResponse])
 async def get_my_orders(
     status: Optional[OrderStatus] = Query(None),
+    view: Optional[str] = Query(
+        None,
+        description="'buyer' বা 'seller' — কোন দিক থেকে order দেখতে চান, "
+                    "স্পষ্টভাবে বলে দাও। না দিলে account role অনুযায়ী default হবে।"
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Buyer বা Farmer-এর সব orders দেখাও (প্রতিটা order-এ তার সব item সহ)।"""
-    if current_user.role == UserRole.farmer:
+    """
+    Buyer বা Farmer-এর সব orders দেখাও (প্রতিটা order-এ তার সব item সহ)।
+
+    একজন farmer অন্য farmer-এর product-ও কিনতে পারে — তখন সেই একই user
+    কখনো seller (নিজের product বিক্রি), কখনো buyer (অন্যের product কেনা)।
+    তাই শুধু account role দিয়ে বোঝা যায় না কোন দিকের orders দেখানো উচিত —
+    caller (frontend) স্পষ্টভাবে `view=buyer` বা `view=seller` পাঠায়।
+    """
+    if view == "buyer":
+        query = db.query(Order).filter(Order.buyer_id == current_user.user_id)
+    elif view == "seller":
+        query = db.query(Order).filter(Order.farmer_id == current_user.user_id)
+    elif current_user.role == UserRole.farmer:
         query = db.query(Order).filter(Order.farmer_id == current_user.user_id)
     else:
         query = db.query(Order).filter(Order.buyer_id == current_user.user_id)

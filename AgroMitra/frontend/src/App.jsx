@@ -14,7 +14,7 @@ import './index.css'
 // ── Protected Route ──────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
   const user = getStoredUser()
-  const token = localStorage.getItem('agromitra_access_token')
+  const token = sessionStorage.getItem('agromitra_access_token')
 
   // Token নেই → login page
   if (!token || !user) {

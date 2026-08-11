@@ -1551,7 +1551,7 @@ export default function FarmerDashboard() {
                           })
                           // localStorage sync করো যাতে refresh-এ নতুন data থাকে
                           const updatedUser = { ...user, ...res.data }
-                          localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                          sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
                           setUser(updatedUser)
                           toast.success('Profile updated successfully!')
                           setProfileEditMode(false)

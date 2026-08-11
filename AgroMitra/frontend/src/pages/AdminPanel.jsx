@@ -134,7 +134,7 @@ export default function AdminPanel() {
   useEffect(() => { if (activeTab === 'users')    fetchUsers()   }, [activeTab, fetchUsers])
   useEffect(() => { if (activeTab === 'orders')  { fetchOrders(); fetchUsers() } }, [activeTab, fetchOrders, fetchUsers])
   useEffect(() => { if (activeTab === 'products') fetchProducts() }, [activeTab, fetchProducts])
-  useEffect(() => { if (activeTab === 'overview') { fetchOrders(); fetchProducts() } }, [activeTab, fetchOrders, fetchProducts])
+  useEffect(() => { if (activeTab === 'overview') { fetchOrders(); fetchProducts(); fetchUsers() } }, [activeTab, fetchOrders, fetchProducts, fetchUsers])
   useEffect(() => { if (activeTab === 'testimonials') fetchTestimonials() }, [activeTab, fetchTestimonials])
   useEffect(() => { if (activeTab === 'retrain') fetchDataStatus() }, [activeTab, fetchDataStatus])
 
@@ -1052,7 +1052,7 @@ export default function AdminPanel() {
                       toast.loading('Uploading photo...')
                       const res = await uploadProfilePhoto(file)
                       const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
-                      localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
                       setUser(updatedUser)
                       setPhotoKey(Date.now())
                       toast.dismiss()
@@ -1129,7 +1129,7 @@ export default function AdminPanel() {
                     try {
                       const res = await updateProfile({ name_en: profileForm.name_en, name_bn: profileForm.name_bn, mobile_number: profileForm.mobile_number, district: profileForm.district })
                       const updatedUser = { ...user, ...res.data }
-                      localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
                       setUser(updatedUser)
                       toast.success('Profile updated!')
                       setProfileEditMode(false)

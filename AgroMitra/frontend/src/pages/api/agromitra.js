@@ -16,7 +16,7 @@ const API = axios.create({
 })
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('agromitra_access_token')
+  const token = sessionStorage.getItem('agromitra_access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -56,7 +56,7 @@ API.interceptors.response.use(
                         originalRequest.url?.includes('/api/v1/auth/refresh-token')
 
     if (error.response.status === 401 && !originalRequest._retry && !isAuthRoute) {
-      const refreshToken = localStorage.getItem('agromitra_refresh_token')
+      const refreshToken = sessionStorage.getItem('agromitra_refresh_token')
 
       // Refresh token-ই না থাকলে সরাসরি লগআউট
       if (!refreshToken) {
@@ -82,7 +82,7 @@ API.interceptors.response.use(
         const { data } = await axios.post(`${BASE_URL}/api/v1/auth/refresh-token`, {
           refresh_token: refreshToken
         })
-        localStorage.setItem('agromitra_access_token', data.access_token)
+        sessionStorage.setItem('agromitra_access_token', data.access_token)
         processQueue(null, data.access_token)
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`
         return API(originalRequest)
@@ -121,22 +121,22 @@ export const uploadProfilePhoto = (file) => {
 }
 // ── Auth Session Helpers ─────────────────────────────────────
 export const saveAuthSession = ({ access_token, refresh_token, user }) => {
-  localStorage.setItem('agromitra_access_token', access_token)
-  localStorage.setItem('agromitra_refresh_token', refresh_token)
-  localStorage.setItem('agromitra_user', JSON.stringify(user))
+  sessionStorage.setItem('agromitra_access_token', access_token)
+  sessionStorage.setItem('agromitra_refresh_token', refresh_token)
+  sessionStorage.setItem('agromitra_user', JSON.stringify(user))
   globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
 export const clearAuthSession = () => {
-  localStorage.removeItem('agromitra_access_token')
-  localStorage.removeItem('agromitra_refresh_token')
-  localStorage.removeItem('agromitra_user')
+  sessionStorage.removeItem('agromitra_access_token')
+  sessionStorage.removeItem('agromitra_refresh_token')
+  sessionStorage.removeItem('agromitra_user')
   globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
 export const getStoredUser = () => {
   try {
-    return JSON.parse(localStorage.getItem('agromitra_user'))
+    return JSON.parse(sessionStorage.getItem('agromitra_user'))
   } catch {
     return null
   }
@@ -147,6 +147,11 @@ export const loginUser      = (credentials) => API.post('/api/v1/auth/login', cr
 export const registerUser   = (payload)     => API.post('/api/v1/auth/register', payload)
 export const getCurrentUser = ()            => API.get('/api/v1/auth/me')
 export const updateProfile  = (data)        => API.put('/api/v1/auth/profile', data)
+
+export const changePassword = (currentPassword, newPassword) =>
+  API.put('/api/v1/auth/change-password', { current_password: currentPassword, new_password: newPassword })
+
+export const deactivateAccount = () => API.delete('/api/v1/auth/account')
 export const forgotPassword = (mobile)      => API.post('/api/v1/auth/forgot-password', { mobile_number: mobile })
 export const resetPassword  = (mobile, otp, newPassword) => API.post('/api/v1/auth/reset-password', { mobile_number: mobile, otp, new_password: newPassword })
 
@@ -163,7 +168,7 @@ export const updateProduct     = (id, formData)   => API.put(`/api/v1/products/$
 export const deleteProduct     = (id)         => API.delete(`/api/v1/products/${id}`)
 
 // ── Orders ───────────────────────────────────────────────────
-export const getMyOrders       = ()           => API.get('/api/v1/orders/')
+export const getMyOrders       = (view) => API.get('/api/v1/orders/', { params: view ? { view } : {} })
 export const getOrder          = (id)         => API.get(`/api/v1/orders/${id}`)
 export const placeOrder        = (data)       => API.post('/api/v1/orders/', data)
 export const cancelOrder       = (id)         => API.delete(`/api/v1/orders/${id}`)
@@ -290,6 +295,13 @@ export const verifyUser       = (userId)            => API.put(`/api/v1/auth/adm
 // ── Weather & Calendar ───────────────────────────────────────
 export const getWeatherAlert   = (district)  => API.get('/api/v1/weather/alert', { params: { district } })
 export const getSowingCalendar = (month)     => API.get('/api/v1/crops/sowing-calendar', { params: month ? { month } : {} })
+
+// ── Notifications ────────────────────────────────────────────
+export const getNotifications          = (unreadOnly = false) =>
+  API.get('/api/v1/notifications/', { params: unreadOnly ? { unread_only: true } : {} })
+export const getUnreadNotificationCount = () => API.get('/api/v1/notifications/unread-count')
+export const markNotificationRead       = (id) => API.put(`/api/v1/notifications/${id}/read`)
+export const markAllNotificationsRead   = ()   => API.put('/api/v1/notifications/read-all')
 
 // ── Platform Settings ───────────────────────────────────────
 export const getPlatformFee    = ()              => API.get('/api/v1/admin/settings/platform-fee')

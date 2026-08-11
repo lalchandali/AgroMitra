@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { FiLock, FiLogIn, FiPhone, FiShield, FiUser, FiUserPlus } from 'react-icons/fi'
-import { loginUser, registerUser, saveAuthSession } from '../api/agromitra'
+import { getStoredUser, loginUser, registerUser, saveAuthSession } from '../api/agromitra'
 
 const districts = [
   "Bagerhat","Bandarban","Barguna","Barishal","Bhola","Bogura",
@@ -98,6 +98,17 @@ const AuthPage = () => {
     const path = ROLE_ROUTES[user?.role] || '/buyer'
     navigate(path)
   }
+
+  // ইতিমধ্যে login করা থাকলে /auth-এ এসে login form দেখানোর দরকার নাই —
+  // সরাসরি তার dashboard-এ পাঠিয়ে দাও
+  useEffect(() => {
+    const existingUser = getStoredUser()
+    const token = sessionStorage.getItem('agromitra_access_token')
+    if (existingUser && token) {
+      redirectByRole(existingUser)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleLogin = async (event) => {
     event.preventDefault()

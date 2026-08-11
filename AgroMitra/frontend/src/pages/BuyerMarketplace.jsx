@@ -1282,7 +1282,7 @@ export default function BuyerMarketplace() {
                       toast.loading('Uploading photo...')
                       const res = await uploadProfilePhoto(file)
                       const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
-                      localStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
                       setUser(updatedUser)
                       setPhotoKey(Date.now())
                       toast.dismiss()

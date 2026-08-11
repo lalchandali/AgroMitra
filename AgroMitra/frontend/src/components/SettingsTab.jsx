@@ -1,4 +1,5 @@
 import { useLanguage } from '../hooks/useLanguage'
+import { useTheme } from '../context/ThemeContext'
 import { clearAuthSession, getPlatformFee, updatePlatformFee, changePassword, deactivateAccount } from '../api/agromitra'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -41,14 +42,12 @@ function Toggle({ on, onChange, label, sub }) {
 
 export default function SettingsTab({ userRole }) {
   const { lang, toggleLang } = useLanguage()
+  const { darkMode, toggleDarkMode } = useTheme()
   const navigate = useNavigate()
   const isBn = lang === 'bn'
 
   // prefs state
   const [prefs, setPrefs] = useState(getPrefs)
-  const [darkMode, setDarkMode] = useState(
-    () => localStorage.getItem('agromitra_dark') === '1'
-  )
 
   // password change
   const [showPassForm, setShowPassForm] = useState(false)
@@ -79,19 +78,11 @@ export default function SettingsTab({ userRole }) {
     savePrefs(next)
   }
 
-  // Dark mode toggle
+  // Dark mode toggle — shared ThemeContext ব্যবহার করে, তাই Navbar-এর সাথে সবসময় sync থাকবে
   const toggleDark = () => {
-    const next = !darkMode
-    setDarkMode(next)
-    document.body.classList.toggle('dark-mode', next)
-    localStorage.setItem('agromitra_dark', next ? '1' : '0')
-    toast.success(next ? T('Dark mode on 🌙', 'ডার্ক মোড চালু 🌙') : T('Light mode on ☀️', 'লাইট মোড চালু ☀️'))
+    toggleDarkMode()
+    toast.success(!darkMode ? T('Dark mode on 🌙', 'ডার্ক মোড চালু 🌙') : T('Light mode on ☀️', 'লাইট মোড চালু ☀️'))
   }
-
-  // Load dark mode on mount
-  useEffect(() => {
-    document.body.classList.toggle('dark-mode', darkMode)
-  }, [darkMode])
 
   // Admin হলে বর্তমান platform fee % লোড করো
   useEffect(() => {

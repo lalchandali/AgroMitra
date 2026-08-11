@@ -877,7 +877,7 @@ const Home = () => {
               © 2026 AgroMitra · Uttara University, CSE Department · Final Year Project
             </div>
             <div style={{ fontSize: 13, opacity: 0.7 }}>
-              Developed by <strong style={{ color: 'white' }}>Lal Chand Ali</strong> · Supervised by <strong style={{ color: 'white' }}>Md. Ashraful Kabir</strong>
+              Developed by <strong style={{ color: 'white' }}>Md Lal Chand Ali</strong> · Supervised by <strong style={{ color: 'white' }}>Md. Ashraful Kabir</strong>
             </div>
           </div>
         </div>

@@ -16,7 +16,7 @@ const API = axios.create({
 })
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('agromitra_access_token')
+  const token = sessionStorage.getItem('agromitra_access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -56,7 +56,7 @@ API.interceptors.response.use(
                         originalRequest.url?.includes('/api/v1/auth/refresh-token')
 
     if (error.response.status === 401 && !originalRequest._retry && !isAuthRoute) {
-      const refreshToken = localStorage.getItem('agromitra_refresh_token')
+      const refreshToken = sessionStorage.getItem('agromitra_refresh_token')
 
       // Refresh token-ই না থাকলে সরাসরি লগআউট
       if (!refreshToken) {
@@ -82,7 +82,7 @@ API.interceptors.response.use(
         const { data } = await axios.post(`${BASE_URL}/api/v1/auth/refresh-token`, {
           refresh_token: refreshToken
         })
-        localStorage.setItem('agromitra_access_token', data.access_token)
+        sessionStorage.setItem('agromitra_access_token', data.access_token)
         processQueue(null, data.access_token)
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`
         return API(originalRequest)
@@ -121,22 +121,22 @@ export const uploadProfilePhoto = (file) => {
 }
 // ── Auth Session Helpers ─────────────────────────────────────
 export const saveAuthSession = ({ access_token, refresh_token, user }) => {
-  localStorage.setItem('agromitra_access_token', access_token)
-  localStorage.setItem('agromitra_refresh_token', refresh_token)
-  localStorage.setItem('agromitra_user', JSON.stringify(user))
+  sessionStorage.setItem('agromitra_access_token', access_token)
+  sessionStorage.setItem('agromitra_refresh_token', refresh_token)
+  sessionStorage.setItem('agromitra_user', JSON.stringify(user))
   globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
 export const clearAuthSession = () => {
-  localStorage.removeItem('agromitra_access_token')
-  localStorage.removeItem('agromitra_refresh_token')
-  localStorage.removeItem('agromitra_user')
+  sessionStorage.removeItem('agromitra_access_token')
+  sessionStorage.removeItem('agromitra_refresh_token')
+  sessionStorage.removeItem('agromitra_user')
   globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
 export const getStoredUser = () => {
   try {
-    return JSON.parse(localStorage.getItem('agromitra_user'))
+    return JSON.parse(sessionStorage.getItem('agromitra_user'))
   } catch {
     return null
   }

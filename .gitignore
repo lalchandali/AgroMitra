@@ -37,8 +37,8 @@ build/
 output/
 coverage/
 
-echo "AgroMitra/backend/venv/" >> .gitignore
-echo "**/venv/" >> .gitignore
-echo "__pycache__/" >> .gitignore
-echo "*.pyc" >> .gitignore
-echo ".env" >> .gitignore
+# ==========================
+# Virtual environments
+# ==========================
+AgroMitra/backend/venv/
+**/venv/

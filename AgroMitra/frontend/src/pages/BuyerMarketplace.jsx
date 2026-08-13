@@ -1508,34 +1508,103 @@ export default function BuyerMarketplace() {
 
                 {/* ── Reviews ── */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div style={{ fontSize: 12, color: '#546E7A', fontWeight: 600 }}>⭐ {T('reviews').toUpperCase()}</div>
-                    {p.average_rating != null && (
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#E65100' }}>
-                        ⭐ {p.average_rating} · {p.review_count} {T('reviews')}
-                      </div>
-                    )}
+                  <div style={{ fontSize: 12, color: '#546E7A', fontWeight: 700, letterSpacing: 0.4, marginBottom: 12 }}>
+                    ⭐ {T('reviews').toUpperCase()}
                   </div>
 
                   {productReviewsLoading ? (
-                    <div style={{ fontSize: 13, color: '#9E9E9E', padding: '8px 0' }}>Loading…</div>
-                  ) : productReviews.length === 0 ? (
-                    <div style={{ fontSize: 13, color: '#9E9E9E', padding: '8px 0' }}>{T('noReviewsYet')}</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
-                      {productReviews.map(r => (
-                        <div key={r.review_id} style={{ background: '#F9FBF9', borderRadius: 8, padding: 12 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>{r.buyer_name || 'Buyer'}</span>
-                            <span style={{ fontSize: 13 }}>{'⭐'.repeat(r.rating)}</span>
-                          </div>
-                          {r.comment && <div style={{ fontSize: 13, color: '#546E7A', lineHeight: 1.5 }}>{r.comment}</div>}
-                          <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 4 }}>{fmtDate(r.created_at)}</div>
-                        </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {[1, 2].map(i => (
+                        <div key={i} style={{
+                          height: 64, borderRadius: 12, background: '#F1F4F1',
+                          animation: 'pulse 1.4s ease-in-out infinite',
+                        }} />
                       ))}
                     </div>
+                  ) : productReviews.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center', padding: '28px 16px', borderRadius: 12,
+                      background: '#F9FBF9', border: '1px dashed #DDE2E5',
+                    }}>
+                      <div style={{ fontSize: 26, marginBottom: 6 }}>📝</div>
+                      <div style={{ fontSize: 13, color: '#78909C', fontWeight: 600 }}>{T('noReviewsYet')}</div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Rating summary */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 18,
+                        background: 'linear-gradient(135deg, #FFF8E1, #FFF3E0)',
+                        border: '1px solid #FFE0B2', borderRadius: 14, padding: '16px 18px', marginBottom: 14,
+                      }}>
+                        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                          <div style={{ fontSize: 34, fontWeight: 800, color: '#E65100', lineHeight: 1 }}>
+                            {(p.average_rating ?? 0).toFixed(1)}
+                          </div>
+                          <div style={{ fontSize: 13, color: '#F9A825', marginTop: 4, letterSpacing: 1 }}>
+                            {'★'.repeat(Math.round(p.average_rating || 0))}
+                            <span style={{ color: '#E0D8C8' }}>{'★'.repeat(5 - Math.round(p.average_rating || 0))}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: '#8D6E63', marginTop: 3 }}>
+                            {p.review_count} {T('reviews')}
+                          </div>
+                        </div>
+
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {[5, 4, 3, 2, 1].map(star => {
+                            const count = productReviews.filter(r => r.rating === star).length
+                            const pct = productReviews.length ? Math.round((count / productReviews.length) * 100) : 0
+                            return (
+                              <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 11, color: '#8D6E63', width: 10 }}>{star}</span>
+                                <span style={{ fontSize: 10, color: '#F9A825' }}>★</span>
+                                <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.7)', overflow: 'hidden' }}>
+                                  <div style={{ width: `${pct}%`, height: '100%', background: '#F9A825', borderRadius: 99 }} />
+                                </div>
+                                <span style={{ fontSize: 10, color: '#8D6E63', width: 18, textAlign: 'right' }}>{count}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual reviews */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 260, overflowY: 'auto', paddingRight: 2 }}>
+                        {productReviews.map(r => {
+                          const initials = (r.buyer_name || 'B').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                          return (
+                            <div key={r.review_id} style={{
+                              background: 'white', border: '1px solid #EEF1EE', borderRadius: 12, padding: 14,
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                <div style={{
+                                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                                  background: '#2E7D32', color: 'white', fontSize: 13, fontWeight: 700,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                  {initials}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#2E2E2E' }}>{r.buyer_name || 'Buyer'}</span>
+                                    <span style={{ fontSize: 11, color: '#9E9E9E', flexShrink: 0 }}>{fmtDate(r.created_at)}</span>
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#F9A825', letterSpacing: 1, margin: '3px 0' }}>
+                                    {'★'.repeat(r.rating)}<span style={{ color: '#E0E0E0' }}>{'★'.repeat(5 - r.rating)}</span>
+                                  </div>
+                                  {r.comment && (
+                                    <div style={{ fontSize: 13, color: '#546E7A', lineHeight: 1.55 }}>{r.comment}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
+
 
                 {inCart && (
                   <div style={{ background: '#E8F5E9', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

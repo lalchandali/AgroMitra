@@ -18,6 +18,7 @@ import matplotlib.dates as mdates
 import warnings
 import os
 import pickle
+from pathlib import Path
 from datetime import datetime, timedelta
 
 import tensorflow as tf
@@ -51,7 +52,7 @@ print("🌾"*30)
 # ============================================================
 # CONFIG
 # ============================================================
-DATA_FILE = r'E:\Personal\UU INFO\UU_Project\Final_Project\AgroMitra\backend\ai_models\data\raw\crop_prices_v2_64districts.csv'
+DATA_FILE = str(Path(__file__).resolve().parent / 'data' / 'raw' / 'crop_prices_v2_64districts.csv')
 CROP_NAME  = 'Tomato'
 DISTRICT   = 'Bogura'
 LOOK_BACK  = 60     # 60 দিনের pattern দেখে predict করবে
@@ -158,7 +159,18 @@ print("  STEP 3: Scaling & Splitting Data")
 print("="*60)
 
 scaler = MinMaxScaler(feature_range=(0, 1))
-scaled = scaler.fit_transform(feature_data)
+
+# ── Data leakage fix ──────────────────────────────────────────
+# আগে পুরো dataset-এ scaler.fit_transform() করা হতো, তারপর train/val/test
+# split হতো — তাতে scaler test/val-এর min-max info leak হয়ে যেত (leakage)।
+# ঠিক করা হলো: প্রথমে raw (unscaled) data-কে train-cut অনুযায়ী ভাগ করে,
+# scaler শুধু train অংশে fit করা হচ্ছে, তারপর পুরো dataset শুধু transform
+# (fit না) করা হচ্ছে — তাই val/test-এর কোনো information scaler-এ leak হয় না।
+n_raw = len(feature_data)
+train_end_raw = int(n_raw * 0.70)
+
+scaler.fit(feature_data[:train_end_raw])
+scaled = scaler.transform(feature_data)
 
 # Save scaler
 scaler_path = f'models/demand_scaler_v2_{CROP_NAME}_{DISTRICT}.pkl'

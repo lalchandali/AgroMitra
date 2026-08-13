@@ -20,6 +20,7 @@ import seaborn as sns
 import warnings
 import os
 import pickle
+from pathlib import Path
 from datetime import datetime, timedelta
 
 from prophet import Prophet
@@ -54,8 +55,7 @@ def load_data(file_path):
     print("\n" + "="*60)
     print("  STEP 1: Data Loading & Cleaning")
     print("="*60)
-    df = pd.read_csv(
-        r"E:\Personal\UU INFO\UU_Project\Final_Project\AgroMitra\backend\ai_models\data\raw\crop_prices_v2_64districts.csv")
+    df = pd.read_csv(file_path)
     print(f"  ✅ Data loaded: {len(df)} rows, {len(df.columns)} columns")
     print(f"  📋 Columns: {list(df.columns)}")
 
@@ -633,7 +633,9 @@ def main():
     print("🌾"*30)
 
     # ── Config — এখানে তোমার settings দাও ──────────────────
-    DATA_FILE = 'data/raw/crop_prices.csv'   # তোমার CSV file path
+    # __file__-এর সাপেক্ষে relative path — কম্পিউটার/OS যাই হোক, সবসময় কাজ করবে
+    SCRIPT_DIR = Path(__file__).resolve().parent
+    DATA_FILE = str(SCRIPT_DIR / 'data' / 'raw' / 'crop_prices_v2_64districts.csv')
     CROP_NAME = 'Tomato'                      # কোন crop predict করবে
     DISTRICT = 'Bogura'                      # কোন district
 

@@ -45,6 +45,8 @@ from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_models'))
+import inference as ai_inference  # noqa: E402 — real trained model inference (Prophet+XGBoost, LSTM)
 
 warnings.filterwarnings('ignore')
 
@@ -577,9 +579,7 @@ def simple_price_forecast(df: pd.DataFrame, days: int):
         predicted = predicted + (trend * d * 0.3)
         predicted = predicted * seasonal_adj
         predicted = max(predicted, last_price * 0.5)
-
-        noise = np.random.normal(0, abs(predicted) * 0.03)
-        predicted = round(predicted + noise, 2)
+        predicted = round(predicted, 2)
         lower = round(predicted * 0.88, 2)
         upper = round(predicted * 1.12, 2)
 
@@ -625,8 +625,7 @@ def simple_demand_forecast(df: pd.DataFrame, days: int):
         future_month = future_date.month
         s_adj = seasonal.get(future_month, 1.0)
         predicted = (roll_7 * 0.5 + roll_30 * 0.3 + last_dem * 0.2) * s_adj
-        noise = np.random.normal(0, abs(predicted) * 0.05)
-        predicted = max(0, int(predicted + noise))
+        predicted = max(0, int(round(predicted)))
         lower = int(predicted * 0.82)
         upper = int(predicted * 1.18)
 
@@ -886,8 +885,24 @@ async def price_prediction(req: PricePredictionRequest):
         )
 
     df = load_crop_data(req.crop_name, req.district)
-    forecasts, last_price, roll_7, roll_30 = simple_price_forecast(
-        df, req.days)
+
+    prices = pd.to_numeric(df['avg_price'], errors='coerce').to_numpy(dtype=float)
+    last_price = float(prices[-1])
+    roll_7 = float(np.mean(prices[-7:])) if len(prices) >= 7 else last_price
+    roll_30 = float(np.mean(prices[-30:])) if len(prices) >= 30 else last_price
+
+    # ── এই crop/district-এর জন্য trained Prophet+XGBoost model থাকলে সেটাই
+    #    ব্যবহার করো, না থাকলে deterministic statistical fallback ──
+    try:
+        forecasts = ai_inference.predict_price_hybrid(df, req.crop_name, req.district, req.days)
+    except Exception:
+        forecasts = None  # trained model থাকলেও load/predict-এ কোনো সমস্যা হলে fallback
+
+    if forecasts is not None:
+        model_used = "prophet_xgboost_hybrid_v1"
+    else:
+        forecasts, _, _, _ = simple_price_forecast(df, req.days)
+        model_used = "statistical_fallback_v1"
 
     avg_forecast = np.mean([f['predicted_price'] for f in forecasts])
     trend_pct = ((avg_forecast - last_price) / last_price) * 100
@@ -905,6 +920,7 @@ async def price_prediction(req: PricePredictionRequest):
         "current_price":   round(float(last_price), 2),
         "forecast_days":   req.days,
         "forecasts":       forecasts,
+        "model_used":      model_used,
         "summary": {
             "avg_7day_price":  round(roll_7, 2),
             "avg_30day_price": round(roll_30, 2),
@@ -932,7 +948,18 @@ async def demand_forecast(req: DemandForecastRequest):
                             detail=f"District '{req.district}' not found.")
 
     df = load_crop_data(req.crop_name, req.district)
-    forecasts, mean_dem = simple_demand_forecast(df, req.days)
+
+    try:
+        result = ai_inference.predict_demand_lstm(df, req.crop_name, req.district, req.days)
+    except Exception:
+        result = None
+
+    if result is not None:
+        forecasts, mean_dem = result
+        model_used = "lstm_demand_v2"
+    else:
+        forecasts, mean_dem = simple_demand_forecast(df, req.days)
+        model_used = "statistical_fallback_v1"
 
     avg_forecast = np.mean([f['predicted_demand'] for f in forecasts])
     change_pct = ((avg_forecast - mean_dem) / mean_dem) * 100
@@ -949,6 +976,7 @@ async def demand_forecast(req: DemandForecastRequest):
         "district":         req.district,
         "forecast_days":    req.days,
         "forecasts":        forecasts,
+        "model_used":       model_used,
         "summary": {
             "historical_avg_demand": round(mean_dem, 0),
             "forecast_avg_demand":   round(avg_forecast, 0),

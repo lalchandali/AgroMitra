@@ -54,6 +54,18 @@ warnings.filterwarnings('ignore')
 load_dotenv()
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
+# ── Allowed CORS origins ─────────────────────────────────────
+# আগে allow_origins=["*"] ছিল, যেটা allow_credentials=True-র সাথে
+# combine করলে নিরাপদ না (যেকোনো site থেকে cookie/token সহ request
+# accept হয়ে যেত)। এখন .env-এ ALLOWED_ORIGINS=comma,separated,urls
+# দিয়ে override করা যাবে; না দিলে শুধু local dev origin গুলো allow হবে।
+_default_origins = "http://localhost:5173,http://127.0.0.1:5173"
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",")
+    if origin.strip()
+]
+
 # ── App Setup ────────────────────────────────────────────────
 app = FastAPI(
     title="🌾 AgroMitra AI API",
@@ -66,7 +78,7 @@ app = FastAPI(
 # ── CORS (React frontend-এর জন্য) ───────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

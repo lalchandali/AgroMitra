@@ -43,17 +43,24 @@ coverage/
 AgroMitra/backend/venv/
 **/venv/
 
+# ==========================
 # User-uploaded files (runtime content, not source)
+# ==========================
 AgroMitra/backend/uploads/*
 !AgroMitra/backend/uploads/.gitkeep
 
+# ==========================
 # Redundant/backup training data dumps
+# (crop_prices_v2_64districts.csv is the live data file — kept)
+# ==========================
 AgroMitra/backend/ai_models/data/raw/backups/
 AgroMitra/backend/ai_models/data/raw/crop_prices.csv
 AgroMitra/backend/ai_models/data/raw/crop_prices_v2.csv
 AgroMitra/backend/ai_models/data/raw/crop_prices_v2_backup.csv
 AgroMitra/backend/ai_models/data/raw/crop_prices_v2_backup2.csv
 
+# ==========================
 # Stray log files
+# ==========================
 gitpush-output.txt
 gitpush-verbose.txt

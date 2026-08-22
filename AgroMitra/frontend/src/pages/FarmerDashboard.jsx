@@ -814,6 +814,20 @@ export default function FarmerDashboard() {
               <div className="grid-2">
                 <div className="card">
                   <div className="card-title">📊 Demand Forecast (7 Days)</div>
+                  {demandData && (
+                    <div style={{
+                      fontSize: 11, marginBottom: 8, display: 'inline-block',
+                      padding: '3px 8px', borderRadius: 12,
+                      background: demandData.model_used === 'lstm_demand_v2'
+                        ? 'var(--green-pale, #E8F5E9)' : '#FFF3E0',
+                      color: demandData.model_used === 'lstm_demand_v2'
+                        ? 'var(--green-dark, #1B5E20)' : '#E65100',
+                    }}>
+                      {demandData.model_used === 'lstm_demand_v2'
+                        ? '🤖 Trained LSTM model'
+                        : '📊 Statistical estimate — no trained model yet for this crop/district'}
+                    </div>
+                  )}
                   {aiLoading
                     ? <div className="spinner-box"><div className="spinner" /><span>Loading…</span></div>
                     : <ResponsiveContainer width="100%" height={200}>
@@ -1735,7 +1749,19 @@ export default function FarmerDashboard() {
                         </div>
                       </div>
                       <div style={{ fontSize: 13, marginTop: 8 }}>{aiPriceSuggestion.summary.market_outlook}</div>
-                      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 10 }}
+                      <div style={{
+                        fontSize: 11, marginTop: 6, display: 'inline-block',
+                        padding: '3px 8px', borderRadius: 12,
+                        background: aiPriceSuggestion.model_used === 'prophet_xgboost_hybrid_v1'
+                          ? 'var(--green-pale, #E8F5E9)' : '#FFF3E0',
+                        color: aiPriceSuggestion.model_used === 'prophet_xgboost_hybrid_v1'
+                          ? 'var(--green-dark, #1B5E20)' : '#E65100',
+                      }}>
+                        {aiPriceSuggestion.model_used === 'prophet_xgboost_hybrid_v1'
+                          ? T('🤖 Trained AI model (Prophet + XGBoost)', '🤖 প্রশিক্ষিত AI মডেল (Prophet + XGBoost)')
+                          : T('📊 Statistical estimate — no trained model yet for this crop/district', '📊 পরিসংখ্যানগত অনুমান — এই ফসল/জেলার জন্য এখনো প্রশিক্ষিত মডেল নেই')}
+                      </div>
+                      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 10, display: 'block' }}
                         onClick={() => {
                           setProductForm({ ...productForm, unit_price_bdt: aiPriceSuggestion.summary.avg_forecast })
                           toast.success(T('Price applied!', 'দাম বসানো হয়েছে!'))

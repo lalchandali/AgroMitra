@@ -231,7 +231,6 @@ export const t = {
   priceAPIName:     { en: 'Price Prediction API',    bn: 'মূল্য পূর্বাভাস API' },
   demandAPIName:    { en: 'Demand Forecasting API',  bn: 'চাহিদা পূর্বাভাস API' },
   cropAPIName:      { en: 'Crop Recommendation API', bn: 'ফসল সুপারিশ API' },
-  diseaseAPIName:   { en: 'Disease Detection CNN',   bn: 'রোগ শনাক্তকরণ CNN' },
   healthy:          { en: 'Healthy',                 bn: 'সুস্থ' },
   soldOut:          { en: 'Sold Out',                bn: 'শেষ হয়ে গেছে' },
   nameRequired:     { en: 'Name is required',        bn: 'নাম আবশ্যক' },

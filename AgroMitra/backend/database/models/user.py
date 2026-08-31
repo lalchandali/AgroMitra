@@ -3,12 +3,14 @@
 #   Represents: Farmers, Buyers, Consumers, Admins
 # ============================================================
 
-import uuid
-from backend.database.database import Base
-from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Enum
-from sqlalchemy.dialects.postgresql import UUID
 import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, Numeric, String
+from sqlalchemy.dialects.postgresql import UUID
+
+from backend.database.database import Base
 
 
 # ── Enums ────────────────────────────────────────────────────

@@ -18,12 +18,22 @@ const districts = [
   "Sunamganj","Sylhet","Tangail","Thakurgaon"
 ]
 
-// ── Matches backend enum exactly: farmer | buyer | consumer | admin ──
+// ── Self-service roles only. "admin" is intentionally left out: the
+// backend's UserRegister schema now rejects it too (see user_schema.py),
+// since letting anyone self-register as Administrator was a real
+// privilege-escalation bug, not just a UI choice. Admin accounts should
+// be created directly in the DB or via an admin-only promotion endpoint.
+//
+// Only two choices shown here: "consumer" used to be a separate option
+// but routed to the exact same /buyer dashboard with the exact same
+// permissions as "buyer" (see ROLE_ROUTES below and order_routes.py —
+// nothing in the backend ever distinguished them), so it was a
+// distinction without a difference. Kept the "buyer" value under the
+// hood since that's what the rest of the code (getMyOrders('buyer'),
+// BuyerMarketplace.jsx) already expects — just relabeled it "Customer".
 const roleOptions = [
-  { value: 'farmer',   label: '👨‍🌾 Farmer (Sell crops)' },
-  { value: 'buyer',    label: '🛒 Buyer (Purchase crops)' },
-  { value: 'consumer', label: '🧑 Consumer (Browse market)' },
-  { value: 'admin',    label: '🛡️ Administrator' },
+  { value: 'farmer', label: '👨‍🌾 Farmer (Sell crops)' },
+  { value: 'buyer',  label: '🛒 Customer (Buy crops)' },
 ]
 
 const emptyLogin = {

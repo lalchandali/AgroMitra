@@ -3,28 +3,41 @@
 #   Register, Login, OTP, Profile, Password Reset
 # ============================================================
 
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import UploadFile, File
-import uuid
 import os
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+import uuid
 from datetime import datetime
 from typing import List, Optional
-from fastapi import Query
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.database.models.user import User, UserRole
 from backend.database.schemas.user_schema import (
-    UserRegister, UserLogin, OTPRequest, OTPVerify,
-    Token, TokenRefresh, UserResponse, UserUpdate,
-    PasswordResetRequest, PasswordResetConfirm, ChangePasswordRequest
+    ChangePasswordRequest,
+    OTPRequest,
+    OTPVerify,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    Token,
+    TokenRefresh,
+    UserLogin,
+    UserRegister,
+    UserResponse,
+    UserUpdate,
 )
 from backend.database.utils.security import (
-    hash_password, verify_password,
-    create_access_token, create_refresh_token, decode_token,
-    generate_otp, verify_otp,
-    check_login_lockout, record_failed_login, reset_login_attempts
+    check_login_lockout,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    generate_otp,
+    hash_password,
+    record_failed_login,
+    reset_login_attempts,
+    verify_otp,
+    verify_password,
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
@@ -170,7 +183,11 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 # ── PUT /api/v1/auth/profile ─────────────────────────────────
 @router.put("/profile", response_model=UserResponse)
-async def update_profile(update_data: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def update_profile(
+    update_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if update_data.name_en:
         current_user.name_en = update_data.name_en
     if update_data.name_bn:

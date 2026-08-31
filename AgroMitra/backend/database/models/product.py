@@ -3,12 +3,14 @@
 #   Represents farmer product listings
 # ============================================================
 
-import uuid
-from backend.database.database import Base
-from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Integer, Text, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
 import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
+
+from backend.database.database import Base
 
 
 class QualityGrade(str, enum.Enum):

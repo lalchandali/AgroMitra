@@ -5,10 +5,12 @@
 # ============================================================
 
 import uuid
-from backend.database.database import Base
 from datetime import datetime
-from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, UniqueConstraint
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
+
+from backend.database.database import Base
 
 
 class Review(Base):

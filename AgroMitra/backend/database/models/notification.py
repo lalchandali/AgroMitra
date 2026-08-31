@@ -6,10 +6,12 @@
 # ============================================================
 
 import uuid
-from backend.database.database import Base
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+
+from backend.database.database import Base
 
 
 class Notification(Base):

@@ -31,9 +31,10 @@ with the new 64-district file.
 ============================================================
 """
 
-import pandas as pd
-import numpy as np
 import os
+
+import numpy as np
+import pandas as pd
 
 # ── CONFIG ───────────────────────────────────────────────────
 INPUT_CSV = "crop_prices_v2.csv"                  # your existing file
@@ -366,7 +367,7 @@ def main():
         f"\nDone. Wrote {len(combined):,} total rows ({len(new_rows):,} newly generated) to '{OUTPUT_CSV}'.")
     print(f"Districts now covered: {combined['district'].nunique()} / 64")
     print("\nNext step: review the file, then REPLACE your original:")
-    print(f"  1. Rename current crop_prices_v2.csv -> crop_prices_v2_backup.csv (keep a backup!)")
+    print("  1. Rename current crop_prices_v2.csv -> crop_prices_v2_backup.csv (keep a backup!)")
     print(f"  2. Rename {OUTPUT_CSV} -> crop_prices_v2.csv")
 
 

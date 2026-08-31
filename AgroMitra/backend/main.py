@@ -27,22 +27,23 @@ if sys.platform == "win32":
     except Exception:
         pass  # খুব পুরনো Python version হলে reconfigure না থাকতে পারে — silently skip
 
-from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
-from typing import Optional
-import pandas as pd
-import numpy as np
+import io
 import json
 import os
-import io
 import shutil
 import warnings
+from datetime import datetime, timedelta
+from typing import Optional
+
+import numpy as np
+import pandas as pd
 import requests
 from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_models'))
@@ -102,22 +103,18 @@ db_text = None
 
 try:
     from sqlalchemy import text as db_text
-    from backend.database.database import engine as db_engine, Base as db_base
+
+    from backend.database.database import Base as db_base
+    from backend.database.database import engine as db_engine
     from backend.database.models.user import User, UserRole
-    from backend.database.models.product import Product
-    from backend.database.models.order import Order
-    from backend.database.models.order_item import OrderItem
-    from backend.database.models.settings import PlatformSettings
-    from backend.database.models.review import Review
-    from backend.database.models.testimonial import Testimonial
-    from backend.database.models.notification import Notification
-    from backend.database.routes.auth_routes import router as auth_router, get_current_user
-    from backend.database.routes.product_routes import router as product_router
-    from backend.database.routes.order_routes import router as order_router
-    from backend.database.routes.settings_routes import router as settings_router
-    from backend.database.routes.review_routes import router as review_router
-    from backend.database.routes.testimonial_routes import router as testimonial_router
+    from backend.database.routes.auth_routes import get_current_user
+    from backend.database.routes.auth_routes import router as auth_router
     from backend.database.routes.notification_routes import router as notification_router
+    from backend.database.routes.order_routes import router as order_router
+    from backend.database.routes.product_routes import router as product_router
+    from backend.database.routes.review_routes import router as review_router
+    from backend.database.routes.settings_routes import router as settings_router
+    from backend.database.routes.testimonial_routes import router as testimonial_router
 
     db_base.metadata.create_all(bind=db_engine)
     app.include_router(auth_router)
@@ -1444,7 +1441,10 @@ if DATABASE_ENABLED:
         try:
             new_df['date'] = pd.to_datetime(new_df['date'], errors='raise')
         except Exception:
-            raise HTTPException(status_code=400, detail="'date' column-এ কিছু value ঠিক তারিখ না (YYYY-MM-DD ফরম্যাট ব্যবহার করুন)।")
+            raise HTTPException(
+                status_code=400,
+                detail="'date' column-এ কিছু value ঠিক তারিখ না (YYYY-MM-DD ফরম্যাট ব্যবহার করুন)।",
+            )
 
         for col in ('avg_price', 'quantity_available'):
             new_df[col] = pd.to_numeric(new_df[col], errors='coerce')
@@ -1455,7 +1455,10 @@ if DATABASE_ENABLED:
                 detail=f"{int(bad_rows)}টা row-তে avg_price/quantity_available সংখ্যা হিসেবে ঠিক না।"
             )
         if (new_df['avg_price'] <= 0).any() or (new_df['quantity_available'] < 0).any():
-            raise HTTPException(status_code=400, detail="avg_price অবশ্যই 0-এর বেশি এবং quantity_available ঋণাত্মক হতে পারবে না।")
+            raise HTTPException(
+                status_code=400,
+                detail="avg_price অবশ্যই 0-এর বেশি এবং quantity_available ঋণাত্মক হতে পারবে না।",
+            )
 
         for col in OPTIONAL_DATA_COLUMNS:
             if col not in new_df.columns:

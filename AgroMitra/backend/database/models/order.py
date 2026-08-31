@@ -3,12 +3,14 @@
 #   Represents transactions between buyers and farmers
 # ============================================================
 
-import uuid
-from backend.database.database import Base
-from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Numeric, Enum, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
 import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Numeric, Text
+from sqlalchemy.dialects.postgresql import UUID
+
+from backend.database.database import Base
 
 
 class OrderStatus(str, enum.Enum):

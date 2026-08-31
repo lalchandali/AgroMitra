@@ -12,23 +12,20 @@
 #
 # ============================================================
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import seaborn as sns
-import warnings
 import os
 import pickle
+import warnings
+from datetime import timedelta
 from pathlib import Path
-from datetime import datetime, timedelta
 
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from prophet import Prophet
-from xgboost import XGBRegressor
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
-
+from sklearn.preprocessing import LabelEncoder
+from xgboost import XGBRegressor
 
 warnings.filterwarnings('ignore')
 
@@ -68,7 +65,7 @@ def load_data(file_path):
     # Missing values check করো
     missing = df.isnull().sum()
     if missing.any():
-        print(f"\n  ⚠️  Missing values found:")
+        print("\n  ⚠️  Missing values found:")
         print(missing[missing > 0])
         # avg_price missing হলে min+max average দিয়ে fill করো
         if 'avg_price' in df.columns:
@@ -369,7 +366,7 @@ def hybrid_predict(prophet_forecast, xgb_model, future_features,
     """
     Prophet + XGBoost combine করে final prediction বানাও।
     """
-    print(f"\n  🔗 Creating Hybrid Ensemble Prediction...")
+    print("\n  🔗 Creating Hybrid Ensemble Prediction...")
     print(f"     Prophet weight: {prophet_weight*100:.0f}%")
     print(f"     XGBoost weight: {xgb_weight*100:.0f}%")
 
@@ -474,10 +471,10 @@ def plot_results(df, crop_name, district, hybrid_df, importance_df=None):
         'avg_price'].mean().reset_index()
     monthly_avg['month_str'] = monthly_avg['month_year'].astype(str)
 
-    bars = ax3.bar(range(len(monthly_avg)), monthly_avg['avg_price'],
-                   color=[COLORS['green'] if v <= monthly_avg['avg_price'].median()
-                          else COLORS['orange'] for v in monthly_avg['avg_price']],
-                   edgecolor='white', linewidth=0.5)
+    ax3.bar(range(len(monthly_avg)), monthly_avg['avg_price'],
+            color=[COLORS['green'] if v <= monthly_avg['avg_price'].median()
+                   else COLORS['orange'] for v in monthly_avg['avg_price']],
+            edgecolor='white', linewidth=0.5)
     ax3.set_xticks(range(len(monthly_avg)))
     ax3.set_xticklabels(monthly_avg['month_str'],
                         rotation=45, ha='right', fontsize=8)
@@ -536,7 +533,7 @@ def print_forecast_report(hybrid_df, crop_name, district):
     7-day এবং 30-day forecast report print করো।
     """
     print("\n" + "="*60)
-    print(f"  📊 PRICE FORECAST REPORT")
+    print("  📊 PRICE FORECAST REPORT")
     print(f"  Crop: {crop_name} | District: {district}")
     print("="*60)
 
@@ -548,7 +545,7 @@ def print_forecast_report(hybrid_df, crop_name, district):
         print("  ⚠️  No future predictions available.")
         return
 
-    print(f"\n  📅 7-Day Forecast:")
+    print("\n  📅 7-Day Forecast:")
     print(f"  {'Date':<15} {'Predicted Price':<20} {'Range':<25} {'Trend'}")
     print(f"  {'-'*70}")
 
@@ -572,7 +569,7 @@ def print_forecast_report(hybrid_df, crop_name, district):
     min_30d = future['hybrid_pred'].min()
     max_30d = future['hybrid_pred'].max()
 
-    print(f"\n  📈 Summary:")
+    print("\n  📈 Summary:")
     print(f"     7-Day Average Price  : ৳{avg_7d:.2f}/kg")
     print(f"     30-Day Average Price : ৳{avg_30d:.2f}/kg")
     print(f"     30-Day Minimum       : ৳{min_30d:.2f}/kg")
@@ -580,13 +577,13 @@ def print_forecast_report(hybrid_df, crop_name, district):
     print(f"     Price Volatility     : ৳{future['hybrid_pred'].std():.2f}")
 
     # Recommendation
-    print(f"\n  💡 AgroMitra Advisory:")
+    print("\n  💡 AgroMitra Advisory:")
     if avg_7d > avg_30d:
-        print(f"     ✅ Prices trending UP — Good time to sell in the next 7 days!")
+        print("     ✅ Prices trending UP — Good time to sell in the next 7 days!")
     elif avg_7d < avg_30d * 0.95:
-        print(f"     ⚠️  Prices trending DOWN — Consider waiting or storing produce.")
+        print("     ⚠️  Prices trending DOWN — Consider waiting or storing produce.")
     else:
-        print(f"     📊 Prices are STABLE — Normal selling conditions.")
+        print("     📊 Prices are STABLE — Normal selling conditions.")
     print("="*60)
 
 
@@ -642,7 +639,7 @@ def main():
     # ── Check if data file exists ────────────────────────────
     if not os.path.exists(DATA_FILE):
         print(f"\n  ❌ Data file not found: {DATA_FILE}")
-        print(f"  📝 Creating sample data for demonstration...")
+        print("  📝 Creating sample data for demonstration...")
         create_sample_data(DATA_FILE, CROP_NAME, DISTRICT)
 
     # ── Step 1: Load Data ────────────────────────────────────

@@ -3,21 +3,31 @@
 #   Create, Read, Update, Delete product listings
 # ============================================================
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form  # type: ignore[import]
-from sqlalchemy.orm import Session  # type: ignore[import]
-from typing import Optional, List
-from uuid import UUID
-from datetime import datetime
 import os
 import uuid as uuid_lib
+from datetime import datetime
+from typing import List, Optional
+from uuid import UUID
+
+from fastapi import (  # type: ignore[import]
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
+from sqlalchemy import func
+from sqlalchemy.orm import Session  # type: ignore[import]
 
 from backend.database import get_db
 from backend.database.models.product import Product, ProductStatus, QualityGrade
-from backend.database.models.user import User, UserRole
 from backend.database.models.review import Review
-from backend.database.schemas.product_schema import ProductResponse, FarmerProfileResponse
+from backend.database.models.user import User, UserRole
 from backend.database.routes.auth_routes import get_current_user
-from sqlalchemy import func
+from backend.database.schemas.product_schema import FarmerProfileResponse, ProductResponse
+
 
 def _parse_dt(value: Optional[str]):
     """Form দিয়ে আসা ISO date string-কে datetime এ পার্স করে; খালি/ভুল হলে None।"""

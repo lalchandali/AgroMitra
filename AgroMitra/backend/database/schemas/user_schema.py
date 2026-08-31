@@ -3,16 +3,33 @@
 #   Request/Response data validation
 # ============================================================
 
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
-from backend.database.models.user import UserRole
 
+from pydantic import BaseModel, Field, field_validator
+
+from backend.database.models.user import UserRole
 
 # ============================================================
 # REGISTRATION
 # ============================================================
+# ── Roles a person can self-assign at public registration ──
+# admin is deliberately excluded: UserRegister.role used to accept any
+# UserRole value straight from the request body, so POSTing {"role": "admin"}
+# was enough to create a full admin account with no invite/approval step.
+# Admin accounts should be created by seeding the DB directly or via an
+# admin-only promotion endpoint — never through this public schema.
+#
+# consumer is also excluded here (registration form now only offers
+# Farmer / Customer) — it routed to the same dashboard with the same
+# permissions as buyer everywhere in the app, so it wasn't a real
+# separate role, just a second label for the same thing. The UserRole
+# enum still has it, so nothing breaks for any account that already
+# has it; new signups just can't pick it anymore.
+SELF_REGISTERABLE_ROLES = (UserRole.farmer, UserRole.buyer)
+
+
 class UserRegister(BaseModel):
     mobile_number: str = Field(..., example="01711223344")
     name_en:       str = Field(..., example="Mohammad Rahim")
@@ -27,6 +44,13 @@ class UserRegister(BaseModel):
         v = v.strip()
         if not v.isdigit() or len(v) != 11 or not v.startswith("01"):
             raise ValueError("Mobile number must be 11 digits starting with 01 (e.g., 01711223344)")
+        return v
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v):
+        if v not in SELF_REGISTERABLE_ROLES:
+            raise ValueError("role must be one of: farmer, buyer, consumer")
         return v
 
 

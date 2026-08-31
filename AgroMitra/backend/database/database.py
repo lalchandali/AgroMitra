@@ -8,6 +8,7 @@
 # ============================================================
 
 import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -30,7 +31,12 @@ PLACEHOLDER_URLS = {
     "postgresql://postgres:YOUR_PASSWORD@localhost:5432/dbname",
 }
 
-if not raw_database_url or raw_database_url in PLACEHOLDER_URLS or "user:password" in raw_database_url or "host:port" in raw_database_url:
+if (
+    not raw_database_url
+    or raw_database_url in PLACEHOLDER_URLS
+    or "user:password" in raw_database_url
+    or "host:port" in raw_database_url
+):
     print(
         "  [WARNING] DATABASE_URL not set (or still a placeholder) in the environment.",
         "Falling back to a generic local-dev connection string - set DATABASE_URL",

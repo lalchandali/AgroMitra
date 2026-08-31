@@ -10,15 +10,15 @@
 #
 # ============================================================
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import seaborn as sns
-import warnings
-import os
 import json
+import os
+import warnings
 from datetime import datetime
+
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 plt.rcParams['font.family'] = 'Segoe UI'  # অথবা 'Arial' বা 'Calibri'
 plt.rcParams['font.sans-serif'] = ['Segoe UI', 'Arial', 'Nikosh', 'Kalpurush']
@@ -1193,8 +1193,6 @@ def score_crop(crop_name, crop_info, farmer_profile, market_data=None):
     budget = farmer_profile['budget_bdt']
     exp_level = farmer_profile['experience']   # Beginner/Intermediate/Expert
 
-    dist_info = DISTRICT_PROFILES.get(district, DISTRICT_PROFILES['Bogura'])
-
     # ── 1. Season Suitability (25%) ───────────────────────────
     if month in crop_info['best_months']:
         season_score = 100
@@ -1328,7 +1326,6 @@ def plot_recommendations(recommendations, farmer_profile):
     crops = [r['crop'] for r in recommendations]
     scores = [r['final_score'] for r in recommendations]
     profits = [r['est_profit_bdt']/1000 for r in recommendations]
-    margins = [r['profit_margin_pct'] for r in recommendations]
 
     bar_colors = [
         COLORS['green'] if s >= 75 else
@@ -1495,18 +1492,18 @@ def print_report(recommendations, farmer_profile):
 
     # Top pick advisory
     top = recommendations[0]
-    print(f"\n  💡 AgroMitra Recommendation:")
+    print("\n  💡 AgroMitra Recommendation:")
     print(
         f"     Best crop for you this season: {top['crop']} ({top['name_bn']})")
     print(
         f"     Expected profit: ৳{top['est_profit_bdt']:,} in {top['grow_days']} days")
 
     if top['risk_level'] == 'Low':
-        print(f"     ✅ Low risk — Safe choice for all farmers!")
+        print("     ✅ Low risk — Safe choice for all farmers!")
     elif top['risk_level'] == 'Medium':
-        print(f"     ⚡ Medium risk — Good choice with proper planning.")
+        print("     ⚡ Medium risk — Good choice with proper planning.")
     else:
-        print(f"     ⚠️  High risk — Only attempt with experience!")
+        print("     ⚠️  High risk — Only attempt with experience!")
     print("="*65)
 
 
@@ -1543,7 +1540,7 @@ def main():
         'planting_month': datetime.now().month,  # Current month
     }
 
-    print(f"\n  👨‍🌾 Generating recommendations for:")
+    print("\n  👨‍🌾 Generating recommendations for:")
     print(f"     Farmer  : {farmer_profile['name']}")
     print(f"     District: {farmer_profile['district']}")
     print(

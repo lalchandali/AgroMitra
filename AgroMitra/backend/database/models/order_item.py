@@ -6,9 +6,11 @@
 # ============================================================
 
 import uuid
-from backend.database.database import Base
-from sqlalchemy import Column, Numeric, ForeignKey
+
+from sqlalchemy import Column, ForeignKey, Numeric
 from sqlalchemy.dialects.postgresql import UUID
+
+from backend.database.database import Base
 
 
 class OrderItem(Base):
@@ -20,7 +22,8 @@ class OrderItem(Base):
     product_id    = Column(UUID(as_uuid=True), ForeignKey("products.product_id"), nullable=False)
 
     quantity_kg = Column(Numeric(10, 2), nullable=False)
-    unit_price  = Column(Numeric(10, 2), nullable=False)   # অর্ডার করার সময়কার দাম (পরে product-এর দাম বদলালেও এটা অপরিবর্তিত থাকে)
+    # unit_price: অর্ডার করার সময়কার দাম — পরে product-এর দাম বদলালেও এটা অপরিবর্তিত থাকে
+    unit_price  = Column(Numeric(10, 2), nullable=False)
     subtotal    = Column(Numeric(12, 2), nullable=False)   # quantity_kg * unit_price
 
     def __repr__(self):

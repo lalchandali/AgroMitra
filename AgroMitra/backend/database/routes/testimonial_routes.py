@@ -5,18 +5,21 @@
 #   section-এ দেখানো হয়।
 # ============================================================
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.database.models.testimonial import Testimonial
 from backend.database.models.user import User, UserRole
-from backend.database.schemas.testimonial_schema import (
-    TestimonialCreate, TestimonialResponse, TestimonialStatusUpdate
-)
 from backend.database.routes.auth_routes import get_current_user
+from backend.database.schemas.testimonial_schema import (
+    TestimonialCreate,
+    TestimonialResponse,
+    TestimonialStatusUpdate,
+)
 
 router = APIRouter(prefix="/api/v1/testimonials", tags=["Testimonials"])
 
@@ -91,7 +94,7 @@ async def get_featured_testimonials(limit: int = Query(6, ge=1, le=20), db: Sess
     """Homepage-এর জন্য public endpoint — শুধু admin-approved testimonial,
     সবচেয়ে বেশি rating ও সাম্প্রতিকগুলো আগে।"""
     rows = db.query(Testimonial, User).join(User, Testimonial.user_id == User.user_id) \
-        .filter(Testimonial.is_approved == True) \
+        .filter(Testimonial.is_approved) \
         .order_by(Testimonial.rating.desc(), Testimonial.created_at.desc()) \
         .limit(limit).all()
     return [_build_response(t, u) for t, u in rows]
@@ -109,9 +112,9 @@ async def admin_list_testimonials(
 
     q = db.query(Testimonial, User).join(User, Testimonial.user_id == User.user_id)
     if status == "pending":
-        q = q.filter(Testimonial.is_approved == False)
+        q = q.filter(~Testimonial.is_approved)
     elif status == "approved":
-        q = q.filter(Testimonial.is_approved == True)
+        q = q.filter(Testimonial.is_approved)
 
     rows = q.order_by(Testimonial.created_at.desc()).all()
     return [_build_response(t, u) for t, u in rows]

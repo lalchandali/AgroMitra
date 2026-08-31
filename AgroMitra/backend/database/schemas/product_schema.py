@@ -2,11 +2,13 @@
 #   AgroMitra — Product Schemas (Pydantic)
 # ============================================================
 
-from pydantic import BaseModel, Field  # type: ignore[import]
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
-from backend.database.models.product import QualityGrade, ProductStatus
+
+from pydantic import BaseModel, Field  # type: ignore[import]
+
+from backend.database.models.product import ProductStatus, QualityGrade
 
 
 class ProductCreate(BaseModel):
@@ -49,7 +51,8 @@ class ProductResponse(BaseModel):
     quality_grade  : QualityGrade
     district       : str
     is_organic     : bool
-    image_url      : Optional[str] = None   # photos[0] থেকে আসে, DB-তে multiple photo রাখার জায়গা থাকলেও frontend আপাতত একটাই ব্যবহার করে
+    # image_url: photos[0] থেকে আসে — DB-তে multiple photo রাখার জায়গা থাকলেও frontend আপাতত একটাই ব্যবহার করে
+    image_url      : Optional[str] = None
     ai_fair_price_min: Optional[float]
     ai_fair_price_max: Optional[float]
     status         : ProductStatus

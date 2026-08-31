@@ -6,16 +6,17 @@
 #   an order is placed, or review_routes.py when a review lands.
 # ============================================================
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.database.models.notification import Notification
 from backend.database.models.user import User
-from backend.database.schemas.notification_schema import NotificationResponse, UnreadCountResponse
 from backend.database.routes.auth_routes import get_current_user
+from backend.database.schemas.notification_schema import NotificationResponse, UnreadCountResponse
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["Notifications"])
 

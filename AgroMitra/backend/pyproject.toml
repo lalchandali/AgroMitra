@@ -1,6 +1,23 @@
 [tool.ruff]
-line-length = 100
+# 100 was unrealistic for a codebase with a lot of bilingual (EN/BN)
+# user-facing strings and comments — 120 covers the large majority of
+# real lines without being so loose it stops meaning anything.
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E","F","I"]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py files re-export names for `from backend.database import X`
+# / `from backend.database.models import X` elsewhere — that's the point
+# of the file, so the "unused" import warning doesn't apply here.
+"__init__.py" = ["F401"]
+# Large embedded reference data (district soil/crop profiles) and
+# formatted CLI report strings — long lines here are the data, not a
+# style lapse; wrapping them would hurt readability more than it helps.
+"ai_models/crop_recommendation.py" = ["E501"]
+# Deliberate one-liner `if field is not None: obj.field = field` blocks
+# for bulk optional-field updates/filters — kept on one line so the
+# parallel structure stays scannable; used consistently, only in this file.
+"database/routes/product_routes.py" = ["E701"]

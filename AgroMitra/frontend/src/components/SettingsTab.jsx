@@ -1,5 +1,5 @@
 import { useLanguage } from '../hooks/useLanguage'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '../hooks/useTheme'
 import { clearAuthSession, getPlatformFee, updatePlatformFee, changePassword, deactivateAccount } from '../api/agromitra'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'

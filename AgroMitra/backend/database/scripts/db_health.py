@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.database import engine
-from sqlalchemy import inspect, text
+from backend.database import engine  # noqa: E402 — must follow the sys.path fix-up above
+from sqlalchemy import inspect, text  # noqa: E402
 
 if __name__ == '__main__':
     try:

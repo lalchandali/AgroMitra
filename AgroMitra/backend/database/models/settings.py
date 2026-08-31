@@ -4,9 +4,11 @@
 #   so they survive restarts instead of being hardcoded constants.
 # ============================================================
 
-from backend.database.database import Base
 from datetime import datetime
-from sqlalchemy import Column, String, Numeric, DateTime
+
+from sqlalchemy import Column, DateTime, Numeric, String
+
+from backend.database.database import Base
 
 
 class PlatformSettings(Base):

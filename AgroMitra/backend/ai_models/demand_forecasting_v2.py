@@ -11,24 +11,24 @@
 #
 # ============================================================
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import warnings
 import os
 import pickle
+import warnings
+from datetime import timedelta
 from pathlib import Path
-from datetime import datetime, timedelta
 
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from tensorflow.keras.optimizers import Adam
-
-from sklearn.preprocessing import MinMaxScaler
+from matplotlib.patches import Patch
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
 
 warnings.filterwarnings('ignore')
 tf.get_logger().setLevel('ERROR')
@@ -285,7 +285,7 @@ history = model.fit(
 )
 
 best_epoch = np.argmin(history.history['val_loss']) + 1
-print(f"\n  ✅ Training complete!")
+print("\n  ✅ Training complete!")
 print(f"  ✅ Best epoch    : {best_epoch}/{len(history.history['loss'])}")
 print(f"  ✅ Best val_loss : {min(history.history['val_loss']):.5f}")
 
@@ -313,7 +313,7 @@ rmse = np.sqrt(mean_squared_error(y_test_real, y_pred_real))
 mae  = np.mean(np.abs(y_test_real - y_pred_real))
 r2   = 1 - np.sum((y_test_real - y_pred_real)**2) / np.sum((y_test_real - y_test_real.mean())**2)
 
-print(f"\n  📊 Performance Metrics:")
+print("\n  📊 Performance Metrics:")
 print(f"     MAPE  : {mape:.2f}%  {'✅ Excellent!' if mape<=15 else '⚡ Good' if mape<=25 else '⚠️ Needs improvement'}")
 print(f"     RMSE  : {rmse:.1f} kg")
 print(f"     MAE   : {mae:.1f} kg")
@@ -443,7 +443,6 @@ ax4.axhline(y=m_avg['quantity_available'].mean(), color=COLORS['red'],
             label=f"Mean: {m_avg['quantity_available'].mean():.0f} kg")
 ax4.legend()
 
-from matplotlib.patches import Patch
 ax4.legend(handles=[
     Patch(facecolor=COLORS['blue'],   label='Winter'),
     Patch(facecolor=COLORS['gold'],   label='Summer/Eid'),
@@ -462,13 +461,13 @@ plt.show()
 # STEP 9: FORECAST REPORT
 # ============================================================
 print("\n" + "="*60)
-print(f"  📊 DEMAND FORECAST REPORT")
+print("  📊 DEMAND FORECAST REPORT")
 print(f"  Crop: {CROP_NAME} | District: {DISTRICT}")
 print("="*60)
 
 mean_hist = data['quantity_available'].mean()
 
-print(f"\n  📅 Next 7-Day Forecast:")
+print("\n  📅 Next 7-Day Forecast:")
 print(f"  {'Date':<14} {'Demand':<14} {'Range':<28} {'Signal'}")
 print(f"  {'-'*70}")
 
@@ -485,19 +484,19 @@ for _, row in forecast_df.head(7).iterrows():
 avg7  = forecast_df.head(7)['predicted_demand'].mean()
 avg30 = forecast_df['predicted_demand'].mean()
 
-print(f"\n  📈 Summary:")
+print("\n  📈 Summary:")
 print(f"     Historical Avg     : {mean_hist:,.0f} kg/day")
 print(f"     7-Day Forecast Avg : {avg7:,.0f} kg/day")
 print(f"     30-Day Forecast Avg: {avg30:,.0f} kg/day")
 print(f"     Change vs History  : {((avg7/mean_hist)-1)*100:+.1f}%")
 
-print(f"\n  💡 AgroMitra Advisory:")
+print("\n  💡 AgroMitra Advisory:")
 if avg7 > mean_hist * 1.15:
-    print(f"     ✅ HIGH demand expected — Harvest & sell more this week!")
+    print("     ✅ HIGH demand expected — Harvest & sell more this week!")
 elif avg7 < mean_hist * 0.85:
-    print(f"     ⚠️  LOW demand expected — Consider storage or price reduction.")
+    print("     ⚠️  LOW demand expected — Consider storage or price reduction.")
 else:
-    print(f"     📊 STABLE demand — Normal production recommended.")
+    print("     📊 STABLE demand — Normal production recommended.")
 
 print("="*60)
 

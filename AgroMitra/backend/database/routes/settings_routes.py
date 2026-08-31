@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.database.models.settings import PlatformSettings
 from backend.database.models.user import User, UserRole
-from backend.database.schemas.settings_schema import PlatformFeeResponse, PlatformFeeUpdate
 from backend.database.routes.auth_routes import get_current_user
+from backend.database.schemas.settings_schema import PlatformFeeResponse, PlatformFeeUpdate
 
 router = APIRouter(prefix="/api/v1/admin/settings", tags=["Admin Settings"])
 

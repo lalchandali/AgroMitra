@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clearAuthSession, getStoredUser } from '../api/agromitra'
 import { useLanguage } from '../hooks/useLanguage'
 import logo from '../assets/icone.PNG'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '../hooks/useTheme'
 import { FiSun, FiMoon } from "react-icons/fi";
 import NotificationBell from './NotificationBell'
 

@@ -136,26 +136,25 @@ Developed as a **Final Year B.Sc. in Computer Science & Engineering Project** at
 AgroMitra
 │
 ├── backend
-│   ├── ai
+│   ├── ai_models       # training scripts + saved models (Prophet, XGBoost, LSTM)
 │   ├── database
-│   ├── models
-│   ├── routers
-│   ├── services
-│   ├── schemas
-│   ├── utils
+│   │   ├── models      # SQLAlchemy models
+│   │   ├── routes      # FastAPI routers (auth, product, order, ...)
+│   │   ├── schemas     # Pydantic request/response schemas
+│   │   ├── scripts     # DB setup / health-check utilities
+│   │   └── utils       # security (JWT, bcrypt, OTP) helpers
+│   ├── models          # static reference JSON (crop knowledge base, districts)
 │   └── main.py
 │
 ├── frontend
 │   ├── src
-│   │
-│   ├── assets
-│   ├── api
-│   ├── components
-│   ├── hooks
-│   ├── pages
-│   ├── context
-│   ├── styles
-│   └── App.jsx
+│   │   ├── api         # centralized axios client
+│   │   ├── assets
+│   │   ├── components
+│   │   ├── context
+│   │   ├── hooks
+│   │   ├── pages
+│   │   └── App.jsx
 │
 ├── README.md
 ├── LICENSE

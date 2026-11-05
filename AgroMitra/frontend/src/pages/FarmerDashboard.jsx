@@ -248,9 +248,10 @@ export default function FarmerDashboard() {
   }, [])
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const VALID_TABS = ['overview', 'price', 'demand', 'recommend', 'yield', 'listings', 'orders', 'profile', 'settings']
+  const VALID_TABS = ['overview', 'price', 'demand', 'recommend', 'listings', 'orders', 'profile', 'settings']
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams.get('tab')
+    if (tab === 'yield') return 'recommend'
     return VALID_TABS.includes(tab) ? tab : 'overview'
   })
 
@@ -271,6 +272,15 @@ export default function FarmerDashboard() {
   //    তাই URL-এর tab পাল্টালে activeTab-ও আলাদাভাবে sync করতে হয় ──
   useEffect(() => {
     const tab = searchParams.get('tab')
+    if (tab === 'yield') {
+      setActiveTab('recommend')
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', 'recommend')
+        return next
+      }, { replace: true })
+      return
+    }
     if (VALID_TABS.includes(tab) && tab !== activeTab) {
       setActiveTab(tab)
     }
@@ -400,6 +410,20 @@ export default function FarmerDashboard() {
     low: f.lower_bound,
     high: f.upper_bound,
   })) || []
+  const priceForecasts = priceData?.forecasts || []
+  const priceChangePct = Number(priceData?.summary?.trend_pct || 0)
+  const priceForecastAverage = Number(
+    priceData?.summary?.avg_7day_price ??
+    (priceForecasts.length
+      ? priceForecasts.reduce((sum, forecast) => sum + Number(forecast.predicted_price || 0), 0) / priceForecasts.length
+      : 0)
+  )
+  const priceRange = priceForecasts.length
+    ? {
+        low: Math.min(...priceForecasts.map(forecast => Number(forecast.lower_bound ?? forecast.predicted_price))),
+        high: Math.max(...priceForecasts.map(forecast => Number(forecast.upper_bound ?? forecast.predicted_price))),
+      }
+    : null
 
   const demandChartData = demandData?.forecasts?.map(f => ({
     date: f.date.slice(5),
@@ -549,26 +573,62 @@ export default function FarmerDashboard() {
     }
   }
 
-  const fetchRecommendations = async () => {
-    setAiLoading(true)
-    try {
-      const res = await getCropRecommendation(recForm)
-      setRecData(res.data)
-      toast.success('Crop recommendations ready!')
-    } catch {
-      toast.error('Failed to get recommendations')
-    } finally { setAiLoading(false) }
-  }
-
-  const fetchCropYield = async () => {
+  const fetchCropYield = async (cropName = yieldForm.crop_name) => {
     setYieldLoading(true)
+    const yieldRequest = {
+      ...yieldForm,
+      crop_name: cropName,
+      district: recForm.district,
+      soil_type: recForm.soil_type,
+      land_acres: recForm.land_acres,
+      planting_month: recForm.planting_month,
+    }
     try {
-      const res = await getCropYield(yieldForm)
+      const res = await getCropYield(yieldRequest)
+      setYieldForm(current => ({ ...current, crop_name: cropName }))
       setYieldData(res.data)
-      toast.success('Yield estimate ready!')
+      return true
     } catch (e) {
       toast.error(e?.response?.data?.detail || 'Failed to get yield estimate')
-    } finally { setYieldLoading(false) }
+      return false
+    } finally {
+      setYieldLoading(false)
+    }
+  }
+
+  const fetchFarmPlan = async () => {
+    setAiLoading(true)
+    setYieldLoading(true)
+    const yieldRequest = {
+      ...yieldForm,
+      district: recForm.district,
+      soil_type: recForm.soil_type,
+      land_acres: recForm.land_acres,
+      planting_month: recForm.planting_month,
+    }
+
+    try {
+      const [recommendationResult, yieldResult] = await Promise.allSettled([
+        getCropRecommendation(recForm),
+        getCropYield(yieldRequest),
+      ])
+      if (recommendationResult.status === 'fulfilled') {
+        setRecData(recommendationResult.value.data)
+      } else {
+        toast.error('Failed to get crop recommendations')
+      }
+      if (yieldResult.status === 'fulfilled') {
+        setYieldData(yieldResult.value.data)
+      } else {
+        toast.error(yieldResult.reason?.response?.data?.detail || 'Failed to get yield estimate')
+      }
+      if (recommendationResult.status === 'fulfilled' && yieldResult.status === 'fulfilled') {
+        toast.success('Crop recommendations and yield estimate are ready!')
+      }
+    } finally {
+      setAiLoading(false)
+      setYieldLoading(false)
+    }
   }
 
   // ── Filter orders ────────────────────────────────────────────
@@ -600,8 +660,7 @@ export default function FarmerDashboard() {
             { key: 'overview', icon: '📊', label: T('overview') },
             { key: 'price', icon: '🤖', label: T('priceAI') },
             { key: 'demand', icon: '📈', label: T('demandAI') },
-            { key: 'recommend', icon: '🌱', label: T('cropAI') },
-            { key: 'yield', icon: '🌾', label: lang === 'bn' ? 'ফলন অনুমান' : 'Crop Yield' },
+            { key: 'recommend', icon: '🌱', label: lang === 'bn' ? 'ফসল ও ফলন AI' : 'Crop & Yield AI' },
             { key: 'listings', icon: '📦', label: T('myListings') },
             { key: 'orders', icon: '🛒', label: T('orders'), badge: pendingOrders > 0 ? pendingOrders : null },
             { key: 'profile', icon: '👤', label: T('profile') },
@@ -968,44 +1027,149 @@ export default function FarmerDashboard() {
 
           {/* ════ Price AI Tab ════ */}
           {activeTab === 'price' && (
-            <div className="grid-2">
-              <div className="card">
-                <div className="card-title">🤖 7-Day Price Forecast — {CROP_EMOJIS[crop] || '🌿'} {crop}</div>
-                <div className="table-container">
-                  <table>
-                    <thead><tr><th>Date</th><th>Predicted Price</th><th>Range</th><th>Trend</th></tr></thead>
-                    <tbody>
-                      {priceData?.forecasts?.map((f, i) => (
-                        <tr key={i}>
-                          <td>{f.date}</td>
-                          <td><strong style={{ color: '#2E7D32' }}>৳{f.predicted_price}/kg</strong></td>
-                          <td style={{ color: '#546E7A', fontSize: 13 }}>৳{f.lower_bound} – ৳{f.upper_bound}</td>
-                          <td><span className={`badge ${f.trend?.includes('↑') ? 'badge-green' : f.trend?.includes('↓') ? 'badge-orange' : 'badge-blue'}`}>{f.trend}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="card">
-                <div className="card-title">📈 Price Trend Chart</div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={priceChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={v => [`৳${v}/kg`, 'Price']} />
-                    <Line type="monotone" dataKey="price" stroke="#2E7D32" strokeWidth={3} dot={{ r: 5, fill: '#2E7D32' }} />
-                    <Line type="monotone" dataKey="high" stroke="#A5D6A7" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-                    <Line type="monotone" dataKey="low" stroke="#FFCC80" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-                {priceData && (
-                  <div className={`alert ${(priceData.summary?.trend_pct || 0) > 0 ? 'alert-success' : 'alert-warning'} mt-16`}>
-                    📊 {priceData.summary?.market_outlook}
+            <div className="price-ai">
+              <section className="price-ai-hero">
+                <div className="price-ai-hero-content">
+                  <span className="price-ai-eyebrow">AGROMITRA PRICE INTELLIGENCE</span>
+                  <h2>Price outlook</h2>
+                  <p>Understand the expected market movement and plan when to sell your crop.</p>
+                  <div className="price-ai-context">
+                    <span>{CROP_EMOJIS[crop] || '🌿'} {crop}</span>
+                    <span>📍 {district}</span>
+                    <span>🗓️ {priceForecasts.length || 7}-day forecast</span>
                   </div>
-                )}
-              </div>
+                </div>
+                <span className={`price-ai-model${priceData?.model_used === 'prophet_xgboost_hybrid_v1' ? ' is-trained' : ''}`}>
+                  <span className="price-ai-model-dot" />
+                  {priceData?.model_used === 'prophet_xgboost_hybrid_v1' ? 'Trained AI model' : 'Statistical estimate'}
+                </span>
+                <div className="price-ai-hero-art" aria-hidden="true">৳</div>
+              </section>
+
+              {aiLoading ? (
+                <div className="card price-ai-state">
+                  <div className="spinner-box"><div className="spinner" /><span>Generating your price outlook…</span></div>
+                </div>
+              ) : !priceForecasts.length ? (
+                <div className="card price-ai-state">
+                  <span aria-hidden="true">📈</span>
+                  <strong>No price forecast yet</strong>
+                  <p>Refresh AI predictions to load the latest outlook for this crop and district.</p>
+                  <button className="btn btn-primary" onClick={fetchAI}>🔄 Refresh forecast</button>
+                </div>
+              ) : (
+                <>
+                  <div className="price-ai-stats">
+                    <article className="price-ai-stat featured">
+                      <span className="price-ai-stat-icon">💰</span>
+                      <span className="price-ai-stat-label">Current market price</span>
+                      <strong>৳{Number(priceData?.current_price || 0).toLocaleString()} <small>/kg</small></strong>
+                      <span className="price-ai-stat-note">Latest available estimate</span>
+                    </article>
+                    <article className="price-ai-stat">
+                      <span className="price-ai-stat-icon">🔭</span>
+                      <span className="price-ai-stat-label">Forecast average</span>
+                      <strong>৳{priceForecastAverage.toLocaleString(undefined, { maximumFractionDigits: 2 })} <small>/kg</small></strong>
+                      <span className="price-ai-stat-note">Expected daily average</span>
+                    </article>
+                    <article className="price-ai-stat">
+                      <span className="price-ai-stat-icon">{priceChangePct > 0 ? '↗️' : priceChangePct < 0 ? '↘️' : '↔️'}</span>
+                      <span className="price-ai-stat-label">Expected movement</span>
+                      <strong className={priceChangePct > 0 ? 'price-positive' : priceChangePct < 0 ? 'price-negative' : ''}>
+                        {priceChangePct > 0 ? '+' : ''}{priceChangePct.toFixed(1)}<small>%</small>
+                      </strong>
+                      <span className="price-ai-stat-note">Across the forecast period</span>
+                    </article>
+                    <article className="price-ai-stat">
+                      <span className="price-ai-stat-icon">↕️</span>
+                      <span className="price-ai-stat-label">Estimated price range</span>
+                      <strong>
+                        {priceRange
+                          ? `৳${priceRange.low.toLocaleString()}–${priceRange.high.toLocaleString()}`
+                          : '—'}
+                      </strong>
+                      <span className="price-ai-stat-note">Lower to upper estimate / kg</span>
+                    </article>
+                  </div>
+
+                  <div className="price-ai-main">
+                    <section className="card price-ai-chart-card">
+                      <div className="price-ai-card-heading">
+                        <div>
+                          <span className="price-ai-kicker">PRICE TREND</span>
+                          <h3>7-day market outlook</h3>
+                          <p>Forecast price with lower and upper estimates</p>
+                        </div>
+                        <span className="price-ai-unit">Bangladeshi Taka · per kg</span>
+                      </div>
+                      <div className="price-ai-chart">
+                        <ResponsiveContainer width="100%" height={310}>
+                          <LineChart data={priceChartData} margin={{ top: 14, right: 12, left: 4, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E8EEF2" vertical={false} />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#718096' }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#718096' }} width={52} />
+                            <Tooltip
+                              formatter={(value, name) => [`৳${Number(value).toLocaleString()}/kg`, name === 'price' ? 'Forecast price' : name === 'high' ? 'Upper estimate' : 'Lower estimate']}
+                              contentStyle={{ borderRadius: 12, border: '1px solid #E5EAF0', boxShadow: '0 8px 24px rgba(15, 23, 42, .1)' }}
+                            />
+                            <Line type="monotone" dataKey="high" name="high" stroke="#E7AC61" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                            <Line type="monotone" dataKey="low" name="low" stroke="#83B2D3" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                            <Line type="monotone" dataKey="price" name="price" stroke="#168B75" strokeWidth={3} dot={{ r: 4, fill: '#168B75', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="price-ai-legend">
+                        <span><i className="price-legend-main" /> Forecast price</span>
+                        <span><i className="price-legend-high" /> Upper estimate</span>
+                        <span><i className="price-legend-low" /> Lower estimate</span>
+                      </div>
+                    </section>
+
+                    <aside className="price-ai-outlook">
+                      <span className="price-ai-outlook-icon">{priceChangePct > 3 ? '🌤️' : priceChangePct < -3 ? '🛡️' : '🌱'}</span>
+                      <span className="price-ai-kicker">MARKET SUMMARY</span>
+                      <h3>{priceChangePct > 3 ? 'Prices may rise' : priceChangePct < -3 ? 'Prices may soften' : 'Prices look steady'}</h3>
+                      <p>{priceData.summary?.market_outlook || 'Review the daily estimates and compare them with local market prices before deciding when to sell.'}</p>
+                      <div className={`price-ai-outlook-change${priceChangePct > 0 ? ' is-positive' : priceChangePct < 0 ? ' is-negative' : ''}`}>
+                        <span>Forecast movement</span>
+                        <strong>{priceChangePct > 0 ? '+' : ''}{priceChangePct.toFixed(1)}%</strong>
+                      </div>
+                    </aside>
+                  </div>
+
+                  <section className="price-ai-daily">
+                    <div className="price-ai-card-heading">
+                      <div>
+                        <span className="price-ai-kicker">DAY-BY-DAY</span>
+                        <h3>Daily price estimates</h3>
+                      </div>
+                      <span className="price-ai-unit">{priceForecasts.length} forecast days</span>
+                    </div>
+                    <div className="price-ai-days">
+                      {priceForecasts.map((forecast, index) => {
+                        const trend = forecast.trend || ''
+                        const isRising = trend.includes('↑')
+                        const isFalling = trend.includes('↓')
+                        const dateLabel = new Date(`${forecast.date}T00:00:00`).toLocaleDateString('en-BD', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                        })
+                        return (
+                          <article className="price-ai-day" key={`${forecast.date}-${index}`}>
+                            <time dateTime={forecast.date}>{dateLabel}</time>
+                            <strong>৳{Number(forecast.predicted_price).toLocaleString()}<small>/kg</small></strong>
+                            <span className="price-ai-day-range">৳{forecast.lower_bound} – ৳{forecast.upper_bound}</span>
+                            <span className={`price-ai-day-trend${isRising ? ' is-positive' : isFalling ? ' is-negative' : ''}`}>
+                              {trend || '↔ Steady'}
+                            </span>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </section>
+                </>
+              )}
             </div>
           )}
 
@@ -1160,200 +1324,293 @@ export default function FarmerDashboard() {
 
           {/* ════ Crop AI Tab ════ */}
           {activeTab === 'recommend' && (
-            <div className="grid-2">
-              <div className="card">
-                <div className="card-title">🌱 Your Farm Profile</div>
-                {[
-                  ['farmer_name', T('yourName'), 'text'],
-                  ['land_acres', 'Land (acres)', 'number'],
-                  ['budget_bdt', 'Budget (৳)', 'number'],
-                ].map(([field, label, type]) => (
-                  <div className="form-group" key={field}>
-                    <label className="form-label">{label}</label>
-                    <input className="form-input" type={type} value={recForm[field]}
-                      onChange={e => setRecForm({ ...recForm, [field]: type === 'number' ? Number(e.target.value) : e.target.value })} />
-                  </div>
-                ))}
-                {[
-                  ['district', 'District', DISTRICTS],
-                  ['experience', 'Experience', ['Beginner', 'Intermediate', 'Expert']],
-                ].map(([field, label, opts]) => (
-                  <div className="form-group" key={field}>
-                    <label className="form-label">{label}</label>
-                    <select className="form-select" value={recForm[field]}
-                      onChange={e => setRecForm({ ...recForm, [field]: e.target.value })}>
-                      {opts.map(o => <option key={o}>{o}</option>)}
-                    </select>
-                  </div>
-                ))}
-                <div className="form-group">
-                  <label className="form-label">{T('soilType')}</label>
-                  <select className="form-select" value={recForm.soil_type}
-                    onChange={e => setRecForm({ ...recForm, soil_type: e.target.value })}>
-                    {[
-                      ['Loam', T('soilTypeLoam')],
-                      ['Sandy Loam', T('soilTypeSandy')],
-                      ['Clay Loam', T('soilTypeClayLoam')],
-                      ['Clay', T('soilTypeClay')],
-                    ].map(([val, label]) => <option key={val} value={val}>{label}</option>)}
-                  </select>
-                </div>
-                <button className="btn btn-primary btn-full" onClick={fetchRecommendations} disabled={aiLoading}>
-                  {aiLoading ? '⏳ Analyzing…' : '🌱 Get AI Recommendations'}
-                </button>
-              </div>
-              <div>
-                {recData ? (
-                  <div>
-                    <div className="alert alert-success mb-20">
-                      🏆 Top Pick: <strong>{recData.top_pick?.crop}</strong> ({recData.top_pick?.name_bn}) — Score: {recData.top_pick?.score}/100
+            <div className="crop-ai">
+              <section className="crop-ai-hero">
+                <div className="crop-ai-hero-content">
+                  <span className="crop-ai-eyebrow">{lang === 'bn' ? 'AGROMITRA ফসল পরিকল্পনা' : 'AGROMITRA CROP PLANNER'}</span>
+                  <h2>{lang === 'bn' ? 'আপনার জমির জন্য সঠিক ফসল খুঁজুন' : 'Find the right crops for your farm'}</h2>
+                  <p>{lang === 'bn' ? 'খামারের তথ্য একবার দিন—আমরা ফসলের সুপারিশ ও সম্ভাব্য ফলন দেখাব।' : 'Tell us about your farm once. We’ll suggest suitable crops and estimate your harvest.'}</p>
+                  {recData && (
+                    <div className="crop-ai-context">
+                      <span>📍 {recData.district}</span>
+                      <span>🌱 {recData.soil_type}</span>
+                      <span>🗓️ {recData.current_season}</span>
                     </div>
-                    {recData.recommendations?.map((r, i) => (
-                      <div key={i} className="rec-card mb-20">
-                        <div className="flex justify-between flex-center">
-                          <div>
-                            <div className="rec-rank">#{r.rank}</div>
-                            <div className="rec-crop">{CROP_EMOJIS[r.crop] || '🌿'} {r.crop}</div>
-                            <div className="rec-crop-bn">{r.name_bn}</div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: '#2E7D32' }}>{r.score}</div>
-                            <div style={{ fontSize: 12, color: '#546E7A' }}>/ 100</div>
-                          </div>
-                        </div>
-                        <div className="rec-score-bar">
-                          <div className="rec-score-fill" style={{ width: `${r.score}%` }} />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-                          <div>💰 Est. Profit: <strong style={{ color: '#2E7D32' }}>৳{r.est_profit_bdt?.toLocaleString()}</strong></div>
-                          <div>⏱️ Duration: <strong>{r.grow_days} days</strong></div>
-                          <div>⚠️ Risk: <span className={`badge ${r.risk_level === 'Low' ? 'badge-green' : r.risk_level === 'Medium' ? 'badge-gold' : 'badge-red'}`}>{r.risk_level}</span></div>
-                          <div>📊 Demand: <span className="badge badge-blue">{r.market_demand}</span></div>
-                        </div>
-                        <div className="alert alert-success mt-16" style={{ padding: '8px 12px', fontSize: 13 }}>{r.advisory}</div>
+                  )}
+                </div>
+                <span className="crop-ai-hero-art" aria-hidden="true">🌾</span>
+              </section>
+              <div className="crop-ai-steps" aria-label={lang === 'bn' ? 'ফসল পরিকল্পনার ধাপ' : 'Crop planning steps'}>
+                <span><i>1</i>{lang === 'bn' ? 'খামারের তথ্য দিন' : 'Add farm details'}</span>
+                <b aria-hidden="true">→</b>
+                <span><i>2</i>{lang === 'bn' ? 'সুপারিশ দেখুন' : 'Review suggestions'}</span>
+                <b aria-hidden="true">→</b>
+                <span><i>3</i>{lang === 'bn' ? 'ফলন জানুন' : 'Check your yield'}</span>
+              </div>
+
+              <div className="crop-ai-layout">
+                <form className="crop-ai-profile crop-ai-form-card" onSubmit={event => { event.preventDefault(); fetchFarmPlan() }}>
+                  <div className="crop-ai-section-heading">
+                    <span className="crop-ai-section-icon">🌱</span>
+                    <div>
+                      <span className="crop-ai-kicker">{lang === 'bn' ? 'ধাপ ১' : 'STEP 1'}</span>
+                      <h3>{lang === 'bn' ? 'আপনার খামারের তথ্য' : 'Tell us about your farm'}</h3>
+                      <p>{lang === 'bn' ? 'এই তথ্য Crop AI ও ফলনের হিসাব—দুই জায়গাতেই ব্যবহার হবে।' : 'We’ll use these details for both crop suggestions and the yield estimate.'}</p>
+                    </div>
+                  </div>
+                  <div className="crop-ai-form-grid">
+                    {[
+                      ['farmer_name', lang === 'bn' ? 'আপনার নাম' : 'Your name', 'text'],
+                      ['land_acres', lang === 'bn' ? 'জমির পরিমাণ (একর)' : 'Land size (acres)', 'number'],
+                      ['budget_bdt', lang === 'bn' ? 'বাজেট (৳)' : 'Available budget (৳)', 'number'],
+                    ].map(([field, label, type]) => (
+                      <div className="form-group" key={field}>
+                        <label className="form-label" htmlFor={`crop-ai-${field}`}>{label}</label>
+                        <input id={`crop-ai-${field}`} className="form-input" type={type} value={recForm[field]}
+                          onChange={e => setRecForm({ ...recForm, [field]: type === 'number' ? Number(e.target.value) : e.target.value })} />
                       </div>
                     ))}
-                  </div>
-                ) : (
-                  <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-                    <div style={{ fontSize: 64, marginBottom: 16 }}>🌱</div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: '#546E7A' }}>Fill your profile and click</div>
-                    <div style={{ fontSize: 15, color: '#9E9E9E', marginTop: 8 }}>"Get AI Recommendations"</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ════ Crop Yield Tab ════ */}
-          {activeTab === 'yield' && (
-            <div className="grid-2">
-              <div className="card">
-                <div className="card-title">🌾 {lang === 'bn' ? 'ফলন অনুমানের জন্য তথ্য দিন' : 'Yield Estimate Inputs'}</div>
-
-                <div className="form-group">
-                  <label className="form-label">{lang === 'bn' ? 'ফসল' : 'Crop'}</label>
-                  <select className="form-select" value={yieldForm.crop_name}
-                    onChange={e => setYieldForm({ ...yieldForm, crop_name: e.target.value })}>
-                    {AI_PRICE_CROPS.map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">District</label>
-                  <select className="form-select" value={yieldForm.district}
-                    onChange={e => setYieldForm({ ...yieldForm, district: e.target.value })}>
-                    {DISTRICTS.map(d => <option key={d}>{d}</option>)}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{T('soilType')}</label>
-                  <select className="form-select" value={yieldForm.soil_type}
-                    onChange={e => setYieldForm({ ...yieldForm, soil_type: e.target.value })}>
                     {[
-                      ['Loam', T('soilTypeLoam')],
-                      ['Sandy Loam', T('soilTypeSandy')],
-                      ['Clay Loam', T('soilTypeClayLoam')],
-                      ['Clay', T('soilTypeClay')],
-                    ].map(([val, label]) => <option key={val} value={val}>{label}</option>)}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{lang === 'bn' ? 'জমির পরিমাণ (acres)' : 'Land (acres)'}</label>
-                  <input className="form-input" type="number" min="0.1" step="0.1" value={yieldForm.land_acres}
-                    onChange={e => setYieldForm({ ...yieldForm, land_acres: Number(e.target.value) })} />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{lang === 'bn' ? 'বপনের মাস' : 'Planting Month'}</label>
-                  <select className="form-select" value={yieldForm.planting_month}
-                    onChange={e => setYieldForm({ ...yieldForm, planting_month: Number(e.target.value) })}>
-                    {MONTH_NAMES.map((m, i) => i > 0 && <option key={i} value={i}>{m}</option>)}
-                  </select>
-                </div>
-
-                <button className="btn btn-primary btn-full" onClick={fetchCropYield} disabled={yieldLoading}>
-                  {yieldLoading ? '⏳ Calculating…' : `🌾 ${lang === 'bn' ? 'ফলন অনুমান করুন' : 'Estimate Yield'}`}
-                </button>
-              </div>
-
-              <div>
-                {yieldData ? (
-                  <div>
-                    <div className="card mb-20" style={{ textAlign: 'center', padding: 24 }}>
-                      <div style={{ fontSize: 40, marginBottom: 4 }}>{CROP_EMOJIS[yieldData.crop] || '🌾'}</div>
-                      <div style={{ fontSize: 14, color: '#546E7A' }}>{yieldData.crop} ({yieldData.name_bn})</div>
-                      <div style={{ fontSize: 34, fontWeight: 800, color: '#2E7D32', marginTop: 6 }}>
-                        {yieldData.estimated_total_yield_kg?.toLocaleString()} kg
+                      ['district', lang === 'bn' ? 'জেলা' : 'District', DISTRICTS],
+                      ['experience', lang === 'bn' ? 'চাষের অভিজ্ঞতা' : 'Farming experience', ['Beginner', 'Intermediate', 'Expert']],
+                    ].map(([field, label, opts]) => (
+                      <div className="form-group" key={field}>
+                        <label className="form-label" htmlFor={`crop-ai-${field}`}>{label}</label>
+                        <select id={`crop-ai-${field}`} className="form-select" value={recForm[field]}
+                          onChange={e => setRecForm({ ...recForm, [field]: e.target.value })}>
+                          {opts.map(o => <option key={o}>{o}</option>)}
+                        </select>
                       </div>
-                      <div style={{ fontSize: 12, color: '#9E9E9E' }}>
-                        {lang === 'bn' ? 'সম্ভাব্য পরিসর' : 'Likely range'}: {yieldData.yield_range_kg?.lower?.toLocaleString()} – {yieldData.yield_range_kg?.upper?.toLocaleString()} kg
-                      </div>
-                      <div style={{ marginTop: 10 }}>
-                        <span className={`badge ${yieldData.suitability_grade === 'A' ? 'badge-green' : yieldData.suitability_grade === 'B' ? 'badge-blue' : yieldData.suitability_grade === 'C' ? 'badge-gold' : 'badge-red'}`}>
-                          {lang === 'bn' ? 'গ্রেড' : 'Grade'} {yieldData.suitability_grade} — {yieldData.suitability_label}
-                        </span>
-                      </div>
+                    ))}
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="crop-ai-soil">{T('soilType')}</label>
+                      <select id="crop-ai-soil" className="form-select" value={recForm.soil_type}
+                        onChange={e => setRecForm({ ...recForm, soil_type: e.target.value })}>
+                        {[
+                          ['Loam', T('soilTypeLoam')],
+                          ['Sandy Loam', T('soilTypeSandy')],
+                          ['Clay Loam', T('soilTypeClayLoam')],
+                          ['Clay', T('soilTypeClay')],
+                        ].map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+                      </select>
                     </div>
-
-                    <div className="card mb-20">
-                      <div className="card-title" style={{ fontSize: 14 }}>{lang === 'bn' ? '💰 আর্থিক হিসাব' : '💰 Financial Breakdown'}</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 13, marginTop: 10 }}>
-                        <div>
-                          <div style={{ color: '#9E9E9E', fontSize: 11 }}>{lang === 'bn' ? 'আয় (Revenue)' : 'Revenue'}</div>
-                          <strong>৳{yieldData.estimated_revenue_bdt?.toLocaleString()}</strong>
-                        </div>
-                        <div>
-                          <div style={{ color: '#9E9E9E', fontSize: 11 }}>{lang === 'bn' ? 'খরচ (Cost)' : 'Cost'}</div>
-                          <strong>৳{yieldData.estimated_cost_bdt?.toLocaleString()}</strong>
-                        </div>
-                        <div>
-                          <div style={{ color: '#9E9E9E', fontSize: 11 }}>{lang === 'bn' ? 'লাভ (Profit)' : 'Profit'}</div>
-                          <strong style={{ color: '#2E7D32' }}>৳{yieldData.estimated_profit_bdt?.toLocaleString()}</strong>
-                        </div>
-                      </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="crop-ai-planting-month">{lang === 'bn' ? 'কোন মাসে বপন করবেন?' : 'When will you plant?'}</label>
+                      <select id="crop-ai-planting-month" className="form-select" value={recForm.planting_month}
+                        onChange={e => setRecForm({ ...recForm, planting_month: Number(e.target.value) })}>
+                        {MONTH_NAMES.map((month, index) => index > 0 && <option key={index} value={index}>{month}</option>)}
+                      </select>
                     </div>
-
-                    <div className="card">
-                      <div className="card-title" style={{ fontSize: 14 }}>{lang === 'bn' ? '📋 কারণ বিশ্লেষণ' : '📋 Suitability Factors'}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, fontSize: 13 }}>
-                        <div>🌱 {lang === 'bn' ? 'মাটি' : 'Soil'}: {yieldData.factors?.soil?.note}</div>
-                        <div>📅 {lang === 'bn' ? 'মৌসুম' : 'Season'}: {yieldData.factors?.season?.note}</div>
-                        <div>📍 {lang === 'bn' ? 'জেলা' : 'District'}: {yieldData.factors?.district?.note}</div>
-                      </div>
+                    <div className="form-group crop-ai-yield-crop-field">
+                      <label className="form-label" htmlFor="crop-ai-yield-crop">{lang === 'bn' ? 'ফলন হিসাবের জন্য ফসল' : 'Which crop’s yield should we estimate?'}</label>
+                      <select id="crop-ai-yield-crop" className="form-select" value={yieldForm.crop_name}
+                        onChange={e => setYieldForm({ ...yieldForm, crop_name: e.target.value })}>
+                        {AI_PRICE_CROPS.map(c => <option key={c}>{c}</option>)}
+                      </select>
+                      <span className="crop-ai-field-hint">
+                        {lang === 'bn' ? 'সুপারিশ পাওয়ার পর অন্য ফসলও বেছে নিতে পারবেন।' : 'You can switch to a recommended crop later.'}
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-                    <div style={{ fontSize: 64, marginBottom: 16 }}>🌾</div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: '#546E7A' }}>
-                      {lang === 'bn' ? 'তথ্য দিয়ে "ফলন অনুমান করুন"-এ ক্লিক করুন' : 'Fill inputs and click "Estimate Yield"'}
+                  <button type="submit" className="btn btn-primary btn-full crop-ai-submit" disabled={aiLoading || yieldLoading}>
+                    {aiLoading || yieldLoading
+                      ? `⏳ ${lang === 'bn' ? 'আপনার খামার বিশ্লেষণ হচ্ছে…' : 'Building your farm plan…'}`
+                      : `🌱 ${lang === 'bn' ? 'আমার ফসলের পরিকল্পনা দেখান' : 'Show my crop plan'}`}
+                  </button>
+                  <p className="crop-ai-form-note">
+                    {lang === 'bn'
+                      ? 'একবার চাপলেই ফসলের সুপারিশ ও নির্বাচিত ফসলের আনুমানিক ফলন পাবেন।'
+                      : 'One click gives you crop recommendations and an estimated yield for your selected crop.'}
+                  </p>
+                </form>
+
+                <section className="crop-ai-results">
+                  {aiLoading ? (
+                    <div className="card crop-ai-state">
+                      <div className="spinner-box"><div className="spinner" /><span>Finding crops that fit your farm…</span></div>
+                    </div>
+                  ) : recData ? (
+                    <>
+                      {recData.top_pick && (
+                        <div className="crop-ai-top-pick">
+                          <div className="crop-ai-top-copy">
+                            <span className="crop-ai-kicker">🏆 BEST MATCH FOR YOUR FARM</span>
+                            <h3>{CROP_EMOJIS[recData.top_pick.crop] || '🌿'} {recData.top_pick.crop}</h3>
+                            <p>{recData.top_pick.name_bn} · {recData.top_pick.advisory}</p>
+                            <div className="crop-ai-top-facts">
+                              <span>💰 Est. profit <strong>৳{Number(recData.top_pick.est_profit || 0).toLocaleString()}</strong></span>
+                              <span>⏱️ {recData.top_pick.grow_days} days</span>
+                              <span>⚠️ {recData.top_pick.risk} risk</span>
+                            </div>
+                          </div>
+                          <div className="crop-ai-top-score">
+                            <strong>{recData.top_pick.score}</strong>
+                            <span>match score</span>
+                            <div className="crop-ai-score-track"><i style={{ width: `${Math.min(100, Math.max(0, Number(recData.top_pick.score) || 0))}%` }} /></div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="crop-ai-results-heading">
+                        <div>
+                          <span className="crop-ai-kicker">YOUR SHORTLIST</span>
+                          <h3>Recommended crops</h3>
+                        </div>
+                        <span className="crop-ai-result-count">{recData.recommendations?.length || 0} matches</span>
+                      </div>
+                      <div className="crop-ai-recommendations">
+                        {recData.recommendations?.map((r, i) => (
+                          <article key={`${r.crop}-${i}`} className={`crop-ai-recommendation${r.rank === 1 ? ' is-top' : ''}`}>
+                            <div className="crop-ai-recommendation-main">
+                              <span className="crop-ai-rank">#{r.rank}</span>
+                              <span className="crop-ai-crop-icon">{CROP_EMOJIS[r.crop] || '🌿'}</span>
+                              <div className="crop-ai-crop-name">
+                                <strong>{r.crop}</strong>
+                                <span>{r.name_bn}</span>
+                              </div>
+                              <div className="crop-ai-score">
+                                <strong>{r.score}</strong>
+                                <span>/100</span>
+                              </div>
+                            </div>
+                            <div className="crop-ai-score-track"><i style={{ width: `${Math.min(100, Math.max(0, Number(r.score) || 0))}%` }} /></div>
+                            <div className="crop-ai-details">
+                              <span>💰 Profit <strong>৳{Number(r.est_profit_bdt || 0).toLocaleString()}</strong></span>
+                              <span>⏱️ <strong>{r.grow_days} days</strong></span>
+                              <span>⚠️ Risk <strong className={`crop-ai-risk risk-${String(r.risk_level || '').toLowerCase()}`}>{r.risk_level}</strong></span>
+                              <span>📊 Demand <strong>{r.market_demand}</strong></span>
+                            </div>
+                            <p className="crop-ai-advisory">{r.advisory}</p>
+                            <button
+                              type="button"
+                              className="crop-ai-yield-action"
+                              onClick={() => {
+                                setYieldForm(current => ({ ...current, crop_name: r.crop }))
+                                fetchCropYield(r.crop)
+                              }}
+                              disabled={yieldLoading}
+                              aria-pressed={yieldForm.crop_name === r.crop}
+                            >
+                              {yieldLoading && yieldForm.crop_name === r.crop
+                                ? `⏳ ${lang === 'bn' ? 'হিসাব হচ্ছে…' : 'Calculating…'}`
+                                : `🌾 ${lang === 'bn' ? 'এই ফসলের ফলন হিসাব করুন' : 'Estimate yield for this crop'}`}
+                            </button>
+                          </article>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="card crop-ai-state crop-ai-empty">
+                      <span aria-hidden="true">🌱</span>
+                      <strong>{lang === 'bn' ? 'আপনার ফসলের পরিকল্পনা এখানে দেখাবে' : 'Your crop plan will appear here'}</strong>
+                      <p>{lang === 'bn' ? 'বাম পাশের ফর্মটি পূরণ করে “আমার ফসলের পরিকল্পনা দেখান” চাপুন।' : 'Fill in your farm details above, then select “Show my crop plan”.'}</p>
+                      <div className="crop-ai-empty-steps">
+                        <span>1. {lang === 'bn' ? 'খামারের তথ্য দিন' : 'Add farm details'}</span>
+                        <span>2. {lang === 'bn' ? 'ফসলের পরিকল্পনা দেখুন' : 'View your crop plan'}</span>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              <section className="yield-ai">
+                <div className="yield-ai-merged-heading">
+                  <div className="yield-ai-section-heading">
+                    <span className="yield-ai-section-icon">🌾</span>
+                    <div>
+                      <span className="yield-ai-kicker">{lang === 'bn' ? 'আপনার ফসলের হিসাব' : 'YOUR HARVEST ESTIMATE'}</span>
+                      <h3>{lang === 'bn' ? 'ফলন ও সম্ভাব্য আয়' : 'Estimated harvest & returns'}</h3>
+                      <p>{lang === 'bn' ? 'নির্বাচিত ফসলের ফলন ও আনুমানিক আর্থিক হিসাব এখানে দেখুন।' : 'See the estimated harvest and financial outlook for your selected crop.'}</p>
                     </div>
                   </div>
-                )}
-              </div>
+                  <span className="yield-ai-linked-crop">
+                    {CROP_EMOJIS[yieldForm.crop_name] || '🌾'} {lang === 'bn' ? 'নির্বাচিত ফসল:' : 'Selected crop:'} {yieldForm.crop_name}
+                  </span>
+                </div>
+
+                <section className="yield-ai-results">
+                    {yieldLoading ? (
+                      <div className="card yield-ai-state">
+                        <div className="spinner-box"><div className="spinner" /><span>{lang === 'bn' ? 'ফলন হিসাব করা হচ্ছে…' : 'Calculating your yield outlook…'}</span></div>
+                      </div>
+                    ) : yieldData ? (
+                      <>
+                        <div className="yield-ai-result-hero">
+                          <div className="yield-ai-result-crop">
+                            <span className="yield-ai-result-icon">{CROP_EMOJIS[yieldData.crop] || '🌾'}</span>
+                            <div>
+                              <span className="yield-ai-kicker">{lang === 'bn' ? 'আপনার ফসলের পূর্বাভাস' : 'YOUR CROP OUTLOOK'}</span>
+                              <h3>{yieldData.crop} <small>{yieldData.name_bn && `· ${yieldData.name_bn}`}</small></h3>
+                            </div>
+                          </div>
+                          <span className={`yield-ai-grade grade-${String(yieldData.suitability_grade || '').toLowerCase()}`}>
+                            {lang === 'bn' ? 'উপযোগিতা' : 'Suitability'} · {yieldData.suitability_grade}
+                          </span>
+                          <div className="yield-ai-total">
+                            <strong>{Number(yieldData.estimated_total_yield_kg || 0).toLocaleString()}</strong>
+                            <span>kg {lang === 'bn' ? 'সম্ভাব্য মোট ফলন' : 'estimated total yield'}</span>
+                          </div>
+                          <div className="yield-ai-range">
+                            <span>{lang === 'bn' ? 'সম্ভাব্য ফলনের পরিসর' : 'Likely yield range'}</span>
+                            <strong>{Number(yieldData.yield_range_kg?.lower || 0).toLocaleString()} – {Number(yieldData.yield_range_kg?.upper || 0).toLocaleString()} kg</strong>
+                          </div>
+                        </div>
+
+                        <section className="yield-ai-finance">
+                          <div className="yield-ai-subheading">
+                            <div>
+                              <span className="yield-ai-kicker">{lang === 'bn' ? 'আর্থিক চিত্র' : 'FINANCIAL SNAPSHOT'}</span>
+                              <h3>{lang === 'bn' ? 'আয় ও ব্যয়ের হিসাব' : 'Revenue, cost & profit'}</h3>
+                            </div>
+                            <span className="yield-ai-finance-icon">৳</span>
+                          </div>
+                          <div className="yield-ai-finance-grid">
+                            <article>
+                              <span>📈 {lang === 'bn' ? 'সম্ভাব্য আয়' : 'Revenue'}</span>
+                              <strong>৳{Number(yieldData.estimated_revenue_bdt || 0).toLocaleString()}</strong>
+                            </article>
+                            <article>
+                              <span>🧾 {lang === 'bn' ? 'আনুমানিক খরচ' : 'Estimated cost'}</span>
+                              <strong>৳{Number(yieldData.estimated_cost_bdt || 0).toLocaleString()}</strong>
+                            </article>
+                            <article className="is-profit">
+                              <span>✨ {lang === 'bn' ? 'সম্ভাব্য লাভ' : 'Estimated profit'}</span>
+                              <strong>৳{Number(yieldData.estimated_profit_bdt || 0).toLocaleString()}</strong>
+                            </article>
+                          </div>
+                        </section>
+
+                        <section className="yield-ai-factors">
+                          <div className="yield-ai-subheading">
+                            <div>
+                              <span className="yield-ai-kicker">{lang === 'bn' ? 'উপযোগিতার কারণ' : 'WHY THIS ESTIMATE'}</span>
+                              <h3>{lang === 'bn' ? 'চাষের উপযোগিতা' : 'Suitability factors'}</h3>
+                            </div>
+                          </div>
+                          <div className="yield-ai-factor-list">
+                            {[
+                              { icon: '🌱', label: lang === 'bn' ? 'মাটি' : 'Soil', note: yieldData.factors?.soil?.note },
+                              { icon: '📅', label: lang === 'bn' ? 'মৌসুম' : 'Season', note: yieldData.factors?.season?.note },
+                              { icon: '📍', label: lang === 'bn' ? 'জেলা' : 'District', note: yieldData.factors?.district?.note },
+                            ].filter(factor => factor.note).map(factor => (
+                              <div className="yield-ai-factor" key={factor.label}>
+                                <span>{factor.icon}</span>
+                                <strong>{factor.label}</strong>
+                                <p>{factor.note}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      </>
+                    ) : (
+                      <div className="card yield-ai-state yield-ai-empty">
+                        <span aria-hidden="true">🌾</span>
+                        <strong>{lang === 'bn' ? 'ফলনের হিসাব এখনো তৈরি হয়নি' : 'No yield estimate yet'}</strong>
+                        <p>{lang === 'bn' ? 'উপরের ফর্ম থেকে ফসল বেছে নিয়ে পরিকল্পনা তৈরি করুন, অথবা যেকোনো সুপারিশে “এই ফসলের ফলন হিসাব করুন” চাপুন।' : 'Create your plan above, or choose “Estimate yield for this crop” on any recommendation.'}</p>
+                      </div>
+                    )}
+                </section>
+              </section>
             </div>
           )}
 

@@ -3653,6 +3653,1668 @@ tbody td {
   }
 }
 
+/* ── Farmer price intelligence ── */
+.price-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.price-ai-hero {
+  position: relative;
+  display: flex;
+  min-height: 190px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+  padding: 28px 32px;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #173b57 0%, #126d74 56%, #169b83 100%);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(18, 109, 116, 0.18);
+}
+
+.price-ai-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.price-ai-eyebrow,
+.price-ai-kicker {
+  display: block;
+  color: #83e0c3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.price-ai-hero h2 {
+  margin: 8px 0 5px;
+  color: #fff;
+  font-size: clamp(26px, 4vw, 36px);
+  letter-spacing: -0.03em;
+}
+
+.price-ai-hero p {
+  max-width: 480px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.price-ai-context {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.price-ai-context span {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.price-ai-model {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(9, 41, 57, 0.32);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.price-ai-model.is-trained {
+  background: rgba(18, 72, 52, 0.62);
+}
+
+.price-ai-model-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f7c969;
+  box-shadow: 0 0 0 3px rgba(247, 201, 105, 0.18);
+}
+
+.price-ai-model.is-trained .price-ai-model-dot {
+  background: #76e3a9;
+  box-shadow: 0 0 0 3px rgba(118, 227, 169, 0.18);
+}
+
+.price-ai-hero-art {
+  position: absolute;
+  right: 180px;
+  bottom: -90px;
+  color: rgba(255, 255, 255, 0.08);
+  font-size: 280px;
+  font-weight: 800;
+  line-height: 1;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.price-ai-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.price-ai-stat {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto 1fr;
+  align-content: center;
+  column-gap: 10px;
+  row-gap: 3px;
+  padding: 15px;
+  border: 1px solid #e8edf0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+}
+
+.price-ai-stat.featured {
+  border-color: #b7e5d7;
+  background: linear-gradient(145deg, #f3fbf7, #fff);
+}
+
+.price-ai-stat-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  grid-row: span 3;
+  place-items: center;
+  border-radius: 11px;
+  background: #edf7f4;
+  font-size: 17px;
+}
+
+.price-ai-stat-label,
+.price-ai-stat-note {
+  overflow: hidden;
+  color: #697887;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price-ai-stat strong {
+  overflow-wrap: anywhere;
+  color: #1c2d38;
+  font-size: clamp(16px, 2vw, 21px);
+  line-height: 1.25;
+}
+
+.price-ai-stat strong small {
+  color: #778591;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.price-ai-stat .price-positive {
+  color: #16835d;
+}
+
+.price-ai-stat .price-negative {
+  color: #c25b41;
+}
+
+.price-ai-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(220px, 0.72fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.price-ai-chart-card,
+.price-ai-daily {
+  min-width: 0;
+  padding: 21px;
+  border: 1px solid #e8edf0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.price-ai-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.price-ai-card-heading h3,
+.price-ai-outlook h3 {
+  margin: 5px 0 4px;
+  color: #20313c;
+  font-size: 17px;
+}
+
+.price-ai-card-heading p {
+  color: #788692;
+  font-size: 12px;
+}
+
+.price-ai-unit {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid #e7edf0;
+  border-radius: 999px;
+  background: #f7f9fa;
+  color: #687986;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.price-ai-chart {
+  width: 100%;
+  height: 310px;
+  margin-top: 14px;
+}
+
+.price-ai-legend {
+  display: flex;
+  gap: 15px;
+  color: #778591;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.price-ai-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.price-ai-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.price-legend-main {
+  background: #168b75;
+}
+
+.price-legend-high {
+  background: #e7ac61;
+}
+
+.price-legend-low {
+  background: #83b2d3;
+}
+
+.price-ai-outlook {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 22px;
+  border: 1px solid #cfe7dc;
+  border-radius: 16px;
+  background: linear-gradient(155deg, #f1faf5, #fff);
+}
+
+.price-ai-outlook-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 20px;
+  place-items: center;
+  border-radius: 14px;
+  background: #e1f4e9;
+  font-size: 22px;
+}
+
+.price-ai-outlook h3 {
+  margin: 8px 0;
+  color: #214f39;
+  font-size: 21px;
+}
+
+.price-ai-outlook p {
+  color: #65766d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.price-ai-outlook .price-ai-kicker {
+  color: #438565;
+}
+
+.price-ai-outlook-change {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 18px;
+  color: #718078;
+  font-size: 12px;
+}
+
+.price-ai-outlook-change strong {
+  color: #52665c;
+  font-size: 15px;
+}
+
+.price-ai-outlook-change.is-positive strong {
+  color: #16835d;
+}
+
+.price-ai-outlook-change.is-negative strong {
+  color: #c25b41;
+}
+
+.price-ai-daily {
+  overflow: hidden;
+}
+
+.price-ai-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 9px;
+  margin-top: 15px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+
+.price-ai-day {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px;
+  border: 1px solid #e9eef1;
+  border-radius: 13px;
+  background: #fafcfc;
+}
+
+.price-ai-day time,
+.price-ai-day-range {
+  color: #788692;
+  font-size: 10px;
+}
+
+.price-ai-day > strong {
+  color: #20313c;
+  font-size: 16px;
+}
+
+.price-ai-day > strong small {
+  margin-left: 2px;
+  color: #778591;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.price-ai-day-trend {
+  align-self: flex-start;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #edf2f5;
+  color: #637381;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.price-ai-day-trend.is-positive {
+  background: #e8f6ed;
+  color: #27814d;
+}
+
+.price-ai-day-trend.is-negative {
+  background: #fff0e9;
+  color: #bc5b38;
+}
+
+.price-ai-state {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.price-ai-state > span {
+  font-size: 36px;
+}
+
+.price-ai-state > strong {
+  color: #20313c;
+  font-size: 17px;
+}
+
+.price-ai-state p {
+  color: #788692;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .price-ai-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .price-ai-main {
+    grid-template-columns: 1fr;
+  }
+
+  .price-ai-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .price-ai-model {
+    align-self: flex-start;
+  }
+
+  .price-ai-hero-art {
+    right: 12px;
+    bottom: -55px;
+    font-size: 190px;
+  }
+}
+
+@media (max-width: 520px) {
+  .price-ai-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .price-ai-hero,
+  .price-ai-chart-card,
+  .price-ai-daily,
+  .price-ai-outlook {
+    padding: 18px;
+  }
+
+  .price-ai-card-heading {
+    flex-direction: column;
+  }
+
+  .price-ai-days {
+    grid-template-columns: repeat(7, 130px);
+  }
+}
+
+/* ── Farmer crop intelligence ── */
+.crop-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.crop-ai-hero {
+  position: relative;
+  min-height: 180px;
+  overflow: hidden;
+  padding: 28px 32px;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #163d32 0%, #167354 57%, #32a56f 100%);
+  box-shadow: 0 12px 30px rgba(22, 115, 84, 0.17);
+  color: #fff;
+}
+
+.crop-ai-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+}
+
+.crop-ai-eyebrow,
+.crop-ai-kicker {
+  display: block;
+  color: #8ce0b4;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.crop-ai-hero h2 {
+  margin: 8px 0 5px;
+  color: #fff;
+  font-size: clamp(25px, 4vw, 35px);
+  letter-spacing: -0.035em;
+}
+
+.crop-ai-hero p {
+  max-width: 510px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.crop-ai-context {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.crop-ai-context span {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.crop-ai-hero-art {
+  position: absolute;
+  right: 45px;
+  bottom: -55px;
+  color: rgba(255, 255, 255, 0.12);
+  font-size: 190px;
+  line-height: 1;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.crop-ai-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.crop-ai-profile,
+.crop-ai-state {
+  padding: 21px;
+  border: 1px solid #e6ece9;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.045);
+}
+
+.crop-ai-profile {
+  position: static;
+}
+
+.crop-ai-form-card {
+  padding: 22px 24px;
+}
+
+.crop-ai-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 11px 16px;
+  border: 1px solid #e6ece9;
+  border-radius: 13px;
+  background: #fff;
+  color: #64766a;
+}
+
+.crop-ai-steps > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.crop-ai-steps i {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf6ed;
+  color: #28714a;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.crop-ai-steps > b {
+  color: #a4b0a8;
+  font-size: 14px;
+}
+
+.crop-ai-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 20px;
+}
+
+.crop-ai-section-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: #eaf6ed;
+  font-size: 20px;
+}
+
+.crop-ai-section-heading .crop-ai-kicker,
+.crop-ai-results-heading .crop-ai-kicker {
+  color: #438565;
+}
+
+.crop-ai-section-heading h3,
+.crop-ai-results-heading h3 {
+  margin: 3px 0 2px;
+  color: #20313c;
+  font-size: 17px;
+}
+
+.crop-ai-section-heading p {
+  color: #788692;
+  font-size: 12px;
+}
+
+.crop-ai-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 14px;
+}
+
+.crop-ai-form-grid .form-group:first-child,
+.crop-ai-form-grid .crop-ai-yield-crop-field {
+  grid-column: span 2;
+}
+
+.crop-ai-profile .form-group {
+  margin-bottom: 13px;
+}
+
+.crop-ai-profile .form-label {
+  color: #52665c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.crop-ai-profile .form-input,
+.crop-ai-profile .form-select {
+  min-height: 46px;
+  border-color: #dfe8e2;
+  border-radius: 11px;
+  background-color: #fbfdfb;
+}
+
+.crop-ai-submit {
+  min-height: 48px;
+  margin-top: 6px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.crop-ai-form-note {
+  margin-top: 11px;
+  color: #839087;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.crop-ai-field-hint {
+  display: block;
+  margin-top: 5px;
+  color: #849188;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.crop-ai-results {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.crop-ai-top-pick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid #bfe4cc;
+  border-radius: 16px;
+  background: linear-gradient(130deg, #f0faf3, #fff 76%);
+}
+
+.crop-ai-top-pick::after {
+  position: absolute;
+  top: -55px;
+  right: -40px;
+  width: 170px;
+  height: 170px;
+  border: 1px solid rgba(36, 124, 69, 0.08);
+  border-radius: 50%;
+  box-shadow: 0 0 0 20px rgba(36, 124, 69, 0.035), 0 0 0 42px rgba(36, 124, 69, 0.025);
+  content: '';
+}
+
+.crop-ai-top-copy,
+.crop-ai-top-score {
+  position: relative;
+  z-index: 1;
+}
+
+.crop-ai-top-copy {
+  min-width: 0;
+}
+
+.crop-ai-top-copy .crop-ai-kicker {
+  color: #368353;
+}
+
+.crop-ai-top-copy h3 {
+  margin: 8px 0 4px;
+  color: #1d4b31;
+  font-size: 24px;
+}
+
+.crop-ai-top-copy > p {
+  color: #64766a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.crop-ai-top-facts {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.crop-ai-top-facts span {
+  padding: 7px 9px;
+  border: 1px solid #dcece1;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #64766a;
+  font-size: 11px;
+}
+
+.crop-ai-top-facts strong {
+  color: #24633d;
+}
+
+.crop-ai-top-score {
+  display: flex;
+  width: 104px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.crop-ai-top-score > strong {
+  color: #176344;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.crop-ai-top-score > span {
+  color: #718078;
+  font-size: 10px;
+}
+
+.crop-ai-score-track {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7eee9;
+}
+
+.crop-ai-score-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #39a56a, #167354);
+}
+
+.crop-ai-results-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 2px 0;
+}
+
+.crop-ai-results-heading h3 {
+  margin-top: 4px;
+}
+
+.crop-ai-result-count {
+  padding: 6px 9px;
+  border: 1px solid #e3ebe6;
+  border-radius: 999px;
+  background: #fff;
+  color: #6d7d73;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.crop-ai-recommendations {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.crop-ai-recommendation {
+  min-width: 0;
+  padding: 15px 17px;
+  border: 1px solid #e6ece9;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.035);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.crop-ai-recommendation:hover {
+  transform: translateY(-2px);
+  border-color: #c7dfcf;
+  box-shadow: 0 9px 22px rgba(25, 82, 47, 0.08);
+}
+
+.crop-ai-recommendation.is-top {
+  border-color: #b7dfc3;
+}
+
+.crop-ai-recommendation-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crop-ai-rank {
+  color: #829087;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.crop-ai-crop-icon {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: #f0f7f2;
+  font-size: 21px;
+}
+
+.crop-ai-crop-name {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crop-ai-crop-name strong {
+  overflow: hidden;
+  color: #203d2d;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crop-ai-crop-name span {
+  overflow: hidden;
+  color: #7b8981;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crop-ai-score {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.crop-ai-score strong {
+  color: #21744a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.crop-ai-score span {
+  color: #829087;
+  font-size: 10px;
+}
+
+.crop-ai-recommendation > .crop-ai-score-track {
+  height: 4px;
+  margin: 11px 0;
+}
+
+.crop-ai-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crop-ai-details > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  color: #829087;
+  font-size: 10px;
+}
+
+.crop-ai-details strong {
+  overflow: hidden;
+  color: #33483b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crop-ai-details .crop-ai-risk {
+  color: #27814d;
+}
+
+.crop-ai-details .risk-medium {
+  color: #a9680c;
+}
+
+.crop-ai-details .risk-high {
+  color: #bc4e42;
+}
+
+.crop-ai-advisory {
+  margin-top: 11px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #f1f8f3;
+  color: #477156;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.crop-ai-yield-action {
+  margin-top: 10px;
+  padding: 7px 10px;
+  border: 1px solid #cfe5d6;
+  border-radius: 9px;
+  background: #f5fbf6;
+  color: #267247;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.crop-ai-yield-action:hover:not(:disabled) {
+  border-color: #9dc9aa;
+  background: #eaf6ed;
+}
+
+.crop-ai-yield-action:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.crop-ai-state {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.crop-ai-state > span {
+  font-size: 42px;
+}
+
+.crop-ai-state > strong {
+  color: #20313c;
+  font-size: 17px;
+}
+
+.crop-ai-state > p {
+  max-width: 360px;
+  color: #788692;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.crop-ai-empty-steps {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.crop-ai-empty-steps span {
+  padding: 7px 10px;
+  border: 1px solid #e2ebe5;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #6c7d72;
+  font-size: 11px;
+}
+
+.yield-ai-merged-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px;
+  border: 1px solid #e6ece9;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.045);
+}
+
+.yield-ai-merged-heading .yield-ai-section-heading {
+  margin: 0;
+}
+
+.yield-ai-linked-crop {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid #d5ebdc;
+  border-radius: 999px;
+  background: #f0f8f2;
+  color: #28714a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.yield-ai-shared-profile {
+  display: flex;
+  gap: 7px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.yield-ai-shared-profile span {
+  padding: 6px 8px;
+  border: 1px solid #e5ece7;
+  border-radius: 8px;
+  background: #f8faf9;
+  color: #607167;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 1000px) {
+  .crop-ai-profile,
+  .crop-ai-state {
+    padding: 16px;
+  }
+
+  .crop-ai-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .crop-ai-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crop-ai-form-grid .form-group:first-child,
+  .crop-ai-form-grid .crop-ai-yield-crop-field {
+    grid-column: 1 / -1;
+  }
+
+  .crop-ai-hero-art {
+    right: 0;
+    bottom: -42px;
+    font-size: 150px;
+  }
+
+  .crop-ai-steps {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .crop-ai-steps > span {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .crop-ai-hero,
+  .crop-ai-profile {
+    padding: 18px;
+  }
+
+  .crop-ai-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crop-ai-form-grid .form-group:first-child,
+  .crop-ai-form-grid .crop-ai-yield-crop-field {
+    grid-column: auto;
+  }
+
+  .crop-ai-steps {
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .crop-ai-steps > span {
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .crop-ai-steps > b {
+    font-size: 12px;
+  }
+
+  .yield-ai-merged-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .yield-ai-linked-crop {
+    white-space: normal;
+  }
+
+  .crop-ai-top-pick {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .crop-ai-top-score {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .crop-ai-top-score .crop-ai-score-track {
+    max-width: 220px;
+  }
+
+  .crop-ai-details {
+    gap: 10px 6px;
+  }
+}
+
+/* ── Farmer crop yield intelligence ── */
+.yield-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.yield-ai-hero {
+  position: relative;
+  min-height: 175px;
+  overflow: hidden;
+  padding: 27px 31px;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #173b57 0%, #126d74 56%, #169b83 100%);
+  box-shadow: 0 12px 30px rgba(18, 109, 116, 0.18);
+  color: #fff;
+}
+
+.yield-ai-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 650px;
+}
+
+.yield-ai-eyebrow,
+.yield-ai-kicker {
+  display: block;
+  color: #83e0c3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.yield-ai-hero h2 {
+  margin: 8px 0 5px;
+  color: #fff;
+  font-size: clamp(24px, 4vw, 34px);
+  letter-spacing: -0.035em;
+}
+
+.yield-ai-hero p {
+  max-width: 500px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.yield-ai-context {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.yield-ai-context span {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.yield-ai-hero-art {
+  position: absolute;
+  right: 50px;
+  bottom: -53px;
+  color: rgba(255, 255, 255, 0.1);
+  font-size: 180px;
+  line-height: 1;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.yield-ai-layout {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.78fr) minmax(0, 1.5fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.yield-ai-form,
+.yield-ai-finance,
+.yield-ai-factors,
+.yield-ai-state {
+  min-width: 0;
+  padding: 21px;
+  border: 1px solid #e6ece9;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.045);
+}
+
+.yield-ai-form {
+  position: sticky;
+  top: 18px;
+}
+
+.yield-ai-section-heading,
+.yield-ai-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.yield-ai-section-heading {
+  justify-content: flex-start;
+  margin-bottom: 20px;
+}
+
+.yield-ai-section-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: #eaf6ed;
+  font-size: 20px;
+}
+
+.yield-ai-section-heading .yield-ai-kicker,
+.yield-ai-subheading .yield-ai-kicker {
+  color: #438565;
+}
+
+.yield-ai-section-heading h3,
+.yield-ai-subheading h3 {
+  margin: 3px 0 2px;
+  color: #20313c;
+  font-size: 17px;
+}
+
+.yield-ai-section-heading p {
+  color: #788692;
+  font-size: 12px;
+}
+
+.yield-ai-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+}
+
+.yield-ai-form-grid .form-group {
+  min-width: 0;
+  margin-bottom: 13px;
+}
+
+.yield-ai-form .form-label {
+  color: #52665c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.yield-ai-form .form-input,
+.yield-ai-form .form-select {
+  min-height: 42px;
+  border-color: #dfe8e2;
+  border-radius: 10px;
+  background-color: #fbfdfb;
+}
+
+.yield-ai-submit {
+  min-height: 44px;
+  margin-top: 5px;
+  border-radius: 11px;
+  font-weight: 700;
+}
+
+.yield-ai-form-note {
+  margin-top: 11px;
+  color: #839087;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.yield-ai-results {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.yield-ai-result-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 13px 18px;
+  overflow: hidden;
+  padding: 21px;
+  border: 1px solid #bfe4d2;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #eff9f3, #fff 75%);
+}
+
+.yield-ai-result-crop {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.yield-ai-result-icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #d5ebdc;
+  border-radius: 16px;
+  background: #fff;
+  font-size: 27px;
+}
+
+.yield-ai-result-crop .yield-ai-kicker {
+  color: #438565;
+}
+
+.yield-ai-result-crop h3 {
+  margin: 4px 0 0;
+  color: #204532;
+  font-size: 19px;
+}
+
+.yield-ai-result-crop h3 small {
+  color: #718078;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.yield-ai-grade {
+  align-self: start;
+  padding: 7px 10px;
+  border: 1px solid #cfe6d6;
+  border-radius: 999px;
+  background: #f4fbf6;
+  color: #28714a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.yield-ai-grade.grade-c {
+  border-color: #f0dfb8;
+  background: #fff9e9;
+  color: #94620d;
+}
+
+.yield-ai-grade.grade-d {
+  border-color: #efcfca;
+  background: #fff3f1;
+  color: #ae4b40;
+}
+
+.yield-ai-total {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: baseline;
+  gap: 8px;
+  padding: 15px 0 12px;
+  border-top: 1px solid #dcece2;
+}
+
+.yield-ai-total strong {
+  color: #176344;
+  font-size: clamp(34px, 5vw, 48px);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.yield-ai-total span {
+  color: #698075;
+  font-size: 13px;
+}
+
+.yield-ai-range {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #dfede4;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #718078;
+  font-size: 12px;
+}
+
+.yield-ai-range strong {
+  color: #305741;
+  text-align: right;
+}
+
+.yield-ai-finance,
+.yield-ai-factors {
+  padding: 19px;
+}
+
+.yield-ai-finance-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 11px;
+  background: #eaf6ed;
+  color: #24744a;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.yield-ai-finance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.yield-ai-finance-grid article {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 12px;
+  border: 1px solid #e8edf0;
+  border-radius: 12px;
+  background: #fafcfc;
+}
+
+.yield-ai-finance-grid article > span {
+  color: #75847b;
+  font-size: 11px;
+}
+
+.yield-ai-finance-grid article > strong {
+  overflow-wrap: anywhere;
+  color: #34493b;
+  font-size: clamp(14px, 2vw, 18px);
+}
+
+.yield-ai-finance-grid article.is-profit {
+  border-color: #cce7d4;
+  background: linear-gradient(145deg, #f0faf3, #fff);
+}
+
+.yield-ai-finance-grid article.is-profit > strong {
+  color: #197448;
+}
+
+.yield-ai-factor-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.yield-ai-factor {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e8edf0;
+  border-radius: 12px;
+  background: #fafcfc;
+}
+
+.yield-ai-factor > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.yield-ai-factor > strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #385443;
+  font-size: 12px;
+}
+
+.yield-ai-factor p {
+  color: #778591;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.yield-ai-state {
+  display: flex;
+  min-height: 280px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.yield-ai-state > span {
+  font-size: 44px;
+}
+
+.yield-ai-state > strong {
+  color: #20313c;
+  font-size: 17px;
+}
+
+.yield-ai-state > p {
+  max-width: 370px;
+  color: #788692;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.yield-ai-empty-steps {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.yield-ai-empty-steps span {
+  padding: 7px 10px;
+  border: 1px solid #e2ebe5;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #6c7d72;
+  font-size: 11px;
+}
+
+@media (max-width: 1000px) {
+  .yield-ai-layout {
+    grid-template-columns: minmax(240px, 0.75fr) minmax(0, 1.25fr);
+    gap: 12px;
+  }
+
+  .yield-ai-form,
+  .yield-ai-finance,
+  .yield-ai-factors,
+  .yield-ai-state {
+    padding: 16px;
+  }
+
+  .yield-ai-factor-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .yield-ai-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .yield-ai-form {
+    position: static;
+  }
+
+  .yield-ai-hero-art {
+    right: 0;
+    bottom: -40px;
+    font-size: 145px;
+  }
+
+  .yield-ai-factor-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .yield-ai-hero,
+  .yield-ai-form,
+  .yield-ai-finance,
+  .yield-ai-factors {
+    padding: 17px;
+  }
+
+  .yield-ai-finance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .yield-ai-finance-grid article {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .yield-ai-factor-list {
+    grid-template-columns: 1fr;
+  }
+
+  .yield-ai-range {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .yield-ai-range strong {
+    text-align: left;
+  }
+}
+
 .fd-order-filters {
   display: flex;
   flex-wrap: wrap;
@@ -4736,6 +6398,360 @@ body.dark-mode .demand-ai-signal.high {
 body.dark-mode .demand-ai-signal.low {
   background: #462d23;
   color: #ffc09f;
+}
+
+body.dark-mode .price-ai-stat,
+body.dark-mode .price-ai-chart-card,
+body.dark-mode .price-ai-daily {
+  border-color: #333;
+  background: #1e1e1e;
+  color: #f5f5f5;
+}
+
+body.dark-mode .price-ai-stat.featured {
+  border-color: #285742;
+  background: linear-gradient(145deg, #173329, #1e1e1e);
+}
+
+body.dark-mode .price-ai-stat strong,
+body.dark-mode .price-ai-card-heading h3,
+body.dark-mode .price-ai-day > strong,
+body.dark-mode .price-ai-state > strong {
+  color: #f1f5f9;
+}
+
+body.dark-mode .price-ai-stat-label,
+body.dark-mode .price-ai-stat-note,
+body.dark-mode .price-ai-stat strong small,
+body.dark-mode .price-ai-card-heading p,
+body.dark-mode .price-ai-day time,
+body.dark-mode .price-ai-day-range {
+  color: #aab5bf;
+}
+
+body.dark-mode .price-ai-stat-icon,
+body.dark-mode .price-ai-unit {
+  border-color: #37414a;
+  background: #252b31;
+  color: #d7e0e7;
+}
+
+body.dark-mode .price-ai-outlook {
+  border-color: #285742;
+  background: linear-gradient(155deg, #173329, #1e1e1e);
+}
+
+body.dark-mode .price-ai-outlook h3 {
+  color: #b7ebc7;
+}
+
+body.dark-mode .price-ai-outlook p,
+body.dark-mode .price-ai-outlook-change {
+  color: #c2ccd4;
+}
+
+body.dark-mode .price-ai-outlook .price-ai-kicker {
+  color: #75d7a1;
+}
+
+body.dark-mode .price-ai-outlook-icon {
+  background: #244333;
+}
+
+body.dark-mode .price-ai-outlook-change strong {
+  color: #e2e8f0;
+}
+
+body.dark-mode .price-ai-day {
+  border-color: #37414a;
+  background: #252b31;
+}
+
+body.dark-mode .price-ai-day-trend {
+  background: #303943;
+  color: #c0ccd5;
+}
+
+body.dark-mode .price-ai-day-trend.is-positive {
+  background: #1e3c2c;
+  color: #a5e3bb;
+}
+
+body.dark-mode .price-ai-day-trend.is-negative {
+  background: #462d23;
+  color: #ffc09f;
+}
+
+body.dark-mode .price-ai-state p {
+  color: #aab5bf;
+}
+
+body.dark-mode .crop-ai-profile,
+body.dark-mode .crop-ai-state,
+body.dark-mode .crop-ai-recommendation {
+  border-color: #333;
+  background: #1e1e1e;
+  color: #f5f5f5;
+}
+
+body.dark-mode .crop-ai-section-heading h3,
+body.dark-mode .crop-ai-results-heading h3,
+body.dark-mode .crop-ai-crop-name strong,
+body.dark-mode .crop-ai-state > strong {
+  color: #e8f2eb;
+}
+
+body.dark-mode .crop-ai-section-heading p,
+body.dark-mode .crop-ai-crop-name span,
+body.dark-mode .crop-ai-form-note,
+body.dark-mode .crop-ai-state > p {
+  color: #aab5bf;
+}
+
+body.dark-mode .crop-ai-section-icon,
+body.dark-mode .crop-ai-crop-icon {
+  background: #244333;
+}
+
+body.dark-mode .crop-ai-profile .form-label {
+  color: #c2d0c7;
+}
+
+body.dark-mode .crop-ai-profile .form-input,
+body.dark-mode .crop-ai-profile .form-select {
+  border-color: #3c4b42;
+  background: #252b27;
+  color: #f5f5f5;
+}
+
+body.dark-mode .crop-ai-section-heading .crop-ai-kicker,
+body.dark-mode .crop-ai-results-heading .crop-ai-kicker {
+  color: #75d7a1;
+}
+
+body.dark-mode .crop-ai-top-pick {
+  border-color: #285742;
+  background: linear-gradient(130deg, #173329, #1e1e1e 76%);
+}
+
+body.dark-mode .crop-ai-top-copy .crop-ai-kicker {
+  color: #75d7a1;
+}
+
+body.dark-mode .crop-ai-top-copy h3,
+body.dark-mode .crop-ai-top-score > strong {
+  color: #b7ebc7;
+}
+
+body.dark-mode .crop-ai-top-copy > p,
+body.dark-mode .crop-ai-top-score > span {
+  color: #bac9bf;
+}
+
+body.dark-mode .crop-ai-top-facts span {
+  border-color: #385344;
+  background: rgba(31, 57, 41, 0.8);
+  color: #c3d3c8;
+}
+
+body.dark-mode .crop-ai-top-facts strong {
+  color: #a6e2b5;
+}
+
+body.dark-mode .crop-ai-result-count,
+body.dark-mode .crop-ai-empty-steps span {
+  border-color: #37433b;
+  background: #252b27;
+  color: #b5c2b9;
+}
+
+body.dark-mode .crop-ai-recommendation:hover {
+  border-color: #4a7056;
+}
+
+body.dark-mode .crop-ai-recommendation.is-top {
+  border-color: #386949;
+}
+
+body.dark-mode .crop-ai-rank,
+body.dark-mode .crop-ai-score span,
+body.dark-mode .crop-ai-details > span {
+  color: #aab5ad;
+}
+
+body.dark-mode .crop-ai-score strong {
+  color: #86d6a1;
+}
+
+body.dark-mode .crop-ai-details strong {
+  color: #d5e0d8;
+}
+
+body.dark-mode .crop-ai-advisory {
+  background: #203a29;
+  color: #b5e3c2;
+}
+
+body.dark-mode .crop-ai-yield-action {
+  border-color: #385b45;
+  background: #203a29;
+  color: #a6e2b5;
+}
+
+body.dark-mode .crop-ai-yield-action:hover:not(:disabled) {
+  border-color: #4a7056;
+  background: #284a34;
+}
+
+body.dark-mode .crop-ai-score-track {
+  background: #343e37;
+}
+
+body.dark-mode .yield-ai-form,
+body.dark-mode .yield-ai-finance,
+body.dark-mode .yield-ai-factors,
+body.dark-mode .yield-ai-state {
+  border-color: #333;
+  background: #1e1e1e;
+  color: #f5f5f5;
+}
+
+body.dark-mode .yield-ai-section-heading h3,
+body.dark-mode .yield-ai-subheading h3,
+body.dark-mode .yield-ai-state > strong {
+  color: #e8f2eb;
+}
+
+body.dark-mode .yield-ai-section-heading p,
+body.dark-mode .yield-ai-form-note,
+body.dark-mode .yield-ai-state > p {
+  color: #aab5bf;
+}
+
+body.dark-mode .yield-ai-section-icon,
+body.dark-mode .yield-ai-finance-icon {
+  background: #244333;
+  color: #a6e2b5;
+}
+
+body.dark-mode .yield-ai-section-heading .yield-ai-kicker,
+body.dark-mode .yield-ai-subheading .yield-ai-kicker,
+body.dark-mode .yield-ai-result-crop .yield-ai-kicker {
+  color: #75d7a1;
+}
+
+body.dark-mode .yield-ai-form .form-label {
+  color: #c2d0c7;
+}
+
+body.dark-mode .yield-ai-form .form-input,
+body.dark-mode .yield-ai-form .form-select {
+  border-color: #3c4b42;
+  background: #252b27;
+  color: #f5f5f5;
+}
+
+body.dark-mode .yield-ai-result-hero {
+  border-color: #285742;
+  background: linear-gradient(135deg, #173329, #1e1e1e 75%);
+}
+
+body.dark-mode .yield-ai-result-icon {
+  border-color: #385344;
+  background: #252b27;
+}
+
+body.dark-mode .yield-ai-result-crop h3 {
+  color: #b7ebc7;
+}
+
+body.dark-mode .yield-ai-result-crop h3 small,
+body.dark-mode .yield-ai-total span {
+  color: #bac9bf;
+}
+
+body.dark-mode .yield-ai-grade {
+  border-color: #385b45;
+  background: #203a29;
+  color: #a6e2b5;
+}
+
+body.dark-mode .yield-ai-grade.grade-c {
+  border-color: #6a542d;
+  background: #3c321f;
+  color: #f4d184;
+}
+
+body.dark-mode .yield-ai-grade.grade-d {
+  border-color: #68403c;
+  background: #3d2725;
+  color: #ffaaa1;
+}
+
+body.dark-mode .yield-ai-total {
+  border-color: #385344;
+}
+
+body.dark-mode .yield-ai-total strong {
+  color: #86d6a1;
+}
+
+body.dark-mode .yield-ai-range {
+  border-color: #385344;
+  background: #202e25;
+  color: #b5c2b9;
+}
+
+body.dark-mode .yield-ai-range strong {
+  color: #d3e6d9;
+}
+
+body.dark-mode .yield-ai-finance-grid article,
+body.dark-mode .yield-ai-factor {
+  border-color: #37414a;
+  background: #252b31;
+}
+
+body.dark-mode .yield-ai-finance-grid article > span,
+body.dark-mode .yield-ai-factor p {
+  color: #aab5bf;
+}
+
+body.dark-mode .yield-ai-finance-grid article > strong,
+body.dark-mode .yield-ai-factor > strong {
+  color: #d5e0d8;
+}
+
+body.dark-mode .yield-ai-finance-grid article.is-profit {
+  border-color: #285742;
+  background: linear-gradient(145deg, #173329, #1e1e1e);
+}
+
+body.dark-mode .yield-ai-finance-grid article.is-profit > strong {
+  color: #86d6a1;
+}
+
+body.dark-mode .yield-ai-empty-steps span {
+  border-color: #37433b;
+  background: #252b27;
+  color: #b5c2b9;
+}
+
+body.dark-mode .yield-ai-merged-heading {
+  border-color: #333;
+  background: #1e1e1e;
+}
+
+body.dark-mode .yield-ai-linked-crop {
+  border-color: #385b45;
+  background: #203a29;
+  color: #a6e2b5;
+}
+
+body.dark-mode .yield-ai-shared-profile span {
+  border-color: #37433b;
+  background: #252b27;
+  color: #c2d0c7;
 }
 
 /* Inputs */

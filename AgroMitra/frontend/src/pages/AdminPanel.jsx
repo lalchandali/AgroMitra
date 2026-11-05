@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate } from '../api/agromitra'
+import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, updateStoredUser, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
@@ -1051,7 +1051,7 @@ export default function AdminPanel() {
                       toast.loading('Uploading photo...')
                       const res = await uploadProfilePhoto(file)
                       const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
-                      sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      updateStoredUser(updatedUser)
                       setUser(updatedUser)
                       setPhotoKey(Date.now())
                       toast.dismiss()
@@ -1128,7 +1128,7 @@ export default function AdminPanel() {
                     try {
                       const res = await updateProfile({ name_en: profileForm.name_en, name_bn: profileForm.name_bn, mobile_number: profileForm.mobile_number, district: profileForm.district })
                       const updatedUser = { ...user, ...res.data }
-                      sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      updateStoredUser(updatedUser)
                       setUser(updatedUser)
                       toast.success('Profile updated!')
                       setProfileEditMode(false)

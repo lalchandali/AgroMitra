@@ -127,6 +127,11 @@ export const saveAuthSession = ({ access_token, refresh_token, user }) => {
   globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
 }
 
+export const updateStoredUser = (user) => {
+  sessionStorage.setItem('agromitra_user', JSON.stringify(user))
+  globalThis.dispatchEvent(new Event('agromitra-auth-changed'))
+}
+
 export const clearAuthSession = () => {
   sessionStorage.removeItem('agromitra_access_token')
   sessionStorage.removeItem('agromitra_refresh_token')

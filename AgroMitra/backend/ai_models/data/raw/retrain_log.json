@@ -14,5 +14,35 @@
       "Tomato"
     ],
     "backup_file": "crop_prices_backup_20260725_231458.csv"
+  },
+  {
+    "timestamp": "2026-11-05T13:17:28.524126",
+    "admin_id": "c3050aab-31ba-45b9-9a65-70a823cca45b",
+    "admin_name": "Md Lal Chand Ali",
+    "filename": "dam_dhaka_prices_2026-11-04.csv",
+    "mode": "append",
+    "rows_uploaded": 28,
+    "total_rows_after": 198395,
+    "date_range_from": "2022-01-01",
+    "date_range_to": "2026-11-04",
+    "crops_in_upload": [
+      "Banana Sagar",
+      "Bottle gourd",
+      "Brinjal",
+      "Cucumber",
+      "Garlic Chinese",
+      "Garlic local",
+      "Ginger imported",
+      "Green chili",
+      "Onion local",
+      "Potato",
+      "Pumpkin",
+      "Raw papaya",
+      "Rice - BRRI 34 aromatic",
+      "Rice - Jirashail Shampa Katari fine",
+      "Rice - Pajam BRRI 28 29 medium",
+      "Rice - Swarna coarse"
+    ],
+    "backup_file": "crop_prices_backup_20261105_131726.csv"
   }
 ]

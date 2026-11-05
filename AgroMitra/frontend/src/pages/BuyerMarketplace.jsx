@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getAllProducts, getMyOrders, placeOrder, cancelOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, createReview, getProductReviews, getReviewableItems, getFarmerProfile } from '../api/agromitra'
+import { getAllProducts, getMyOrders, placeOrder, cancelOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, updateStoredUser, createReview, getProductReviews, getReviewableItems, getFarmerProfile } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
@@ -14,6 +14,57 @@ const CROP_EMOJIS = {
   Cabbage: '🥬', Cauliflower: '🥦', Garlic: '🧄', Rice: '🌾',
   Ginger: '🫚', Corn: '🌽', Chili: '🌶️', Carrot: '🥕',
   Cucumber: '🥒', Pumpkin: '🎃', Spinach: '🥗', Wheat: '🌾',
+}
+
+const ProductFarmerInfo = ({ product, lang, onSelect }) => (
+  <div className="bm-product-farmer">
+    <button
+      type="button"
+      className="bm-product-farmer-profile"
+      onClick={() => onSelect(product.farmer_id)}
+      disabled={!product.farmer_id}
+      title={lang === 'bn' ? 'কৃষকের প্রোফাইল দেখুন' : "View farmer's profile"}
+    >
+      <span className="bm-product-farmer-avatar">
+        {product.farmer_photo_url
+          ? <img
+              src={resolveImageUrl(product.farmer_photo_url)}
+              alt=""
+              onError={event => { event.currentTarget.style.display = 'none' }}
+            />
+          : <span aria-hidden="true">👨‍🌾</span>}
+      </span>
+      <span className="bm-product-farmer-copy">
+        <span className="bm-product-farmer-label">{lang === 'bn' ? 'কৃষক' : 'GROWN BY'}</span>
+        <span className="bm-product-farmer-name">{product.farmer_name || (lang === 'bn' ? 'কৃষক' : 'Farmer')}</span>
+      </span>
+      {product.average_rating != null && (
+        <span className="bm-product-farmer-rating">★ {product.average_rating} <small>({product.review_count})</small></span>
+      )}
+    </button>
+    <span className="bm-product-farmer-location">📍 {product.district || (lang === 'bn' ? 'জেলা উল্লেখ নেই' : 'District not listed')}</span>
+  </div>
+)
+
+const ProductStockInfo = ({ product, lang }) => {
+  const quantity = product.quantity_kg == null ? null : Number(product.quantity_kg)
+  const hasStock = quantity != null && Number.isFinite(quantity) && quantity > 0
+
+  return (
+    <div className={`bm-product-stock${quantity != null && !hasStock ? ' is-empty' : ''}${quantity == null ? ' is-unknown' : ''}`}>
+      <span className="bm-product-stock-icon" aria-hidden="true">📦</span>
+      <span className="bm-product-stock-copy">
+        <span className="bm-product-stock-label">
+          {quantity == null
+            ? (lang === 'bn' ? 'মজুদের তথ্য নেই' : 'STOCK NOT LISTED')
+            : hasStock
+              ? (lang === 'bn' ? 'মজুদ আছে' : 'AVAILABLE')
+              : (lang === 'bn' ? 'মজুদ নেই' : 'OUT OF STOCK')}
+        </span>
+        <strong>{quantity != null && Number.isFinite(quantity) ? `${quantity.toLocaleString()} kg` : '—'}</strong>
+      </span>
+    </div>
+  )
 }
 
 export default function BuyerMarketplace() {
@@ -507,57 +558,27 @@ export default function BuyerMarketplace() {
           ) : (
             <div className="grid-auto">
               {filtered.map(p => (
-                <div key={p.product_id} className="product-card">
+                <div key={p.product_id} className="product-card bm-listing-card">
                   <div className={`product-img${p.image_url ? ' has-photo' : ''}`}>
                     {p.image_url
                       ? <img className="product-photo" src={resolveImageUrl(p.image_url)} alt={p.title_en} />
                       : getEmoji(p)}
                   </div>
                   <div className="product-body">
-                    <div className="flex justify-between flex-center mb-20">
-                      <div>
-                        <div className="product-name">
-                          {p.title_en} 
-                          {p.title_bn && <span style={{ fontSize: 13, color: '#546E7A' }}> ({p.title_bn})</span>}
-                        </div>
-                        <div className="product-location" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span>📍 {p.district} •</span>
-                          <span
-                            onClick={(e) => { e.stopPropagation(); setSelectedFarmerId(p.farmer_id) }}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
-                            title={lang === 'bn' ? 'Farmer profile দেখুন' : "View farmer's profile"}
-                          >
-                            {p.farmer_photo_url ? (
-                              <img
-                                src={resolveImageUrl(p.farmer_photo_url)}
-                                alt={p.farmer_name || 'Farmer'}
-                                style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }}
-                                onError={(e2) => { e2.target.style.display = 'none' }}
-                              />
-                            ) : (
-                              <span>👨‍🌾</span>
-                            )}
-                            <span style={{ textDecoration: 'underline dotted' }}>{p.farmer_name || 'Farmer'}</span>
-                          </span>
-                        </div>
-                        {p.average_rating != null && (
-                          <div style={{ fontSize: 12, color: '#E65100', fontWeight: 600, marginTop: 2 }}>
-                            ⭐ {p.average_rating} ({p.review_count})
-                          </div>
-                        )}
+                    <div className="bm-product-heading">
+                      <div className="product-name">
+                        {p.title_en}
+                        {p.title_bn && <span className="bm-product-name-bn"> ({p.title_bn})</span>}
                       </div>
                       <div className="flex gap-8" style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
                         {p.is_organic && <span className="badge badge-green">🌱 Organic</span>}
                         {p.quality_grade && <span className="badge badge-blue">Grade {p.quality_grade}</span>}
                       </div>
                     </div>
-                    <div className="flex justify-between flex-center">
-                      <div>
-                        <div className="product-price">৳{p.unit_price_bdt}<span>/kg</span></div>
-                        <div style={{ fontSize: 13, color: '#546E7A' }}>
-                          Available: {p.quantity_kg?.toLocaleString()} kg
-                        </div>
-                      </div>
+                    <ProductFarmerInfo product={p} lang={lang} onSelect={setSelectedFarmerId} />
+                    <div className="bm-product-purchase-info">
+                      <div className="product-price">৳{p.unit_price_bdt}<span>/kg</span></div>
+                      <ProductStockInfo product={p} lang={lang} />
                     </div>
                   </div>
                   <div className="product-footer" style={{ flexDirection: 'column', gap: 8 }}>
@@ -1178,36 +1199,24 @@ export default function BuyerMarketplace() {
           ) : (
             <div className="grid-auto">
               {wishlist.map(p => (
-                <div key={p.product_id} className="product-card">
+                <div key={p.product_id} className="product-card bm-listing-card">
                   <div className={`product-img${p.image_url ? ' has-photo' : ''}`}>
                     {p.image_url
                       ? <img className="product-photo" src={resolveImageUrl(p.image_url)} alt={p.title_en} />
                       : getEmoji(p)}
                   </div>
                   <div className="product-body">
-                    <div className="product-name">{p.title_en}</div>
-                    <div className="product-location" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>📍 {p.district} ·</span>
-                      <span
-                        onClick={(e) => { e.stopPropagation(); setSelectedFarmerId(p.farmer_id) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
-                        title={lang === 'bn' ? 'Farmer profile দেখুন' : "View farmer's profile"}
-                      >
-                        {p.farmer_photo_url ? (
-                          <img
-                            src={resolveImageUrl(p.farmer_photo_url)}
-                            alt={p.farmer_name || 'Farmer'}
-                            style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover' }}
-                            onError={(e2) => { e2.target.style.display = 'none' }}
-                          />
-                        ) : (
-                          <span>👨‍🌾</span>
-                        )}
-                        <span style={{ textDecoration: 'underline dotted' }}>{p.farmer_name || 'Farmer'}</span>
-                      </span>
+                    <div className="bm-product-heading">
+                      <div className="product-name">
+                        {p.title_en}
+                        {p.title_bn && <span className="bm-product-name-bn"> ({p.title_bn})</span>}
+                      </div>
                     </div>
-                    <div className="product-price" style={{ marginTop: 8 }}>৳{p.unit_price_bdt}<span>/kg</span></div>
-                    <div style={{ fontSize: 13, color: '#546E7A' }}>{p.quantity_kg?.toLocaleString()} kg available</div>
+                    <ProductFarmerInfo product={p} lang={lang} onSelect={setSelectedFarmerId} />
+                    <div className="bm-product-purchase-info">
+                      <div className="product-price">৳{p.unit_price_bdt}<span>/kg</span></div>
+                      <ProductStockInfo product={p} lang={lang} />
+                    </div>
                   </div>
                   <div className="product-footer" style={{ gap: 8 }}>
                     <button className="btn btn-primary btn-sm" style={{ flex: 1 }}
@@ -1282,7 +1291,7 @@ export default function BuyerMarketplace() {
                       toast.loading('Uploading photo...')
                       const res = await uploadProfilePhoto(file)
                       const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
-                      sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                      updateStoredUser(updatedUser)
                       setUser(updatedUser)
                       setPhotoKey(Date.now())
                       toast.dismiss()

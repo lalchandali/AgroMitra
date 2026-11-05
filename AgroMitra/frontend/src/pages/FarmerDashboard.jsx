@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, BarChart, Bar
+  Tooltip, ResponsiveContainer, BarChart, Bar, ComposedChart
 } from 'recharts'
 import {
   getPricePrediction, getDemandForecast, getCropRecommendation, getCropYield,
   getMyProducts, createProduct, updateProduct, deleteProduct,
   getMyOrders, updateOrderStatus,
-  getStoredUser, uploadProfilePhoto, updateProfile, resolveImageUrl
+  getStoredUser, uploadProfilePhoto, updateProfile, resolveImageUrl, updateStoredUser,
+  getWeatherAlert
 } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
@@ -276,7 +277,11 @@ export default function FarmerDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
   const [crop, setCrop] = useState('Tomato')
-  const [district, setDistrict] = useState(user?.district)
+  const [district, setDistrict] = useState(user?.district || 'Dhaka')
+  const [weather, setWeather] = useState(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherError, setWeatherError] = useState(false)
+  const [weatherRefresh, setWeatherRefresh] = useState(0)
   const [priceData, setPriceData] = useState(null)
   const [demandData, setDemandData] = useState(null)
   const [recData, setRecData] = useState(null)
@@ -363,6 +368,25 @@ export default function FarmerDashboard() {
   useEffect(() => { fetchAI() }, [fetchAI])
   useEffect(() => { fetchProducts() }, [fetchProducts])
   useEffect(() => { fetchOrders() }, [fetchOrders])
+  useEffect(() => {
+    let cancelled = false
+    setWeatherLoading(true)
+    setWeatherError(false)
+    getWeatherAlert(district)
+      .then(({ data }) => {
+        if (!cancelled) setWeather(data)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWeather(null)
+          setWeatherError(true)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setWeatherLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [district, weatherRefresh])
 
   const activeListings = products.filter(p => p.is_available !== false).length
   const pendingOrders = orders.filter(o => ['placed', 'pending'].includes(o.status?.toLowerCase())).length
@@ -380,7 +404,14 @@ export default function FarmerDashboard() {
   const demandChartData = demandData?.forecasts?.map(f => ({
     date: f.date.slice(5),
     demand: f.predicted_demand,
+    lower: f.lower_bound,
+    upper: f.upper_bound,
+    signal: f.market_signal,
   })) || []
+  const demandChangePct = Number(demandData?.summary?.demand_change_pct || 0)
+  const highDemandDays = demandData?.forecasts?.filter(f =>
+    f.market_signal?.toLowerCase().includes('high')
+  ).length || 0
 
   // productForm.title_en থেকে সবচেয়ে কাছাকাছি AI-supported crop অনুমান করে
   // (যেমন "Fresh Tomato" টাইটেল দিলে "Tomato" ধরে নেবে) — না মিললে প্রথমটা।
@@ -621,6 +652,66 @@ export default function FarmerDashboard() {
           {/* ════ Overview Tab ════ */}
           {activeTab === 'overview' && (
             <div>
+
+              {/* ── Local Weather ── */}
+              <div className="card" style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div className="card-title" style={{ marginBottom: 0 }}>
+                    🌦️ {lang === 'bn' ? 'স্থানীয় আবহাওয়া' : 'Local Weather'} · {district}
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setWeatherRefresh((value) => value + 1)}
+                    disabled={weatherLoading}
+                  >
+                    {weatherLoading ? '⏳' : '🔄'} {lang === 'bn' ? 'রিফ্রেশ' : 'Refresh'}
+                  </button>
+                </div>
+
+                {weatherLoading ? (
+                  <div className="spinner-box">
+                    <div className="spinner" />
+                    <span>{lang === 'bn' ? 'আবহাওয়ার তথ্য লোড হচ্ছে…' : 'Loading weather…'}</span>
+                  </div>
+                ) : weatherError ? (
+                  <div className="alert alert-warning" role="alert">
+                    {lang === 'bn'
+                      ? 'এই জেলার আবহাওয়ার তথ্য পাওয়া যায়নি। আবহাওয়া পরিষেবা কনফিগার করা আছে কিনা পরীক্ষা করে আবার চেষ্টা করুন।'
+                      : 'Weather information is unavailable. Check that the weather service is configured, then try again.'}
+                  </div>
+                ) : weather && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                      {[
+                        { icon: '🌡️', label: lang === 'bn' ? 'তাপমাত্রা' : 'Temperature', value: `${weather.temperature_c ?? '—'}°C` },
+                        { icon: '🌤️', label: lang === 'bn' ? 'অবস্থা' : 'Conditions', value: weather.condition || '—' },
+                        { icon: '💧', label: lang === 'bn' ? 'আর্দ্রতা' : 'Humidity', value: `${weather.humidity_pct ?? '—'}%` },
+                        { icon: '💨', label: lang === 'bn' ? 'বাতাস' : 'Wind', value: `${weather.wind_speed_ms ?? '—'} m/s` },
+                      ].map((item) => (
+                        <div key={item.label} style={{ padding: 14, borderRadius: 8, background: 'var(--bg-muted, #F8FAFC)' }}>
+                          <div style={{ color: 'var(--gray)', fontSize: 13 }}>{item.icon} {item.label}</div>
+                          <div style={{ marginTop: 4, fontWeight: 700, textTransform: 'capitalize' }}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      className={`alert ${weather.has_alert ? 'alert-warning' : 'alert-success'}`}
+                      role={weather.has_alert ? 'alert' : 'status'}
+                      style={{ marginTop: 14, marginBottom: 0 }}
+                    >
+                      <strong>
+                        {weather.has_alert
+                          ? `⚠️ ${weather.alert_title || (lang === 'bn' ? 'আবহাওয়া সতর্কতা' : 'Weather advisory')}`
+                          : `✅ ${lang === 'bn' ? 'কোনো সক্রিয় আবহাওয়া সতর্কতা নেই' : 'No active weather alerts'}`}
+                      </strong>
+                      {weather.has_alert && weather.alert_message && <span> {weather.alert_message}</span>}
+                      <span style={{ display: 'block', marginTop: 4, fontSize: 12 }}>
+                        {weather.alert_source}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* ── Profile + Quick Actions ── */}
               <div className="grid-1" style={{ marginBottom: 20 }}>
@@ -920,42 +1011,150 @@ export default function FarmerDashboard() {
 
           {/* ════ Demand AI Tab ════ */}
           {activeTab === 'demand' && (
-            <div className="grid-2">
-              <div className="card">
-                <div className="card-title">📊 Demand Forecast Table</div>
-                <div className="table-container">
-                  <table>
-                    <thead><tr><th>Date</th><th>Predicted Demand</th><th>Range</th><th>Signal</th></tr></thead>
-                    <tbody>
-                      {demandData?.forecasts?.map((f, i) => (
-                        <tr key={i}>
-                          <td>{f.date}</td>
-                          <td><strong>{f.predicted_demand?.toLocaleString()} kg</strong></td>
-                          <td style={{ color: '#546E7A', fontSize: 13 }}>{f.lower_bound?.toLocaleString()} – {f.upper_bound?.toLocaleString()}</td>
-                          <td><span className={`badge ${f.market_signal?.includes('High') ? 'badge-green' : f.market_signal?.includes('Low') ? 'badge-red' : 'badge-blue'}`}>{f.market_signal}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="card">
-                <div className="card-title">📈 Demand Chart</div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={demandChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={v => [`${v} kg`, 'Demand']} />
-                    <Bar dataKey="demand" fill="#1976D2" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-                {demandData && (
-                  <div className="alert alert-info mt-16">
-                    💡 {demandData.summary?.farmer_advisory}
+            <div className="demand-ai">
+              <section className="demand-ai-hero">
+                <div className="demand-ai-hero-content">
+                  <span className="demand-ai-eyebrow">AGROMITRA INTELLIGENCE</span>
+                  <h2>Demand outlook</h2>
+                  <p>Plan your harvest with a district-specific view of expected crop demand.</p>
+                  <div className="demand-ai-context">
+                    <span>🌱 {CROP_EMOJIS[crop] || '🌿'} {crop}</span>
+                    <span>📍 {district}</span>
+                    <span>🗓️ {demandData?.forecast_days || 7}-day outlook</span>
                   </div>
-                )}
-              </div>
+                </div>
+                <span className={`demand-ai-model${demandData?.model_used === 'lstm_demand_v2' ? ' is-trained' : ''}`}>
+                  <span className="demand-ai-model-dot" />
+                  {demandData?.model_used === 'lstm_demand_v2' ? 'Trained LSTM model' : 'Statistical forecast'}
+                </span>
+                <div className="demand-ai-hero-art" aria-hidden="true">📈</div>
+              </section>
+
+              {aiLoading ? (
+                <div className="card demand-ai-loading">
+                  <div className="spinner-box"><div className="spinner" /><span>Generating your demand outlook…</span></div>
+                </div>
+              ) : !demandData?.forecasts?.length ? (
+                <div className="card demand-ai-empty">
+                  <span>📊</span>
+                  <strong>No demand forecast yet</strong>
+                  <p>Refresh AI predictions to load the latest outlook for this crop and district.</p>
+                  <button className="btn btn-primary" onClick={fetchAI}>🔄 Refresh forecast</button>
+                </div>
+              ) : (
+                <>
+                  <div className="demand-ai-stats">
+                    <article className="demand-ai-stat">
+                      <span className="demand-ai-stat-icon">🧾</span>
+                      <span className="demand-ai-stat-label">Historical average</span>
+                      <strong>{Number(demandData.summary?.historical_avg_demand || 0).toLocaleString()} <small>kg</small></strong>
+                      <span className="demand-ai-stat-note">Recent market baseline</span>
+                    </article>
+                    <article className="demand-ai-stat featured">
+                      <span className="demand-ai-stat-icon">🔭</span>
+                      <span className="demand-ai-stat-label">Forecast average</span>
+                      <strong>{Number(demandData.summary?.forecast_avg_demand || 0).toLocaleString()} <small>kg</small></strong>
+                      <span className="demand-ai-stat-note">Expected per day</span>
+                    </article>
+                    <article className="demand-ai-stat">
+                      <span className="demand-ai-stat-icon">{demandChangePct > 0 ? '↗️' : demandChangePct < 0 ? '↘️' : '↔️'}</span>
+                      <span className="demand-ai-stat-label">Demand movement</span>
+                      <strong className={demandChangePct > 0 ? 'demand-positive' : demandChangePct < 0 ? 'demand-negative' : ''}>
+                        {demandChangePct > 0 ? '+' : ''}{demandChangePct.toFixed(1)}<small>%</small>
+                      </strong>
+                      <span className="demand-ai-stat-note">Compared with baseline</span>
+                    </article>
+                    <article className="demand-ai-stat">
+                      <span className="demand-ai-stat-icon">🔥</span>
+                      <span className="demand-ai-stat-label">High-demand days</span>
+                      <strong>{highDemandDays} <small>of {demandChartData.length} days</small></strong>
+                      <span className="demand-ai-stat-note">In this forecast window</span>
+                    </article>
+                  </div>
+
+                  <div className="demand-ai-main-grid">
+                    <section className="card demand-ai-chart-card">
+                      <div className="demand-ai-card-heading">
+                        <div>
+                          <span className="demand-ai-section-kicker">DAY-BY-DAY</span>
+                          <h3>Expected market demand</h3>
+                          <p>Forecast estimate with upper and lower bounds</p>
+                        </div>
+                        <span className="demand-ai-unit">Kilograms (kg)</span>
+                      </div>
+                      <div className="demand-ai-chart">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <ComposedChart data={demandChartData} margin={{ top: 12, right: 12, left: 0, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E8EEF2" vertical={false} />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#718096' }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#718096' }} width={58} />
+                            <Tooltip
+                              cursor={{ fill: 'rgba(25, 118, 210, 0.06)' }}
+                              formatter={(value, name) => [`${Number(value).toLocaleString()} kg`, name === 'demand' ? 'Expected demand' : name === 'lower' ? 'Lower estimate' : 'Upper estimate']}
+                              contentStyle={{ borderRadius: 12, border: '1px solid #E5EAF0', boxShadow: '0 8px 24px rgba(15, 23, 42, .1)' }}
+                            />
+                            <Bar dataKey="demand" name="demand" fill="#168B75" radius={[6, 6, 0, 0]} maxBarSize={38} />
+                            <Line dataKey="upper" name="upper" stroke="#F0A44B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                            <Line dataKey="lower" name="lower" stroke="#79A9D1" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="demand-ai-legend">
+                        <span><i className="legend-demand" /> Expected demand</span>
+                        <span><i className="legend-upper" /> Upper estimate</span>
+                        <span><i className="legend-lower" /> Lower estimate</span>
+                      </div>
+                    </section>
+
+                    <aside className={`demand-ai-advisory${demandChangePct < -10 ? ' is-caution' : ''}`}>
+                      <span className="demand-ai-advisory-icon">{demandChangePct > 10 ? '🚀' : demandChangePct < -10 ? '⚠️' : '🌿'}</span>
+                      <span className="demand-ai-section-kicker">FARMER ADVISORY</span>
+                      <h3>{demandChangePct > 10 ? 'Demand is trending up' : demandChangePct < -10 ? 'Demand may be easing' : 'Keep production balanced'}</h3>
+                      <p>{demandData.summary?.farmer_advisory || 'Use this forecast as one input when planning your production.'}</p>
+                      <div className="demand-ai-advisory-detail">
+                        <span>Forecast location</span>
+                        <strong>{district}</strong>
+                      </div>
+                      <div className="demand-ai-advisory-detail">
+                        <span>Forecast crop</span>
+                        <strong>{CROP_EMOJIS[crop] || '🌿'} {crop}</strong>
+                      </div>
+                      <p className="demand-ai-disclaimer">Forecasts are estimates, not guaranteed sales. Consider weather, storage, and local market conditions before deciding.</p>
+                    </aside>
+                  </div>
+
+                  <section className="card demand-ai-daily">
+                    <div className="demand-ai-card-heading">
+                      <div>
+                        <span className="demand-ai-section-kicker">FORECAST DETAILS</span>
+                        <h3>Daily demand outlook</h3>
+                      </div>
+                      <span className="demand-ai-day-count">{demandChartData.length} days</span>
+                    </div>
+                    <div className="demand-ai-days">
+                      {demandData.forecasts.map((forecast, index) => {
+                        const signal = forecast.market_signal || 'Normal'
+                        const signalClass = signal.toLowerCase().includes('high')
+                          ? 'high'
+                          : signal.toLowerCase().includes('low') ? 'low' : 'normal'
+                        return (
+                          <article className="demand-ai-day" key={`${forecast.date}-${index}`}>
+                            <div className="demand-ai-day-top">
+                              <span>DAY {String(index + 1).padStart(2, '0')}</span>
+                              <span className={`demand-ai-signal ${signalClass}`}>{signal}</span>
+                            </div>
+                            <time>{forecast.date}</time>
+                            <strong>{Number(forecast.predicted_demand || 0).toLocaleString()} <small>kg</small></strong>
+                            <span className="demand-ai-day-range">
+                              Range {Number(forecast.lower_bound || 0).toLocaleString()}–{Number(forecast.upper_bound || 0).toLocaleString()} kg
+                            </span>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </section>
+                </>
+              )}
             </div>
           )}
 
@@ -1425,7 +1624,7 @@ export default function FarmerDashboard() {
                           toast.loading('Uploading photo...')
                           const res = await uploadProfilePhoto(file)
                           const updatedUser = { ...user, profile_photo_url: res.data.photo_url }
-                          sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                          updateStoredUser(updatedUser)
                           setUser(updatedUser)
                           toast.dismiss()
                           toast.success('Profile photo updated!')
@@ -1565,7 +1764,7 @@ export default function FarmerDashboard() {
                           })
                           // localStorage sync করো যাতে refresh-এ নতুন data থাকে
                           const updatedUser = { ...user, ...res.data }
-                          sessionStorage.setItem('agromitra_user', JSON.stringify(updatedUser))
+                          updateStoredUser(updatedUser)
                           setUser(updatedUser)
                           toast.success('Profile updated successfully!')
                           setProfileEditMode(false)

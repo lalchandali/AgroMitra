@@ -12,12 +12,12 @@ import toast from 'react-hot-toast'
 import TeamSection from '../components/TeamSection';
 
 const features = [
-  { icon: '🤖', title: 'AI Price Prediction', desc: 'Prophet + XGBoost hybrid model forecasts crop prices 7–30 days ahead with 12% MAPE accuracy.' },
-  { icon: '📊', title: 'Demand Forecasting', desc: 'LSTM neural network predicts crop demand 4–8 weeks in advance to help farmers plan production.' },
-  { icon: '🌱', title: 'Crop Recommendation', desc: 'Content-based AI suggests top 5 profitable crops based on soil, season, budget, and market trends.' },
+  { icon: '🤖', title: 'AI Price Prediction', badge: 'ML · Prophet + XGBoost', ai: true, desc: 'Forecasts prices up to 30 days ahead when a trained crop-and-district model is available; a statistical fallback handles other cases.' },
+  { icon: '📊', title: 'Demand Forecasting', badge: 'ML · LSTM', ai: true, desc: 'Uses trained LSTM demand models where available, with a statistical fallback for unsupported crop-and-district combinations.' },
+  { icon: '🌱', title: 'Crop Recommendation', badge: 'Rule-based scoring', ai: true, desc: 'Ranks crops using district, soil, planting month, land size, budget, and experience with a transparent scoring engine.' },
+  { icon: '🌤️', title: 'Weather & Sowing Guidance', badge: 'Live data + rules', ai: true, desc: 'Combines live district weather with rule-based alerts and a crop knowledge base for seasonal sowing guidance.' },
   { icon: '💳', title: 'bKash & Nagad Payments', desc: 'Secure digital payments with escrow protection. Farmers get paid instantly on delivery confirmation.' },
   { icon: '🗣️', title: 'Bengali Interface', desc: 'Fully bilingual Bengali and English platform designed for rural farmers with low digital literacy.' },
-  { icon: '🌤️', title: 'Micro-Climate Alerts', desc: 'Hyper-local weather warnings and regional sowing timelines mapped to safeguard crops against unpredictable weather.' },
 ]
 const stats = [
   { val: '17M+', label: 'Bangladeshi Farmers', icon: '👨‍🌾' },
@@ -68,6 +68,29 @@ const DEMO_CROP_EMOJI = { Tomato: '🍅', Onion: '🧅', Potato: '🥔', Brinjal
 // Crop -> emoji, used for the Sowing Calendar cards
 const CROP_EMOJI = { Tomato: '🍅', Onion: '🧅', Potato: '🥔', Brinjal: '🍆', Cabbage: '🥬', Garlic: '🧄', Rice: '🌾', Ginger: '🫚' }
 
+const getWindDirection = (degrees) => {
+  if (degrees == null) return null
+  return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(degrees / 45) % 8]
+}
+
+const getWeatherIcon = (condition = '') => {
+  const value = condition.toLowerCase()
+  if (value.includes('thunder')) return '⛈️'
+  if (value.includes('rain') || value.includes('drizzle')) return '🌧️'
+  if (value.includes('snow')) return '🌨️'
+  if (value.includes('cloud') || value.includes('mist') || value.includes('fog')) return '☁️'
+  return '☀️'
+}
+
+const formatWeatherTime = (timestamp) => {
+  if (!timestamp) return '—'
+  return new Intl.DateTimeFormat('en-BD', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Asia/Dhaka',
+  }).format(new Date(timestamp * 1000))
+}
+
 const Home = () => {
   const rootRef = useRef(null)
 
@@ -83,6 +106,8 @@ const Home = () => {
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
   const [weatherError, setWeatherError] = useState(false)
+  const [weatherRefresh, setWeatherRefresh] = useState(0)
+  const [weatherUpdatedAt, setWeatherUpdatedAt] = useState(null)
 
   // ── Market price table ───────────────────────────────────────
   const [marketPrices, setMarketPrices] = useState([])
@@ -128,11 +153,19 @@ const Home = () => {
     setWeatherLoading(true)
     setWeatherError(false)
     getWeatherAlert(weatherDistrict)
-      .then(res => { if (!cancelled) setWeather(res.data) })
-      .catch(() => { if (!cancelled) setWeatherError(true) })
+      .then(res => {
+        if (cancelled) return
+        setWeather(res.data)
+        setWeatherUpdatedAt(new Date())
+      })
+      .catch(() => {
+        if (cancelled) return
+        setWeather(null)
+        setWeatherError(true)
+      })
       .finally(() => { if (!cancelled) setWeatherLoading(false) })
     return () => { cancelled = true }
-  }, [weatherDistrict])
+  }, [weatherDistrict, weatherRefresh])
 
   // ── Fetch today's wholesale market prices (once) ──────────────
   useEffect(() => {
@@ -277,18 +310,19 @@ const Home = () => {
       {/* ===== FEATURES ===== */}
       <div className="am-section am-reveal">
         <div className="am-section-head">
-          <div className="am-section-eyebrow">Built for the field</div>
-          <h2>Technology that speaks the farmer's language</h2>
-          <p className="am-section-sub">Six tools working together so every harvest finds its fairest price.</p>
+          <div className="am-section-eyebrow">AI & decision support</div>
+          <h2>How intelligence powers AgroMitra</h2>
+          <p className="am-section-sub">See where trained ML models are used—and where transparent rules and live data guide decisions.</p>
         </div>
         <div className="am-features">
           {features.map((f, i) => (
-            <div key={i} className="am-feature">
+            <div key={i} className={`am-feature${f.ai ? ' am-feature-ai' : ''}`}>
               <div className="am-feature-top">
                 <div className="am-feature-icon-circle">{f.icon}</div>
                 <div className="am-feature-num">{String(i + 1).padStart(2, '0')}</div>
               </div>
               <h3>{f.title}</h3>
+              {f.badge && <span className="am-feature-badge">{f.badge}</span>}
               <p>{f.desc}</p>
             </div>
           ))}
@@ -433,52 +467,112 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 1. EMERGENCY ADVISORY ALERTS — live from OpenWeatherMap via our backend */}
-      <section className="am-section">
-        <div className="am-weather-controls">
-          <span className="am-weather-controls-label">📍 Checking weather for:</span>
-          <select className="am-demo-select am-weather-select" value={weatherDistrict} onChange={e => setWeatherDistrict(e.target.value)}>
-            {DEMO_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+      {/* 1. LOCAL WEATHER & FARM ADVISORY — live from OpenWeatherMap */}
+      <section className="am-section am-reveal">
+        <div className="am-section-head">
+          <span className="am-section-eyebrow">Live local conditions</span>
+          <h2>🌦️ Weather & Farm Advisory</h2>
+          <p className="am-section-sub">Current conditions and practical weather alerts for districts across Bangladesh.</p>
         </div>
 
-        {weatherLoading && (
-          <div className="am-demo-loading">
-            <span className="am-demo-spinner" />
-            Checking live conditions in {weatherDistrict}…
+        <div className="am-weather-panel">
+          <div className="am-weather-toolbar">
+            <label className="am-weather-controls-label" htmlFor="home-weather-district">
+              📍 Weather for
+            </label>
+            <select
+              id="home-weather-district"
+              className="am-demo-select am-weather-select"
+              value={weatherDistrict}
+              onChange={e => setWeatherDistrict(e.target.value)}
+            >
+              {DEMO_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <button
+              type="button"
+              className="am-weather-refresh"
+              onClick={() => setWeatherRefresh(value => value + 1)}
+              disabled={weatherLoading}
+            >
+              {weatherLoading ? '⏳ Updating…' : '🔄 Refresh'}
+            </button>
           </div>
-        )}
 
-        {weatherError && !weatherLoading && (
-          <div className="am-demo-error">⚠️ Could not reach the weather service right now.</div>
-        )}
+          {weatherLoading && (
+            <div className="am-demo-loading" role="status">
+              <span className="am-demo-spinner" />
+              Checking live conditions in {weatherDistrict}…
+            </div>
+          )}
 
-        {weather && !weatherLoading && !weatherError && (
-          weather.has_alert ? (
-            <div className="alert alert-warning" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', border: '6px solid var(--orange)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '32px', paddingLeft: '20px' }}>⚠️</span>
-                <div>
-                  <strong style={{ fontSize: '16px', display: 'block', color: 'var(--orange)' }}>{weather.alert_title}</strong>
-                  <span style={{ fontSize: '14px', color: 'var(--gray-dark)' }}>{weather.alert_message}</span>
+          {weatherError && !weatherLoading && (
+            <div className="am-demo-error" role="alert">
+              ⚠️ Could not load weather for {weatherDistrict}. Please try refreshing.
+            </div>
+          )}
+
+          {weather && !weatherLoading && !weatherError && (
+            <>
+              <div className="am-weather-current">
+                <div className="am-weather-summary">
+                  <div className="am-weather-summary-icon" aria-hidden="true">
+                    {getWeatherIcon(weather.condition)}
+                  </div>
+                  <div className="am-weather-summary-main">
+                    <span className="am-weather-location">📍 {weather.district}, Bangladesh</span>
+                    <div className="am-weather-temperature">
+                      {weather.temperature_c ?? '—'}<span>°C</span>
+                    </div>
+                    <span className="am-weather-description">
+                      {weather.condition}
+                      {weather.feels_like_c != null && ` · Feels like ${weather.feels_like_c}°C`}
+                    </span>
+                  </div>
+                  <span className={`am-weather-status${weather.has_alert ? ' is-alert' : ''}`}>
+                    {weather.has_alert ? '⚠️ Advisory' : '✅ No active alerts'}
+                  </span>
+                </div>
+
+                <div className="am-weather-metrics">
+                  {[
+                    { icon: '🌡️', label: 'Temperature range', value: weather.min_temp_c != null && weather.max_temp_c != null ? `${weather.min_temp_c}° – ${weather.max_temp_c}°C` : null },
+                    { icon: '💧', label: 'Humidity', value: weather.humidity_pct != null ? `${weather.humidity_pct}%` : null, featured: true },
+                    { icon: '💨', label: 'Wind', value: weather.wind_speed_ms != null ? `${weather.wind_speed_ms} m/s${getWindDirection(weather.wind_direction_deg) ? ` ${getWindDirection(weather.wind_direction_deg)}` : ''}` : null, featured: true },
+                    { icon: '🌬️', label: 'Wind gust', value: weather.wind_gust_ms != null ? `${weather.wind_gust_ms} m/s` : null },
+                    { icon: '☁️', label: 'Cloud cover', value: weather.clouds_pct != null ? `${weather.clouds_pct}%` : null },
+                    { icon: '👁️', label: 'Visibility', value: weather.visibility_km != null ? `${weather.visibility_km} km` : null },
+                    { icon: '🧭', label: 'Pressure', value: weather.pressure_hpa != null ? `${weather.pressure_hpa} hPa` : null },
+                    { icon: '🌅', label: 'Sunrise · Sunset', value: weather.sunrise_unix && weather.sunset_unix ? `${formatWeatherTime(weather.sunrise_unix)} · ${formatWeatherTime(weather.sunset_unix)}` : null },
+                  ].filter(item => item.value != null).map(item => (
+                    <div className={`am-weather-metric${item.featured ? ' is-featured' : ''}`} key={item.label}>
+                      <span className="am-weather-metric-label"><span aria-hidden="true">{item.icon}</span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <strong style={{ fontSize: '16px', color: 'var(--orange)', display: 'block', paddingRight: '20px' }}>{weather.district} : {weather.temperature_c}°C {weather.alert_source}</strong>
 
-            </div>
-          ) : (
-            <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', border: '6px solid var(--green)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '32px' }}>☀️</span>
+              <div className={`am-weather-advisory${weather.has_alert ? ' is-alert' : ''}`} role={weather.has_alert ? 'alert' : 'status'}>
+                <span className="am-weather-advisory-icon" aria-hidden="true">{weather.has_alert ? '⚠️' : '✅'}</span>
                 <div>
-                  <strong style={{ fontSize: '16px', display: 'block', color: 'var(--green-dark)' }}>No active weather alerts</strong>
-                  <span style={{ fontSize: '14px', color: 'var(--gray-dark)' }}>Conditions in {weather.district}: {weather.condition}, {weather.temperature_c}°C, wind {weather.wind_speed_ms} m/s.</span>
+                  <strong>
+                    {weather.has_alert
+                      ? weather.alert_title || 'Weather advisory'
+                      : 'No active weather alerts'}
+                  </strong>
+                  {weather.has_alert && weather.alert_message && <p>{weather.alert_message}</p>}
                 </div>
               </div>
-              {/* <span className="badge badge-green" style={{ whiteSpace: 'nowrap' }}>Agri Info Service</span> */}
-            </div>
-          )
-        )}
+
+              <div className="am-weather-footer">
+                <span>{weather.alert_source}</span>
+                {weatherUpdatedAt && (
+                  <span>Updated {weatherUpdatedAt.toLocaleTimeString('en-BD', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Dhaka' })} (Bangladesh time)</span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </section>
 
       {/* 2. REAL-TIME MARKET PRICE — live from our backend (per-kg converted to per-maund) */}

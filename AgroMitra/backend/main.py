@@ -1241,8 +1241,18 @@ async def get_weather_alert(district: str):
     weather_id = data.get("weather", [{}])[0].get("id", 800)
     description = data.get("weather", [{}])[0].get("description", "clear sky")
     temp = data.get("main", {}).get("temp")
+    feels_like = data.get("main", {}).get("feels_like")
+    temp_min = data.get("main", {}).get("temp_min")
+    temp_max = data.get("main", {}).get("temp_max")
     humidity = data.get("main", {}).get("humidity")
+    pressure = data.get("main", {}).get("pressure")
     wind_speed = data.get("wind", {}).get("speed", 0)
+    wind_direction = data.get("wind", {}).get("deg")
+    wind_gust = data.get("wind", {}).get("gust")
+    clouds = data.get("clouds", {}).get("all")
+    visibility = data.get("visibility")
+    sunrise = data.get("sys", {}).get("sunrise")
+    sunset = data.get("sys", {}).get("sunset")
 
     title, advisory_text = _build_weather_advisory(
         weather_id, wind_speed, description)
@@ -1250,8 +1260,18 @@ async def get_weather_alert(district: str):
     return {
         "district":      district,
         "temperature_c": temp,
+        "feels_like_c":  feels_like,
+        "min_temp_c":    temp_min,
+        "max_temp_c":    temp_max,
         "humidity_pct":  humidity,
+        "pressure_hpa":  pressure,
         "wind_speed_ms": wind_speed,
+        "wind_direction_deg": wind_direction,
+        "wind_gust_ms":  wind_gust,
+        "clouds_pct":    clouds,
+        "visibility_km": round(visibility / 1000, 1) if visibility is not None else None,
+        "sunrise_unix":  sunrise,
+        "sunset_unix":   sunset,
         "condition":     description,
         "has_alert":     advisory_text is not None,
         "alert_title":   title,

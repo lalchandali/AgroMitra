@@ -1,4 +1,6 @@
 date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_available,weather_condition,season
+2026-11-04,Banana Sagar,Dhaka,Dhaka Metropolis Retail - dam.gov.bd,40.0,60.0,50.0,4 pieces,180,,
+2026-11-04,Bottle gourd,Dhaka,Dhaka Metropolis Retail - dam.gov.bd,30.0,70.0,50.0,piece,120,,
 2022-01-01,Brinjal,Bogura,Bogura Main Bazar,18.39,25.79,21.95,kg,761,Cloudy,Winter
 2022-01-02,Brinjal,Bogura,Bogura Main Bazar,17.68,24.98,21.3,kg,754,Sunny,Winter
 2022-01-03,Brinjal,Bogura,Bogura Main Bazar,18.71,24.69,22.39,kg,757,Foggy,Winter
@@ -4383,6 +4385,7 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Brinjal,Dhaka,Dhaka Main Bazar,28.52,35.75,32.97,kg,1375,Foggy,Winter
 2024-12-30,Brinjal,Dhaka,Dhaka Main Bazar,29.39,41.66,35.4,kg,1358,Cloudy,Winter
 2024-12-31,Brinjal,Dhaka,Dhaka Main Bazar,32.5,38.58,35.55,kg,1366,Sunny,Winter
+2026-11-04,Brinjal,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,20.0,40.0,30.0,kg,200,,
 2022-01-01,Brinjal,Faridpur,Faridpur Main Bazar,44.41,57.65,51.03,kg,719,Foggy,Winter
 2022-01-02,Brinjal,Faridpur,Faridpur Main Bazar,45.36,58.89,52.12,kg,845,Cloudy,Winter
 2022-01-03,Brinjal,Faridpur,Faridpur Main Bazar,46.13,59.88,53.0,kg,639,Rainy,Winter
@@ -40551,6 +40554,7 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Cauliflower,Rajshahi,Rajshahi Main Bazar,20.32,25.5,23.2,kg,935,Sunny,Winter
 2024-12-30,Cauliflower,Rajshahi,Rajshahi Main Bazar,17.22,22.35,20.09,kg,922,Cloudy,Winter
 2024-12-31,Cauliflower,Rajshahi,Rajshahi Main Bazar,17.08,23.02,20.71,kg,885,Sunny,Winter
+2026-11-04,Cucumber,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,30.0,45.0,37.5,kg,220,,
 2022-01-01,Garlic,Bogura,Bogura Main Bazar,50.71,67.12,57.61,kg,528,Sunny,Winter
 2022-01-02,Garlic,Bogura,Bogura Main Bazar,49.51,61.26,56.05,kg,537,Sunny,Winter
 2022-01-03,Garlic,Bogura,Bogura Main Bazar,55.18,72.86,62.17,kg,466,Sunny,Winter
@@ -54799,6 +54803,8 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Garlic,Rajshahi,Rajshahi Main Bazar,59.08,77.37,71.38,kg,535,Sunny,Winter
 2024-12-30,Garlic,Rajshahi,Rajshahi Main Bazar,61.65,78.04,67.57,kg,581,Sunny,Winter
 2024-12-31,Garlic,Rajshahi,Rajshahi Main Bazar,58.55,77.84,68.42,kg,566,Cloudy,Winter
+2026-11-04,Garlic Chinese,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,145.0,160.0,152.5,kg,120,,
+2026-11-04,Garlic local,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,55.0,90.0,72.5,kg,180,,
 2022-01-01,Ginger,Bandarban,Bandarban Main Bazar,28.55,37.09,32.82,kg,555,Cloudy,Winter
 2022-01-02,Ginger,Bandarban,Bandarban Main Bazar,25.62,33.28,29.45,kg,497,Rainy,Winter
 2022-01-03,Ginger,Bandarban,Bandarban Main Bazar,35.54,46.16,40.85,kg,529,Cloudy,Winter
@@ -70143,6 +70149,8 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Ginger,Sylhet,Sylhet Main Bazar,97.88,127.14,112.51,kg,509,Cloudy,Winter
 2024-12-30,Ginger,Sylhet,Sylhet Main Bazar,103.05,133.85,118.45,kg,334,Foggy,Winter
 2024-12-31,Ginger,Sylhet,Sylhet Main Bazar,105.38,136.87,121.12,kg,429,Sunny,Winter
+2026-11-04,Ginger imported,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,75.0,120.0,97.5,kg,90,,
+2026-11-04,Green chili,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,35.0,70.0,52.5,kg,250,,
 2022-01-01,Onion,Bogura,Bogura Main Bazar,24.36,33.86,28.71,kg,1469,Sunny,Winter
 2022-01-02,Onion,Bogura,Bogura Main Bazar,24.91,31.32,28.42,kg,1458,Sunny,Winter
 2022-01-03,Onion,Bogura,Bogura Main Bazar,21.69,30.13,26.06,kg,1424,Sunny,Winter
@@ -88775,6 +88783,7 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Onion,Shariatpur,Shariatpur Main Bazar,19.97,25.93,22.95,kg,1420,Sunny,Winter
 2024-12-30,Onion,Shariatpur,Shariatpur Main Bazar,23.93,31.07,27.5,kg,1660,Cloudy,Winter
 2024-12-31,Onion,Shariatpur,Shariatpur Main Bazar,19.18,24.9,22.04,kg,1774,Rainy,Winter
+2026-11-04,Onion local,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,28.0,42.0,35.0,kg,222,,
 2022-01-01,Potato,Bogura,Bogura Main Bazar,13.37,16.49,15.25,kg,1811,Sunny,Winter
 2022-01-02,Potato,Bogura,Bogura Main Bazar,14.88,18.68,16.24,kg,1670,Cloudy,Winter
 2022-01-03,Potato,Bogura,Bogura Main Bazar,14.87,18.34,16.78,kg,1634,Sunny,Winter
@@ -93160,6 +93169,7 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Potato,Dhaka,Dhaka Main Bazar,22.98,27.87,25.43,kg,3212,Cloudy,Winter
 2024-12-30,Potato,Dhaka,Dhaka Main Bazar,22.52,27.18,24.58,kg,3223,Cloudy,Winter
 2024-12-31,Potato,Dhaka,Dhaka Main Bazar,20.14,26.45,23.81,kg,3330,Sunny,Winter
+2026-11-04,Potato,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,12.0,20.0,16.0,kg,350,,
 2022-01-01,Potato,Dinajpur,Dinajpur Main Bazar,9.63,12.51,11.07,kg,1745,Foggy,Winter
 2022-01-02,Potato,Dinajpur,Dinajpur Main Bazar,10.16,13.19,11.68,kg,1506,Foggy,Winter
 2022-01-03,Potato,Dinajpur,Dinajpur Main Bazar,12.29,15.97,14.13,kg,1639,Rainy,Winter
@@ -107409,6 +107419,8 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-30,Potato,Thakurgaon,Thakurgaon Main Bazar,9.08,11.79,10.43,kg,1743,Sunny,Winter
 2024-12-31,Potato,Thakurgaon,Thakurgaon Main Bazar,6.51,8.46,7.48,kg,1848,Foggy,Winter
 2026-07-25,Potato,khulna,Khulna Bazar,18.0,22.0,20.0,kg,300,Cloudy,Winter
+2026-11-04,Pumpkin,Dhaka,Dhaka Metropolis Retail - dam.gov.bd,35.0,50.0,42.5,kg,180,,
+2026-11-04,Raw papaya,Dhaka,Dhaka Metropolis Retail - dam.gov.bd,20.0,30.0,25.0,kg,150,,
 2022-01-01,Rice,Bagerhat,Bagerhat Main Bazar,19.5,25.33,22.42,kg,2368,Rainy,Winter
 2022-01-02,Rice,Bagerhat,Bagerhat Main Bazar,19.54,25.39,22.46,kg,1513,Foggy,Winter
 2022-01-03,Rice,Bagerhat,Bagerhat Main Bazar,21.44,27.85,24.65,kg,2674,Cloudy,Winter
@@ -177553,6 +177565,10 @@ date,crop_name,district,market_name,min_price,max_price,avg_price,unit,quantity_
 2024-12-29,Rice,Thakurgaon,Thakurgaon Main Bazar,31.49,40.91,36.2,kg,1594,Sunny,Winter
 2024-12-30,Rice,Thakurgaon,Thakurgaon Main Bazar,32.4,42.09,37.25,kg,1557,Rainy,Winter
 2024-12-31,Rice,Thakurgaon,Thakurgaon Main Bazar,30.69,39.88,35.29,kg,1811,Sunny,Winter
+2026-11-04,Rice - BRRI 34 aromatic,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,95.0,180.0,137.5,kg,150,,
+2026-11-04,Rice - Jirashail Shampa Katari fine,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,59.0,85.0,72.0,kg,234,,
+2026-11-04,Rice - Pajam BRRI 28 29 medium,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,49.0,53.0,51.0,kg,300,,
+2026-11-04,Rice - Swarna coarse,Dhaka,Dhaka Metropolis Wholesale - dam.gov.bd,42.0,46.0,44.0,kg,150,,
 2022-01-01,Tomato,Bogura,Bogura Main Bazar,14.4,18.99,16.67,kg,1013,Sunny,Winter
 2022-01-02,Tomato,Bogura,Bogura Main Bazar,14.61,19.51,16.56,kg,947,Sunny,Winter
 2022-01-03,Tomato,Bogura,Bogura Main Bazar,16.02,20.85,17.81,kg,1015,Foggy,Winter

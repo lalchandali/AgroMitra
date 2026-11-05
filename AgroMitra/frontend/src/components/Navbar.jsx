@@ -1,11 +1,47 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { clearAuthSession, getStoredUser } from '../api/agromitra'
+import { clearAuthSession, getStoredUser, resolveImageUrl } from '../api/agromitra'
 import { useLanguage } from '../hooks/useLanguage'
 import logo from '../assets/icone.PNG'
 import { useTheme } from '../hooks/useTheme'
-import { FiSun, FiMoon } from "react-icons/fi";
+import { FiSun, FiMoon, FiUser } from "react-icons/fi";
 import NotificationBell from './NotificationBell'
+
+const roleLabels = {
+  farmer: { en: 'Farmer', bn: 'কৃষক' },
+  buyer: { en: 'Buyer', bn: 'ক্রেতা' },
+  consumer: { en: 'Consumer', bn: 'ভোক্তা' },
+  admin: { en: 'Admin', bn: 'প্রশাসক' },
+}
+
+const UserAvatar = ({ photoUrl }) => {
+  const [imageFailed, setImageFailed] = useState(false)
+
+  return (
+    <span className="nav-avatar" aria-hidden="true">
+      <FiUser />
+      {photoUrl && !imageFailed && (
+        <img
+          src={resolveImageUrl(photoUrl)}
+          alt=""
+          onError={() => setImageFailed(true)}
+        />
+      )}
+    </span>
+  )
+}
+
+const UserIdentity = ({ user, lang, mobile = false }) => (
+  <div className={`nav-profile${mobile ? ' nav-mobile-user' : ''}`}>
+    <UserAvatar key={user.profile_photo_url} photoUrl={user.profile_photo_url} />
+    <span className="nav-profile-text">
+      <span className="nav-profile-name">{user.name_en || user.full_name}</span>
+      <span className="nav-profile-role">
+        {roleLabels[user.role]?.[lang] || user.role}
+      </span>
+    </span>
+  </div>
+)
 
 const Navbar = () => {
   const location = useLocation()
@@ -171,9 +207,7 @@ const Navbar = () => {
           <>
             <NotificationBell />
 
-            <span className="nav-user">
-              {user.name_en || user.full_name}
-            </span>
+            <UserIdentity user={user} lang={lang} />
 
             <button className="nav-btn" onClick={handleLogout}>
               {L.logout}
@@ -231,9 +265,7 @@ const Navbar = () => {
                 <NotificationBell />
               </div>
 
-              <div className="nav-mobile-user">
-                👤 {user.name_en || user.full_name}
-              </div>
+              <UserIdentity user={user} lang={lang} mobile />
 
               <button
                 className="nav-mobile-logout"

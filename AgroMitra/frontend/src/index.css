@@ -136,6 +136,58 @@ body {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.nav-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 190px;
+  color: white;
+}
+
+.nav-avatar {
+  position: relative;
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 19px;
+}
+
+.nav-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nav-profile-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.nav-profile-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-profile-role {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
 /* ── Page Layout ── */
 .page {
   padding: 32px 24px;
@@ -1404,6 +1456,25 @@ tbody td {
   transition: var(--transition);
 }
 
+.am-feature-ai {
+  border-color: rgba(46, 125, 50, 0.28);
+  box-shadow: 0 4px 18px rgba(46, 125, 50, 0.08);
+}
+
+.am-feature-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 5px 9px;
+  border: 1px solid rgba(46, 125, 50, 0.18);
+  border-radius: 999px;
+  background: #E8F5E9;
+  color: #1B5E20;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .am-feature:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-hover);
@@ -1724,25 +1795,330 @@ tbody td {
   margin-top: 16px;
 }
 
-/* ── Weather alert controls (district picker above the alert banner) ── */
-.am-weather-controls {
+/* ── Local weather dashboard ── */
+.am-weather-panel {
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid #e4ece8;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #ffffff 0%, #f7faf8 100%);
+  box-shadow: 0 18px 45px rgba(27, 68, 46, 0.08);
+}
+
+.am-weather-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 20px;
+  padding: 0 0 18px;
+  border-bottom: 1px solid #e8efeb;
   flex-wrap: wrap;
 }
 
 .am-weather-controls-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--gray-dark);
+  color: #52665c;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .am-weather-select {
-  min-width: 140px;
-  padding: 8px 18px;
+  min-width: 170px;
+  padding: 10px 38px 10px 14px;
+  border: 1px solid #dce8e0;
+  border-radius: 12px;
+  background-color: #fff;
+  color: #183b2b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.am-weather-refresh {
+  margin-left: auto;
+  padding: 10px 15px;
+  border: 1px solid #dce8e0;
+  border-radius: 12px;
+  background: #fff;
+  color: #245c3b;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.am-weather-refresh:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #b6d2c0;
+  background: #f0f7f2;
+}
+
+.am-weather-refresh:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.am-weather-current {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+  gap: 16px;
+}
+
+.am-weather-summary {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  overflow: hidden;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 26px;
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #164f39 0%, #176a60 55%, #218b88 100%);
+  color: white;
+  isolation: isolate;
+}
+
+.am-weather-summary::after {
+  position: absolute;
+  z-index: -1;
+  right: -66px;
+  bottom: -106px;
+  width: 250px;
+  height: 250px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
+  box-shadow: 0 0 0 28px rgba(255, 255, 255, 0.035), 0 0 0 58px rgba(255, 255, 255, 0.025);
+  content: '';
+}
+
+.am-weather-summary-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 38px;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+}
+
+.am-weather-summary-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.am-weather-location,
+.am-weather-description {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.am-weather-temperature {
+  color: #fff;
+  font-size: clamp(52px, 5vw, 68px);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.am-weather-temperature span {
+  margin-left: 5px;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.am-weather-status {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #f0fff4;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.am-weather-status.is-alert {
+  background: rgba(255, 196, 123, 0.18);
+  color: #ffe0b5;
+}
+
+.am-weather-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: stretch;
+  gap: 10px;
+}
+
+.am-weather-metric {
+  display: flex;
+  min-width: 0;
+  min-height: 82px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  padding: 14px 16px;
+  border: 1px solid #e8efeb;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.am-weather-metric:hover {
+  transform: translateY(-2px);
+  border-color: #c9ded0;
+  box-shadow: 0 8px 20px rgba(27, 68, 46, 0.06);
+}
+
+.am-weather-metric-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #73847a;
+  font-size: 12px;
+}
+
+.am-weather-metric-label span {
+  font-size: 14px;
+}
+
+.am-weather-metric strong {
+  overflow-wrap: anywhere;
+  color: #213c2e;
   font-size: 15px;
+  line-height: 1.3;
+}
+
+.am-home .am-weather-metric.is-featured {
+  min-height: 112px;
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(145deg, #f3f9f5, #fff);
+}
+
+.am-home .am-weather-metric.is-featured .am-weather-metric-label {
+  justify-content: center;
+  font-size: 13px;
+}
+
+.am-home .am-weather-metric.is-featured .am-weather-metric-label span {
+  font-size: 17px;
+}
+
+.am-home .am-weather-metric.is-featured strong {
+  color: #176344;
+  font-size: clamp(22px, 2.4vw, 29px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.am-weather-advisory {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 15px 17px;
+  border: 1px solid #d7e9dc;
+  border-radius: 15px;
+  background: #eff8f1;
+  color: #245c3b;
+}
+
+.am-weather-advisory.is-alert {
+  border-color: #f5d6b8;
+  background: #fff6ed;
+  color: #a44a12;
+}
+
+.am-weather-advisory-icon {
+  font-size: 20px;
+}
+
+.am-weather-advisory strong {
+  display: block;
+  font-size: 14px;
+}
+
+.am-weather-advisory p {
+  margin-top: 5px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.am-weather-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+  padding: 0 2px;
+  color: #75847b;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .am-weather-current {
+    grid-template-columns: 1fr;
+  }
+
+  .am-weather-summary {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 560px) {
+  .am-weather-panel {
+    padding: 14px;
+    border-radius: 19px;
+  }
+
+  .am-weather-toolbar {
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 14px;
+  }
+
+  .am-weather-controls-label {
+    width: 100%;
+  }
+
+  .am-weather-select {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .am-weather-refresh {
+    margin-left: 0;
+  }
+
+  .am-weather-summary {
+    min-height: 0;
+    padding: 21px;
+  }
+
+  .am-weather-metrics {
+    gap: 8px;
+  }
+
+  .am-weather-metric {
+    min-height: 76px;
+    padding: 11px;
+  }
+
+  .am-weather-metric-label {
+    font-size: 11px;
+  }
+
+  .am-weather-metric strong {
+    font-size: 13px;
+  }
 }
 
 /* ── Animations ── */
@@ -2812,6 +3188,471 @@ tbody td {
 }
 
 /* ── Order filter pills ── */
+/* ── Farmer demand intelligence ── */
+.demand-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.demand-ai-hero {
+  position: relative;
+  display: flex;
+  min-height: 190px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+  padding: 28px 32px;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #123f39 0%, #087c6a 58%, #19a080 100%);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(8, 124, 106, 0.18);
+}
+
+.demand-ai-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.demand-ai-eyebrow,
+.demand-ai-section-kicker {
+  display: block;
+  color: #75d7b6;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.demand-ai-hero h2 {
+  margin: 8px 0 5px;
+  color: white;
+  font-size: clamp(26px, 4vw, 36px);
+  letter-spacing: -0.03em;
+}
+
+.demand-ai-hero p {
+  max-width: 470px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+}
+
+.demand-ai-context {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.demand-ai-context span {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.demand-ai-model {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(9, 41, 37, 0.3);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.demand-ai-model.is-trained {
+  background: rgba(18, 72, 52, 0.65);
+}
+
+.demand-ai-model-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f7c969;
+  box-shadow: 0 0 0 3px rgba(247, 201, 105, 0.18);
+}
+
+.demand-ai-model.is-trained .demand-ai-model-dot {
+  background: #76e3a9;
+  box-shadow: 0 0 0 3px rgba(118, 227, 169, 0.18);
+}
+
+.demand-ai-hero-art {
+  position: absolute;
+  right: 175px;
+  bottom: -48px;
+  color: rgba(255, 255, 255, 0.08);
+  font-size: 190px;
+  line-height: 1;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.demand-ai-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.demand-ai-stat {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto 1fr;
+  align-content: center;
+  column-gap: 11px;
+  row-gap: 3px;
+  padding: 16px;
+  border: 1px solid #e8edf0;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+}
+
+.demand-ai-stat.featured {
+  border-color: #b7e5d7;
+  background: linear-gradient(145deg, #f3fbf7, #fff);
+}
+
+.demand-ai-stat-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  grid-row: span 3;
+  place-items: center;
+  border-radius: 11px;
+  background: #edf7f4;
+  font-size: 18px;
+}
+
+.demand-ai-stat-label,
+.demand-ai-stat-note {
+  overflow: hidden;
+  color: #697887;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demand-ai-stat strong {
+  color: #1c2d38;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.demand-ai-stat strong small {
+  color: #778591;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.demand-ai-stat .demand-positive {
+  color: #16835d;
+}
+
+.demand-ai-stat .demand-negative {
+  color: #c25b41;
+}
+
+.demand-ai-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(250px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.demand-ai-chart-card,
+.demand-ai-daily {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #e8edf0;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.demand-ai-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.demand-ai-card-heading h3,
+.demand-ai-advisory h3 {
+  margin: 5px 0 4px;
+  color: #20313c;
+  font-size: 17px;
+}
+
+.demand-ai-card-heading p {
+  color: #788692;
+  font-size: 12px;
+}
+
+.demand-ai-section-kicker {
+  color: #168b75;
+}
+
+.demand-ai-unit,
+.demand-ai-day-count {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #f0f5f7;
+  color: #63727e;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.demand-ai-chart {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.demand-ai-legend {
+  display: flex;
+  gap: 16px;
+  color: #778591;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.demand-ai-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demand-ai-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: #168b75;
+}
+
+.demand-ai-legend .legend-upper,
+.demand-ai-legend .legend-lower {
+  width: 15px;
+  height: 2px;
+  border-radius: 0;
+}
+
+.demand-ai-legend .legend-upper {
+  background: #f0a44b;
+}
+
+.demand-ai-legend .legend-lower {
+  background: #79a9d1;
+}
+
+.demand-ai-advisory {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 22px;
+  border: 1px solid #bfe5d6;
+  border-radius: 16px;
+  background: linear-gradient(155deg, #eff9f4, #fbfefc);
+}
+
+.demand-ai-advisory.is-caution {
+  border-color: #f1d0a6;
+  background: linear-gradient(155deg, #fff7ec, #fffdf9);
+}
+
+.demand-ai-advisory-icon {
+  margin-bottom: 15px;
+  font-size: 28px;
+}
+
+.demand-ai-advisory p {
+  color: #576875;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.demand-ai-advisory-detail {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(36, 90, 71, 0.12);
+  color: #657580;
+  font-size: 12px;
+}
+
+.demand-ai-advisory-detail strong {
+  color: #20313c;
+}
+
+.demand-ai-advisory .demand-ai-disclaimer {
+  margin-top: auto;
+  padding-top: 16px;
+  color: #87949d;
+  font-size: 11px;
+}
+
+.demand-ai-daily {
+  overflow: hidden;
+}
+
+.demand-ai-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(125px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+
+.demand-ai-day {
+  min-width: 125px;
+  padding: 13px;
+  border: 1px solid #e8edf0;
+  border-radius: 12px;
+  background: #fbfcfd;
+}
+
+.demand-ai-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  color: #8996a0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.demand-ai-signal {
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #eaf3fa;
+  color: #3276a7;
+  font-size: 9px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.demand-ai-signal.high {
+  background: #e5f5ec;
+  color: #21804f;
+}
+
+.demand-ai-signal.low {
+  background: #fff0e9;
+  color: #b85b39;
+}
+
+.demand-ai-day time {
+  display: block;
+  margin: 10px 0 4px;
+  color: #43535f;
+  font-size: 12px;
+}
+
+.demand-ai-day > strong {
+  display: block;
+  color: #20313c;
+  font-size: 18px;
+}
+
+.demand-ai-day > strong small {
+  color: #788692;
+  font-size: 11px;
+}
+
+.demand-ai-day-range {
+  display: block;
+  margin-top: 5px;
+  color: #85919a;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.demand-ai-loading,
+.demand-ai-empty {
+  padding: 40px;
+}
+
+.demand-ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.demand-ai-empty > span {
+  font-size: 36px;
+}
+
+.demand-ai-empty p {
+  color: #788692;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .demand-ai-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .demand-ai-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .demand-ai-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demand-ai-model {
+    align-self: flex-start;
+  }
+
+  .demand-ai-hero-art {
+    right: 12px;
+    bottom: -52px;
+    font-size: 150px;
+  }
+}
+
+@media (max-width: 520px) {
+  .demand-ai-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .demand-ai-hero,
+  .demand-ai-chart-card,
+  .demand-ai-daily,
+  .demand-ai-advisory {
+    padding: 18px;
+  }
+
+  .demand-ai-card-heading {
+    flex-direction: column;
+  }
+
+  .demand-ai-days {
+    grid-template-columns: repeat(7, 135px);
+  }
+}
+
 .fd-order-filters {
   display: flex;
   flex-wrap: wrap;
@@ -3655,10 +4496,8 @@ tbody td {
 }
 
 .nav-mobile-user {
+  max-width: none;
   padding: 10px 24px;
-  font-size: 14px;
-  color: rgba(255,255,255,0.7);
-  font-weight: 600;
 }
 
 .nav-mobile-logout {
@@ -3825,6 +4664,80 @@ body.dark-mode .bm-card{
   border-color: #333;
 }
 
+body.dark-mode .demand-ai-stat,
+body.dark-mode .demand-ai-chart-card,
+body.dark-mode .demand-ai-daily {
+  background: #1e1e1e;
+  border-color: #333;
+  color: #f5f5f5;
+}
+
+body.dark-mode .demand-ai-stat.featured {
+  background: linear-gradient(145deg, #173329, #1e1e1e);
+  border-color: #285742;
+}
+
+body.dark-mode .demand-ai-stat strong,
+body.dark-mode .demand-ai-card-heading h3,
+body.dark-mode .demand-ai-advisory h3,
+body.dark-mode .demand-ai-advisory-detail strong,
+body.dark-mode .demand-ai-day > strong {
+  color: #f1f5f9;
+}
+
+body.dark-mode .demand-ai-stat-label,
+body.dark-mode .demand-ai-stat-note,
+body.dark-mode .demand-ai-stat strong small,
+body.dark-mode .demand-ai-card-heading p,
+body.dark-mode .demand-ai-legend,
+body.dark-mode .demand-ai-day time,
+body.dark-mode .demand-ai-day-range {
+  color: #aab5bf;
+}
+
+body.dark-mode .demand-ai-stat-icon,
+body.dark-mode .demand-ai-day,
+body.dark-mode .demand-ai-unit,
+body.dark-mode .demand-ai-day-count {
+  background: #252b31;
+  border-color: #37414a;
+  color: #d7e0e7;
+}
+
+body.dark-mode .demand-ai-advisory {
+  background: linear-gradient(155deg, #173329, #1e1e1e);
+  border-color: #285742;
+}
+
+body.dark-mode .demand-ai-advisory.is-caution {
+  background: linear-gradient(155deg, #35291d, #1e1e1e);
+  border-color: #65472d;
+}
+
+body.dark-mode .demand-ai-advisory p,
+body.dark-mode .demand-ai-advisory-detail {
+  color: #c2ccd4;
+}
+
+body.dark-mode .demand-ai-advisory-detail {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .demand-ai-signal {
+  background: #233547;
+  color: #a8d1f0;
+}
+
+body.dark-mode .demand-ai-signal.high {
+  background: #1e3c2c;
+  color: #a5e3bb;
+}
+
+body.dark-mode .demand-ai-signal.low {
+  background: #462d23;
+  color: #ffc09f;
+}
+
 /* Inputs */
 body.dark-mode input,
 body.dark-mode textarea,
@@ -3872,6 +4785,7 @@ body.dark-mode .am-home {
 body.dark-mode .am-home .am-stats,
 body.dark-mode .am-home .am-feature,
 body.dark-mode .am-home .am-demo,
+body.dark-mode .am-home .am-weather-panel,
 body.dark-mode .am-home .am-demo-card,
 body.dark-mode .am-home .am-flip-front,
 body.dark-mode .am-home .am-flip-back,
@@ -3883,6 +4797,80 @@ body.dark-mode .am-home footer {
   color: #f8fafc;
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 10px 30px rgba(2, 8, 23, 0.35);
+}
+
+body.dark-mode .am-home .am-weather-summary {
+  background: linear-gradient(145deg, #123d2e 0%, #14564f 55%, #176b70 100%);
+}
+
+body.dark-mode .am-home .am-weather-temperature,
+body.dark-mode .am-home .am-weather-metric strong {
+  color: #f8fafc;
+}
+
+body.dark-mode .am-home .am-weather-location,
+body.dark-mode .am-home .am-weather-metric-label,
+body.dark-mode .am-home .am-weather-footer {
+  color: #cbd5e1;
+}
+
+body.dark-mode .am-home .am-weather-location,
+body.dark-mode .am-home .am-weather-description {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+body.dark-mode .am-home .am-weather-metric {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: #0f172a;
+}
+
+body.dark-mode .am-home .am-weather-toolbar {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .am-home .am-weather-select,
+body.dark-mode .am-home .am-weather-refresh {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+body.dark-mode .am-home .am-weather-refresh:hover:not(:disabled) {
+  background-color: #172a22;
+}
+
+body.dark-mode .am-home .am-weather-advisory {
+  border-color: rgba(74, 222, 128, 0.2);
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
+}
+
+body.dark-mode .am-home .am-weather-advisory.is-alert {
+  border-color: rgba(251, 146, 60, 0.25);
+  background: rgba(234, 88, 12, 0.12);
+  color: #fdba74;
+}
+
+body.dark-mode .am-home .am-weather-status {
+  background: rgba(34, 197, 94, 0.15);
+  color: #bbf7d0;
+}
+
+body.dark-mode .am-home .am-weather-status.is-alert {
+  background: rgba(234, 88, 12, 0.16);
+  color: #fdba74;
+}
+
+body.dark-mode .am-home .am-weather-refresh {
+  border-color: rgba(74, 222, 128, 0.25);
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
+}
+
+body.dark-mode .am-home .am-feature-badge {
+  border-color: rgba(74, 222, 128, 0.25);
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
 }
 
 body.dark-mode .am-home .am-demo-card-highlight {
@@ -4218,4 +5206,401 @@ body.dark-mode .am-home [style*="color: var(--green-dark)"] {
   transform: translateY(-3px);
   background: #22c55e;
   box-shadow: 0 10px 25px rgba(34, 197, 94, .35);
+}
+
+.bm-listing-card {
+  min-width: 0;
+  border: 1px solid #e7eee9;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(30, 65, 43, 0.08);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.bm-listing-card:hover {
+  transform: translateY(-5px);
+  border-color: #c8dfd0;
+  box-shadow: 0 16px 34px rgba(30, 65, 43, 0.14);
+}
+
+.bm-listing-card .product-img {
+  height: 205px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, #fff 0%, #f5faf6 55%, #eaf3ed 100%);
+  color: #38764e;
+}
+
+.bm-listing-card .product-img:not(.has-photo) {
+  font-size: 76px;
+}
+
+.bm-listing-card .product-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.bm-listing-card:hover .product-photo {
+  transform: scale(1.05);
+}
+
+.bm-listing-card .product-body {
+  flex: 1;
+  padding: 18px 18px 15px;
+}
+
+.bm-listing-card .bm-product-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.bm-listing-card .bm-product-heading > .flex {
+  flex: 0 0 auto;
+}
+
+.bm-listing-card .bm-product-name-bn {
+  color: #74837a;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.bm-product-farmer {
+  padding: 12px 0;
+  border-top: 1px solid #edf2ee;
+  border-bottom: 1px solid #edf2ee;
+}
+
+.bm-product-farmer-profile {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bm-product-farmer-profile:disabled {
+  cursor: default;
+}
+
+.bm-product-farmer-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  place-items: center;
+  border: 2px solid #dcebe0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #eef8f1, #dcefe2);
+  font-size: 22px;
+}
+
+.bm-product-farmer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bm-product-farmer-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bm-product-farmer-label,
+.bm-product-stock-label {
+  color: #809087;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+}
+
+.bm-product-farmer-name {
+  overflow: hidden;
+  color: #294b36;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bm-product-farmer-profile:not(:disabled):hover .bm-product-farmer-name {
+  color: #176344;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bm-product-farmer-rating {
+  margin-left: auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff8e7;
+  color: #a9680c;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bm-product-farmer-rating small {
+  color: #947b56;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.bm-product-farmer-location {
+  display: block;
+  margin: 8px 0 0 52px;
+  color: #74837a;
+  font-size: 12px;
+}
+
+.bm-product-purchase-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e8f0ea;
+  border-radius: 14px;
+  background: #f7faf8;
+}
+
+.bm-product-stock {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid #dcece1;
+  border-radius: 11px;
+  background: #eff8f1;
+}
+
+.bm-product-stock-icon {
+  font-size: 17px;
+}
+
+.bm-product-stock-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bm-product-stock-label {
+  color: #43805a;
+  font-size: 9px;
+  letter-spacing: 0.045em;
+  white-space: nowrap;
+}
+
+.bm-product-stock-copy strong {
+  color: #245c3b;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.bm-product-stock.is-empty {
+  border-color: #f2d6d3;
+  background: #fff3f1;
+}
+
+.bm-product-stock.is-empty .bm-product-stock-label,
+.bm-product-stock.is-empty .bm-product-stock-copy strong {
+  color: #b23e35;
+}
+
+.bm-product-stock.is-unknown {
+  border-color: #e5e9e6;
+  background: #f4f6f5;
+}
+
+.bm-product-stock.is-unknown .bm-product-stock-label,
+.bm-product-stock.is-unknown .bm-product-stock-copy strong {
+  color: #69766e;
+}
+
+.bm-listing-card .product-name {
+  color: #203d2d;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.bm-listing-card .product-location {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: #718078;
+  font-size: 12px;
+}
+
+.bm-listing-card .product-price {
+  color: #176344;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.bm-listing-card .product-price span {
+  margin-left: 2px;
+  color: #829087;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.bm-listing-card .product-footer {
+  padding: 13px 16px 16px;
+  border-top: 1px solid #edf2ee;
+}
+
+.bm-listing-card .product-footer > div:first-child {
+  align-items: stretch;
+}
+
+.bm-listing-card .product-footer .btn {
+  min-height: 38px;
+  border-radius: 10px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.bm-listing-card .product-footer .btn:hover {
+  transform: translateY(-1px);
+}
+
+body.dark-mode .bm-listing-card {
+  border-color: #33443a;
+  background: #1b2821;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .bm-listing-card:hover {
+  border-color: #4a7056;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .bm-listing-card .product-img {
+  background: radial-gradient(circle at 50% 40%, #293b30 0%, #1c2a22 68%, #17231c 100%);
+}
+
+body.dark-mode .bm-listing-card .product-name {
+  color: #e8f2eb;
+}
+
+body.dark-mode .bm-listing-card .product-location,
+body.dark-mode .bm-listing-card .product-price span {
+  color: #a9b8ae;
+}
+
+body.dark-mode .bm-listing-card .product-price {
+  color: #86d6a1;
+}
+
+body.dark-mode .bm-listing-card .bm-product-name-bn,
+body.dark-mode .bm-product-farmer-location {
+  color: #a9b8ae;
+}
+
+body.dark-mode .bm-product-farmer {
+  border-color: #33443a;
+}
+
+body.dark-mode .bm-product-farmer-avatar {
+  border-color: #42604b;
+  background: linear-gradient(145deg, #294332, #20372a);
+}
+
+body.dark-mode .bm-product-farmer-name {
+  color: #d7eadc;
+}
+
+body.dark-mode .bm-product-farmer-label {
+  color: #9bac9f;
+}
+
+body.dark-mode .bm-product-farmer-rating {
+  background: #3a3020;
+  color: #f7c969;
+}
+
+body.dark-mode .bm-product-farmer-rating small {
+  color: #d6bd8b;
+}
+
+body.dark-mode .bm-product-purchase-info {
+  border-color: #33443a;
+  background: #202e25;
+}
+
+body.dark-mode .bm-product-stock {
+  border-color: #355a40;
+  background: #203a29;
+}
+
+body.dark-mode .bm-product-stock-label,
+body.dark-mode .bm-product-stock-copy strong {
+  color: #a6e2b5;
+}
+
+body.dark-mode .bm-product-stock.is-empty {
+  border-color: #68403c;
+  background: #3d2725;
+}
+
+body.dark-mode .bm-product-stock.is-empty .bm-product-stock-label,
+body.dark-mode .bm-product-stock.is-empty .bm-product-stock-copy strong {
+  color: #ffaaa1;
+}
+
+body.dark-mode .bm-product-stock.is-unknown {
+  border-color: #3f4a43;
+  background: #2a342d;
+}
+
+body.dark-mode .bm-product-stock.is-unknown .bm-product-stock-label,
+body.dark-mode .bm-product-stock.is-unknown .bm-product-stock-copy strong {
+  color: #bcc9c0;
+}
+
+body.dark-mode .bm-listing-card .product-footer {
+  border-color: #33443a;
+}
+
+@media (max-width: 560px) {
+  .bm-listing-card .product-img {
+    height: 185px;
+  }
+
+  .bm-listing-card .product-body {
+    padding: 15px;
+  }
+
+  .bm-listing-card .product-footer {
+    padding: 11px 13px 14px;
+  }
+
+  .bm-listing-card .bm-product-heading {
+    gap: 8px;
+  }
+
+  .bm-listing-card .bm-product-heading .badge {
+    font-size: 10px;
+  }
+
+  .bm-product-purchase-info {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

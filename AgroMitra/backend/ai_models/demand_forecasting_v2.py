@@ -11,10 +11,11 @@
 #
 # ============================================================
 
+import json
 import os
 import pickle
 import warnings
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import matplotlib.dates as mdates
@@ -53,6 +54,9 @@ print("🌾"*30)
 # CONFIG
 # ============================================================
 DATA_FILE = str(Path(__file__).resolve().parent / 'data' / 'raw' / 'crop_prices_v2_64districts.csv')
+SCRIPT_DIR = Path(__file__).resolve().parent
+MODELS_DIR = SCRIPT_DIR / 'models'
+OUTPUT_DIR = SCRIPT_DIR / 'output'
 CROP_NAME  = 'Tomato'
 DISTRICT   = 'Bogura'
 LOOK_BACK  = 60     # 60 দিনের pattern দেখে predict করবে
@@ -60,8 +64,8 @@ FORECAST   = 30     # আগামী 30 দিনের forecast
 EPOCHS     = 150
 BATCH_SIZE = 32
 
-os.makedirs('output', exist_ok=True)
-os.makedirs('models', exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
@@ -79,6 +83,11 @@ data = df[
     (df['crop_name'] == CROP_NAME) &
     (df['district']  == DISTRICT)
 ].copy().reset_index(drop=True)
+if len(data) < LOOK_BACK + 10:
+    raise ValueError(
+        f"Only {len(data)} rows are available for {CROP_NAME} in {DISTRICT}; "
+        f"at least {LOOK_BACK + 10} rows are required for an honest holdout evaluation."
+    )
 
 print(f"  ✅ Loaded       : {len(df):,} total rows")
 print(f"  ✅ Filtered     : {len(data):,} rows ({CROP_NAME}, {DISTRICT})")
@@ -173,7 +182,7 @@ scaler.fit(feature_data[:train_end_raw])
 scaled = scaler.transform(feature_data)
 
 # Save scaler
-scaler_path = f'models/demand_scaler_v2_{CROP_NAME}_{DISTRICT}.pkl'
+scaler_path = MODELS_DIR / f'demand_scaler_v2_{CROP_NAME}_{DISTRICT}.pkl'
 with open(scaler_path, 'wb') as f:
     pickle.dump(scaler, f)
 
@@ -268,7 +277,7 @@ callbacks = [
         verbose=1
     ),
     ModelCheckpoint(
-        filepath=f'models/lstm_demand_v2_{CROP_NAME}_{DISTRICT}.keras',
+        filepath=str(MODELS_DIR / f'lstm_demand_v2_{CROP_NAME}_{DISTRICT}.keras'),
         monitor='val_loss',
         save_best_only=True,
         verbose=0
@@ -319,6 +328,52 @@ print(f"     RMSE  : {rmse:.1f} kg")
 print(f"     MAE   : {mae:.1f} kg")
 print(f"     R²    : {r2:.4f}  {'✅' if r2 >= 0.7 else '⚡'}")
 
+test_start_idx = val_end + LOOK_BACK
+test_target_indices = np.arange(test_start_idx, len(data))
+if len(test_target_indices) != len(y_test_real):
+    raise RuntimeError("The chronological test indices do not match the model test split.")
+
+actual_demand = data['quantity_available'].to_numpy(dtype=float)[test_target_indices]
+last_value_baseline = data['quantity_available'].to_numpy(dtype=float)[test_target_indices - 1]
+moving_average_baseline = np.array([
+    data['quantity_available'].iloc[index - 7:index].mean()
+    for index in test_target_indices
+], dtype=float)
+
+
+def forecast_metrics(actual, predicted):
+    actual = np.asarray(actual, dtype=float)
+    predicted = np.asarray(predicted, dtype=float)
+    valid = np.isfinite(actual) & np.isfinite(predicted)
+    actual, predicted = actual[valid], predicted[valid]
+    nonzero = actual != 0
+    return {
+        "MAPE_percent": round(float(mean_absolute_percentage_error(actual[nonzero], predicted[nonzero]) * 100), 4)
+        if nonzero.any() else "not evaluated (all actual values are zero)",
+        "RMSE": round(float(np.sqrt(mean_squared_error(actual, predicted))), 4) if len(actual) else "not evaluated",
+        "test_samples": int(len(actual)),
+    }
+
+
+metrics_path = MODELS_DIR / f'metrics_demand_{CROP_NAME}_{DISTRICT}.json'
+with metrics_path.open('w', encoding='utf-8') as metrics_file:
+    json.dump({
+        "model_name": "LSTM demand forecast",
+        "algorithm": f"LSTM sequence model; chronological 70/15/15 split; look-back={LOOK_BACK}",
+        "training_data_source": str(Path(DATA_FILE).resolve()),
+        "data_provenance_note": "The project CSV includes generated/synthetic district rows; quantity_available is not independently verified sales data.",
+        "training_date": datetime.now(timezone.utc).isoformat(),
+        "evaluation_metrics": {
+            "lstm": forecast_metrics(actual_demand, y_pred_real),
+            "baseline_last_value": forecast_metrics(actual_demand, last_value_baseline),
+            "baseline_moving_average_7": forecast_metrics(actual_demand, moving_average_baseline),
+            "test_split": "final 15% chronological split",
+            "target": "quantity_available",
+        },
+        "status": "evaluated",
+    }, metrics_file, indent=2)
+print(f"  ✅ Holdout metrics saved: {metrics_path}")
+
 
 # ============================================================
 # STEP 7: FUTURE FORECAST
@@ -346,8 +401,6 @@ future_dates = pd.date_range(last_date + timedelta(days=1), periods=FORECAST, fr
 forecast_df = pd.DataFrame({
     'date':             future_dates,
     'predicted_demand': future_demand.round(0).astype(int),
-    'lower_bound':      (future_demand * 0.82).round(0).astype(int),
-    'upper_bound':      (future_demand * 1.18).round(0).astype(int),
 })
 
 print(f"  ✅ {FORECAST}-day forecast ready!\n")
@@ -405,9 +458,6 @@ ax3.plot(hist_last['date'], hist_last['quantity_available'],
          color=COLORS['gray'], lw=1.5, label='Historical', alpha=0.8)
 ax3.plot(forecast_df['date'], forecast_df['predicted_demand'],
          color=COLORS['teal'], lw=2.5, label=f'{FORECAST}-Day Forecast')
-ax3.fill_between(forecast_df['date'],
-                 forecast_df['lower_bound'], forecast_df['upper_bound'],
-                 alpha=0.2, color=COLORS['teal'], label='Confidence Band')
 ax3.axvline(x=last_date, color=COLORS['red'], linestyle=':', lw=2, label='Today')
 ax3.set_title(f'Next {FORECAST}-Day Demand Forecast', fontweight='bold', fontsize=12)
 ax3.set_xlabel('Date')
@@ -451,7 +501,7 @@ ax4.legend(handles=[
 ], fontsize=8, loc='upper right')
 
 plt.tight_layout()
-chart_path = f'output/{CROP_NAME}_{DISTRICT}_demand_v2.png'
+chart_path = OUTPUT_DIR / f'{CROP_NAME}_{DISTRICT}_demand_v2.png'
 plt.savefig(chart_path, dpi=150, bbox_inches='tight', facecolor='white')
 print(f"  ✅ Chart saved: {chart_path}")
 plt.show()
@@ -468,8 +518,8 @@ print("="*60)
 mean_hist = data['quantity_available'].mean()
 
 print("\n  📅 Next 7-Day Forecast:")
-print(f"  {'Date':<14} {'Demand':<14} {'Range':<28} {'Signal'}")
-print(f"  {'-'*70}")
+print(f"  {'Date':<14} {'Demand':<14} {'Signal'}")
+print(f"  {'-'*42}")
 
 for _, row in forecast_df.head(7).iterrows():
     d = row['predicted_demand']
@@ -477,8 +527,7 @@ for _, row in forecast_df.head(7).iterrows():
               "🟢 High Supply" if d > mean_hist*1.20 else
               "🟡 Stable")
     print(f"  {str(row['date'].date()):<14} "
-          f"{d:>6,} kg{'':<6} "
-          f"{row['lower_bound']:,}–{row['upper_bound']:,} kg{'':<8}"
+          f"{d:>6,} kg{'':<6}"
           f"{signal}")
 
 avg7  = forecast_df.head(7)['predicted_demand'].mean()
@@ -501,11 +550,11 @@ else:
 print("="*60)
 
 # Save forecast CSV
-csv_path = f'output/{CROP_NAME}_{DISTRICT}_demand_forecast_v2.csv'
+csv_path = OUTPUT_DIR / f'{CROP_NAME}_{DISTRICT}_demand_forecast_v2.csv'
 forecast_df.to_csv(csv_path, index=False)
 
 print(f"\n  ✅ Forecast CSV : {csv_path}")
-print(f"  ✅ Model saved  : models/lstm_demand_v2_{CROP_NAME}_{DISTRICT}.keras")
+print(f"  ✅ Model saved  : {MODELS_DIR / f'lstm_demand_v2_{CROP_NAME}_{DISTRICT}.keras'}")
 
 print("\n" + "🌾"*30)
 print("  ✅ AgroMitra Demand Forecasting v2 Complete!")

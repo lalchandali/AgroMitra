@@ -7,6 +7,7 @@ import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
 import { tr } from '../translations'
 import { displayQuantity, displayUnit, orderItemQuantity, orderItemUnit } from '../utils/quantityUnits'
+import ModelDisclosure from '../components/ModelDisclosure'
 
 // existing code...
 
@@ -816,11 +817,56 @@ export default function BuyerMarketplace() {
                               {Math.abs(price?.summary?.trend_pct ?? 0).toFixed(1)}%
                             </strong>
                           </div>
+                          {price?.forecasts?.[0]?.lower_bound != null && price?.forecasts?.[0]?.upper_bound != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Price range :</span>
+                              <strong>৳{price.forecasts[0].lower_bound}–৳{price.forecasts[0].upper_bound}</strong>
+                            </div>
+                          )}
+                          {price?.model_used !== 'prophet_xgboost_hybrid_v1' && price?.market_average && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Latest market average :</span>
+                              <strong>৳{price.market_average.value} ({price.market_average.date})</strong>
+                            </div>
+                          )}
 
                           <div style={{ display: 'flex', justifyContent: 'normal' }}>
                             <span>📊 Demand signal :</span>
                             <strong>{demand?.forecasts?.[0]?.market_signal || '—'}</strong>
                           </div>
+                          {demand?.forecasts?.[0]?.lower_bound != null && demand?.forecasts?.[0]?.upper_bound != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Demand range :</span>
+                              <strong>
+                                {Number(demand.forecasts[0].lower_bound).toLocaleString()}–
+                                {Number(demand.forecasts[0].upper_bound).toLocaleString()} kg
+                              </strong>
+                            </div>
+                          )}
+                          {demand?.model_used !== 'lstm_demand_v2' && demand?.market_average && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Latest market average :</span>
+                              <strong>৳{demand.market_average.value} ({demand.market_average.date})</strong>
+                            </div>
+                          )}
+                          <ModelDisclosure
+                            modelKey="price-prediction"
+                            cropName={guessCropName(p)}
+                            district={p.district}
+                            modelName={price?.model_name}
+                            message={price?.message}
+                            lowConfidence={price?.low_confidence}
+                            lang={lang}
+                          />
+                          <ModelDisclosure
+                            modelKey="demand-forecast"
+                            cropName={guessCropName(p)}
+                            district={p.district}
+                            modelName={demand?.model_name}
+                            message={demand?.message}
+                            lowConfidence={demand?.low_confidence}
+                            lang={lang}
+                          />
                         </div>
                       );
                     })()}

@@ -8,6 +8,7 @@ import {
   Tooltip
 } from "recharts"
 import { getPricePrediction, getDemandForecast, getWeatherAlert, getSowingCalendar, getMarketPrices, getFeaturedTestimonials, submitTestimonial, getMyTestimonial, getStoredUser, resolveImageUrl } from '../api/agromitra'
+import ModelDisclosure from '../components/ModelDisclosure'
 import toast from 'react-hot-toast'
 import TeamSection from '../components/TeamSection';
 
@@ -22,7 +23,7 @@ const features = [
 const stats = [
   { val: '17M+', label: 'Bangladeshi Farmers', icon: '👨‍🌾' },
   { val: '64', label: 'Districts Supported', icon: '🗺️' },
-  { val: '12%', label: 'AI MAPE Accuracy', icon: '🤖' },
+  { val: 'Not evaluated', label: 'Saved forecast metrics', icon: '🤖' },
   { val: '35%+', label: 'Farmer Income Increase', icon: '📈' },
 ]
 
@@ -39,8 +40,8 @@ const roleAvatar = (role) => {
 
 const gapRows = [
   { problem: 'Farmers earn only 20–40% of market price', solution: 'Direct farmer-to-buyer marketplace — zero middlemen' },
-  { problem: '3–5 middlemen layers extract 60–80% value', solution: 'AI price prediction with 12% MAPE accuracy' },
-  { problem: '25–30% post-harvest food waste every year', solution: 'Demand forecasting reduces overproduction by 25%' },
+  { problem: '3–5 middlemen layers extract 60–80% value', solution: 'Price estimates with model details; saved evaluation metrics are shown when available' },
+  { problem: '25–30% post-harvest food waste every year', solution: 'Demand estimates where data and model artifacts are available, with a transparent fallback' },
   { problem: 'No real-time price data for rural farmers', solution: 'Real-time market data in Bengali and English' },
   { problem: 'Cash-based risky transactions with no records', solution: 'Secure bKash/Nagad payments with escrow protection' },
   { problem: 'Buyers can\u2019t verify quality before paying', solution: 'Quality grading and photos on every listing' },
@@ -333,8 +334,8 @@ const Home = () => {
       <div className="am-section am-reveal">
         <div className="am-section-head">
           <div className="am-section-eyebrow">See it in action</div>
-          <h2>Real AI, running right now</h2>
-          <p className="am-section-sub">Pick a crop and a district — this is live data from our forecasting model.</p>
+          <h2>Live price and demand estimates</h2>
+          <p className="am-section-sub">Pick a crop and district to see available forecasts, fallback behavior, and model details.</p>
         </div>
 
         <div className="am-demo">
@@ -364,6 +365,8 @@ const Home = () => {
 
           {demoData && !demoLoading && !demoError && (() => {
             const sparkData = demoData.price.forecasts?.map(f => ({ price: f.predicted_price })) || []
+            const priceForecast = demoData.price.forecasts?.[0]
+            const demandForecast = demoData.demand.forecasts?.[0]
             const isUp = (demoData.price.summary?.trend_pct ?? 0) > 0
             const strokeColor = isUp ? '#2E7D32' : '#D32F2F'
             //const fillColor = isUp ? 'rgba(46, 125, 50, 0.15)' : 'rgba(211, 47, 47, 0.15)'
@@ -376,7 +379,19 @@ const Home = () => {
                     <span className="am-demo-card-icon">💰</span>
                     <span className="am-demo-card-label">Current Price</span>
                   </div>
-                  <div className="am-demo-card-val">৳{demoData.price.current_price}<span>/kg</span></div>
+                  <div className="am-demo-card-val">
+                    ৳{demoData.price.current_price ?? demoData.price.market_average?.value ?? '—'}<span>/kg</span>
+                  </div>
+                  {priceForecast?.lower_bound != null && priceForecast?.upper_bound != null && (
+                    <p className="am-demo-card-meta">
+                      Next-day estimate: ৳{priceForecast.lower_bound}–৳{priceForecast.upper_bound}/kg
+                    </p>
+                  )}
+                  {demoData.price.model_used !== 'prophet_xgboost_hybrid_v1' && demoData.price.market_average && (
+                    <p className="am-demo-card-meta">
+                      Latest market average: ৳{demoData.price.market_average.value}/kg
+                    </p>
+                  )}
                   <div className="am-demo-spark">
                     <ResponsiveContainer width="100%" height={50}>
                       <AreaChart data={sparkData}>
@@ -425,13 +440,42 @@ const Home = () => {
                     <span className="am-demo-card-label">Demand Signal</span>
                   </div>
                   <div className="am-demo-card-val am-demo-card-val-sm">
-                    {demoData.demand.forecasts?.[0]?.market_signal || 'Normal'}
+                    {demandForecast?.market_signal || (demandForecast ? 'Forecast available' : 'Insufficient data')}
                   </div>
-                  <p className="am-demo-card-meta">Volume expectation</p>
+                  {demandForecast?.lower_bound != null && demandForecast?.upper_bound != null && (
+                    <p className="am-demo-card-meta">
+                      Next-day estimate: {demandForecast.lower_bound}–{demandForecast.upper_bound} kg
+                    </p>
+                  )}
+                  {demoData.demand.model_used !== 'lstm_demand_v2' && demoData.demand.market_average && (
+                    <p className="am-demo-card-meta">
+                      Latest market average: ৳{demoData.demand.market_average.value}/kg
+                    </p>
+                  )}
                 </div>
               </div>
             )
           })()}
+          {demoData && !demoLoading && !demoError && (
+            <div className="am-demo-results">
+              <ModelDisclosure
+                modelKey="price-prediction"
+                cropName={demoCrop}
+                district={demoDistrict}
+                modelName={demoData.price.model_name}
+                message={demoData.price.message}
+                lowConfidence={demoData.price.low_confidence}
+              />
+              <ModelDisclosure
+                modelKey="demand-forecast"
+                cropName={demoCrop}
+                district={demoDistrict}
+                modelName={demoData.demand.model_name}
+                message={demoData.demand.message}
+                lowConfidence={demoData.demand.low_confidence}
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -318,8 +318,6 @@ def predict_demand_lstm(history_df, crop_name, district, days):
         forecasts.append({
             'date': next_date.strftime('%Y-%m-%d'),
             'predicted_demand': int(round(pred_qty)),
-            'lower_bound': int(round(pred_qty * 0.85)),
-            'upper_bound': int(round(pred_qty * 1.15)),
             'market_signal': signal,
         })
 

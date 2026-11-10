@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, updateStoredUser, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate, getFarmerVerificationQueue, decideFarmerVerification, getAdminReports, updateAdminReport } from '../api/agromitra'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, getMarketPrices, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, updateStoredUser, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate, getFarmerVerificationQueue, decideFarmerVerification, getAdminReports, updateAdminReport } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
@@ -63,6 +64,8 @@ export default function AdminPanel() {
   // Products
   const [products, setProducts]               = useState([])
   const [productsLoading, setProductsLoading] = useState(false)
+  const [marketPrices, setMarketPrices] = useState([])
+  const [marketPricesLoading, setMarketPricesLoading] = useState(false)
   const [productSearch, setProductSearch]     = useState('')
   const [productStatusFilter, setProductStatusFilter] = useState('all')
 
@@ -130,10 +133,31 @@ export default function AdminPanel() {
   const fetchProducts = useCallback(async () => {
     setProductsLoading(true)
     try {
-      const res = await getAllProducts()
-      setProducts(res.data || [])
+      const pageSize = 100
+      const allProducts = []
+      let skip = 0
+      let page
+      do {
+        const res = await getAllProducts({ skip, limit: pageSize })
+        page = res.data || []
+        allProducts.push(...page)
+        skip += page.length
+      } while (page.length === pageSize)
+      setProducts(allProducts)
     } catch { toast.error('Could not load products') }
     finally { setProductsLoading(false) }
+  }, [])
+
+  const fetchMarketPrices = useCallback(async () => {
+    setMarketPricesLoading(true)
+    try {
+      const res = await getMarketPrices()
+      setMarketPrices(res.data?.prices || [])
+    } catch (error) {
+      console.error('Could not load market reference prices:', error)
+      setMarketPrices([])
+      toast.error('Could not load market reference prices')
+    } finally { setMarketPricesLoading(false) }
   }, [])
 
   const fetchTestimonials = useCallback(async () => {
@@ -180,6 +204,7 @@ export default function AdminPanel() {
   useEffect(() => { if (activeTab === 'orders')  { fetchOrders(); fetchUsers() } }, [activeTab, fetchOrders, fetchUsers])
   useEffect(() => { if (activeTab === 'products') fetchProducts() }, [activeTab, fetchProducts])
   useEffect(() => { if (activeTab === 'overview') { fetchOrders(); fetchProducts(); fetchUsers() } }, [activeTab, fetchOrders, fetchProducts, fetchUsers])
+  useEffect(() => { if (activeTab === 'overview') fetchMarketPrices() }, [activeTab, fetchMarketPrices])
   useEffect(() => { if (activeTab === 'testimonials') fetchTestimonials() }, [activeTab, fetchTestimonials])
   useEffect(() => { if (activeTab === 'verification') fetchVerificationQueue() }, [activeTab, fetchVerificationQueue])
   useEffect(() => { if (activeTab === 'reports') fetchReports() }, [activeTab, fetchReports])
@@ -326,6 +351,70 @@ export default function AdminPanel() {
   const completedOrders = orders.filter(o => o.status === 'delivered').length
   const completionRate  = orders.length ? ((completedOrders / orders.length) * 100).toFixed(1) : 0
   const activeProducts  = products.filter(p => p.status === 'active').length
+  const activeVerifiedListings = products.filter(
+    product => product.status === 'active' && product.farmer_verified === true,
+  )
+  const completedOrdersList = orders.filter(order => order.status === 'delivered')
+  const completedSales = completedOrdersList.reduce(
+    (sum, order) => sum + Number(order.total_amount || 0),
+    0,
+  )
+  const activeListingsByCategory = Object.entries(activeVerifiedListings.reduce((counts, product) => {
+    const category = product.category || 'Other'
+    counts[category] = (counts[category] || 0) + 1
+    return counts
+  }, {})).map(([category, count]) => ({ category, count }))
+  const monthlyOrderMetrics = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date()
+    date.setDate(1)
+    date.setMonth(date.getMonth() - (5 - index))
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const ordersInMonth = completedOrdersList.filter(order => {
+      const completedAt = new Date(order.delivered_at || order.created_at)
+      return completedAt.getFullYear() === year && completedAt.getMonth() === month
+    })
+    return {
+      month: date.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en', { month: 'short' }),
+      count: ordersInMonth.length,
+      sales: ordersInMonth.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+    }
+  })
+  const marketPriceMap = new Map(
+    marketPrices.map(price => [`${price.crop_name?.toLowerCase()}|${price.district?.toLowerCase()}`, Number(price.avg_price)]),
+  )
+  const farmerPriceByMarket = activeVerifiedListings.reduce((groups, product) => {
+    const crop = product.crop_name || Object.keys(CROP_EMOJIS).find(name =>
+      product.title_en?.toLowerCase().includes(name.toLowerCase()),
+    )
+    const saleUnit = (product.sale_unit || 'kg').toLowerCase()
+    const unitFactor = saleUnit === 'kg' ? 1 : saleUnit === 'maund' ? 40 : null
+    const farmerPricePerKg = unitFactor
+      ? Number(product.unit_price_bdt) / unitFactor
+      : null
+    const referencePrice = crop
+      ? marketPriceMap.get(`${crop.toLowerCase()}|${product.district?.toLowerCase()}`)
+      : null
+    if (!crop || farmerPricePerKg == null || !Number.isFinite(referencePrice)) return groups
+
+    const key = `${crop}|${product.district}`
+    const group = groups.get(key) || {
+      crop: `${crop} · ${product.district}`,
+      farmerTotal: 0,
+      marketTotal: 0,
+      count: 0,
+    }
+    group.farmerTotal += farmerPricePerKg
+    group.marketTotal += referencePrice
+    group.count += 1
+    groups.set(key, group)
+    return groups
+  }, new Map())
+  const farmerMarketChartData = [...farmerPriceByMarket.values()].slice(0, 8).map(group => ({
+    crop: group.crop,
+    farmerPrice: Number((group.farmerTotal / group.count).toFixed(2)),
+    marketPrice: Number((group.marketTotal / group.count).toFixed(2)),
+  }))
 
   // ── User map for name lookup ─────────────────────────────────
   const userMap = {}
@@ -412,6 +501,99 @@ export default function AdminPanel() {
       {/* ════ Overview Tab ════ */}
       {activeTab === 'overview' && (
         <div>
+          <section aria-label="Marketplace success metrics" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+            gap: 16,
+            marginBottom: 20,
+          }}>
+            <article className="card">
+              <div className="card-title">✅ Active verified listings</div>
+              <div className="stat-value">{productsLoading ? '…' : activeVerifiedListings.length}</div>
+              <div style={{ height: 210, marginTop: 12 }}>
+                {productsLoading ? (
+                  <p style={{ color: '#78909C', fontSize: 13 }}>Loading listing breakdown…</p>
+                ) : activeListingsByCategory.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={activeListingsByCategory} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" name="Verified listings" fill="#2E7D32" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p style={{ color: '#78909C', fontSize: 13 }}>No active verified listings to chart.</p>
+                )}
+              </div>
+            </article>
+
+            <article className="card">
+              <div className="card-title">📦 Completed orders & total sales</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <div className="stat-value">{ordersLoading ? '…' : completedOrdersList.length}</div>
+                  <div className="stat-label">Delivered orders</div>
+                </div>
+                <div>
+                  <div className="stat-value">৳{completedSales.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                  <div className="stat-label">Sales from delivered orders</div>
+                </div>
+              </div>
+              <div style={{ height: 210, marginTop: 12 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyOrderMetrics} margin={{ top: 8, right: 8, left: -18, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis yAxisId="orders" allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <YAxis
+                      yAxisId="sales"
+                      orientation="right"
+                      width={48}
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={value => value >= 1000 ? `৳${(value / 1000).toFixed(0)}k` : `৳${value}`}
+                    />
+                    <Tooltip formatter={(value, name) => (
+                      name === 'Sales (৳)' ? `৳${Number(value).toLocaleString()}` : value
+                    )} />
+                    <Legend />
+                    <Bar yAxisId="orders" dataKey="count" name="Completed orders" fill="#1976D2" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="sales" dataKey="sales" name="Sales (৳)" fill="#F9A825" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </article>
+
+            <article className="card">
+              <div className="card-title">⚖️ Farmer price vs. market reference</div>
+              <p style={{ color: '#78909C', fontSize: 12, margin: '0 0 8px' }}>
+                Matched crop and district; prices shown per kg. Piece-based listings are omitted.
+              </p>
+              <div style={{ height: 230 }}>
+                {productsLoading || marketPricesLoading ? (
+                  <p style={{ color: '#78909C', fontSize: 13 }}>Loading price references…</p>
+                ) : farmerMarketChartData.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={farmerMarketChartData} margin={{ top: 8, right: 8, left: -18, bottom: 24 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="crop" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" interval={0} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={value => `৳${Number(value).toLocaleString()}/kg`} />
+                      <Legend />
+                      <Bar dataKey="farmerPrice" name="Farmer listing (৳/kg)" fill="#2E7D32" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="marketPrice" name="Market reference (৳/kg)" fill="#607D8B" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p style={{ color: '#78909C', fontSize: 13 }}>
+                    No matching crop-and-district reference prices are available.
+                  </p>
+                )}
+              </div>
+            </article>
+          </section>
+
           <div className="card">
             <div className="card-title">📦 Recent Orders (Live)</div>
             {ordersLoading ? (

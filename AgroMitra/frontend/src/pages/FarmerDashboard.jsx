@@ -17,6 +17,7 @@ import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { tr } from '../translations'
 import { displayQuantity, displayUnit, orderItemQuantity, orderItemUnit, UNIT_TO_BASE } from '../utils/quantityUnits'
+import ModelDisclosure from '../components/ModelDisclosure'
 
 const CROPS = [
   "Rice", "Wheat", "Corn", "Tomato", "Onion", "Potato", "Brinjal", "Cabbage",
@@ -491,10 +492,13 @@ export default function FarmerDashboard() {
       ? priceForecasts.reduce((sum, forecast) => sum + Number(forecast.predicted_price || 0), 0) / priceForecasts.length
       : 0)
   )
-  const priceRange = priceForecasts.length
+  const priceRange = priceForecasts.length && priceForecasts.every(forecast => (
+    Number.isFinite(Number(forecast.lower_bound))
+    && Number.isFinite(Number(forecast.upper_bound))
+  ))
     ? {
-        low: Math.min(...priceForecasts.map(forecast => Number(forecast.lower_bound ?? forecast.predicted_price))),
-        high: Math.max(...priceForecasts.map(forecast => Number(forecast.upper_bound ?? forecast.predicted_price))),
+        low: Math.min(...priceForecasts.map(forecast => Number(forecast.lower_bound))),
+        high: Math.max(...priceForecasts.map(forecast => Number(forecast.upper_bound))),
       }
     : null
 
@@ -1171,6 +1175,24 @@ export default function FarmerDashboard() {
                 <div className="price-ai-hero-art" aria-hidden="true">৳</div>
               </section>
 
+              {priceData && (
+                <ModelDisclosure
+                  modelKey="price-prediction"
+                  cropName={crop}
+                  district={district}
+                  modelName={priceData.model_name}
+                  message={priceData.message}
+                  lowConfidence={priceData.low_confidence}
+                  lang={lang}
+                />
+              )}
+              {priceData && priceData.model_used !== 'prophet_xgboost_hybrid_v1' && priceData.market_average && (
+                <p className="ai-model-disclosure-message">
+                  {lang === 'bn' ? 'সর্বশেষ বাজার গড়:' : 'Latest market average:'}
+                  {' '}৳{priceData.market_average.value}/kg ({priceData.market_average.date})
+                </p>
+              )}
+
               {aiLoading ? (
                 <div className="card price-ai-state">
                   <div className="spinner-box"><div className="spinner" /><span>Generating your price outlook…</span></div>
@@ -1284,7 +1306,9 @@ export default function FarmerDashboard() {
                           <article className="price-ai-day" key={`${forecast.date}-${index}`}>
                             <time dateTime={forecast.date}>{dateLabel}</time>
                             <strong>৳{Number(forecast.predicted_price).toLocaleString()}<small>/kg</small></strong>
-                            <span className="price-ai-day-range">৳{forecast.lower_bound} – ৳{forecast.upper_bound}</span>
+                            {forecast.lower_bound != null && forecast.upper_bound != null && (
+                              <span className="price-ai-day-range">৳{forecast.lower_bound} – ৳{forecast.upper_bound}</span>
+                            )}
                             <span className={`price-ai-day-trend${isRising ? ' is-positive' : isFalling ? ' is-negative' : ''}`}>
                               {trend || '↔ Steady'}
                             </span>
@@ -1318,6 +1342,24 @@ export default function FarmerDashboard() {
                 </span>
                 <div className="demand-ai-hero-art" aria-hidden="true">📈</div>
               </section>
+
+              {demandData && (
+                <ModelDisclosure
+                  modelKey="demand-forecast"
+                  cropName={crop}
+                  district={district}
+                  modelName={demandData.model_name}
+                  message={demandData.message}
+                  lowConfidence={demandData.low_confidence}
+                  lang={lang}
+                />
+              )}
+              {demandData && demandData.model_used !== 'lstm_demand_v2' && demandData.market_average && (
+                <p className="ai-model-disclosure-message">
+                  {lang === 'bn' ? 'সর্বশেষ বাজার গড়:' : 'Latest market average:'}
+                  {' '}৳{demandData.market_average.value}/kg ({demandData.market_average.date})
+                </p>
+              )}
 
               {aiLoading ? (
                 <div className="card demand-ai-loading">
@@ -1434,9 +1476,11 @@ export default function FarmerDashboard() {
                             </div>
                             <time>{forecast.date}</time>
                             <strong>{Number(forecast.predicted_demand || 0).toLocaleString()} <small>kg</small></strong>
-                            <span className="demand-ai-day-range">
-                              Range {Number(forecast.lower_bound || 0).toLocaleString()}–{Number(forecast.upper_bound || 0).toLocaleString()} kg
-                            </span>
+                            {forecast.lower_bound != null && forecast.upper_bound != null && (
+                              <span className="demand-ai-day-range">
+                                Range {Number(forecast.lower_bound).toLocaleString()}–{Number(forecast.upper_bound).toLocaleString()} kg
+                              </span>
+                            )}
                           </article>
                         )
                       })}
@@ -1675,11 +1719,23 @@ export default function FarmerDashboard() {
                             <strong>{Number(yieldData.estimated_total_yield_kg || 0).toLocaleString()}</strong>
                             <span>kg {lang === 'bn' ? 'সম্ভাব্য মোট ফলন' : 'estimated total yield'}</span>
                           </div>
-                          <div className="yield-ai-range">
-                            <span>{lang === 'bn' ? 'সম্ভাব্য ফলনের পরিসর' : 'Likely yield range'}</span>
-                            <strong>{Number(yieldData.yield_range_kg?.lower || 0).toLocaleString()} – {Number(yieldData.yield_range_kg?.upper || 0).toLocaleString()} kg</strong>
-                          </div>
                         </div>
+
+                        <ModelDisclosure
+                          modelKey="crop-yield"
+                          cropName={yieldForm.crop_name}
+                          district={yieldData.district}
+                          modelName={yieldData.model_name}
+                          message={yieldData.message}
+                          lowConfidence={yieldData.low_confidence}
+                          lang={lang}
+                        />
+                        {yieldData.market_average && (
+                          <p className="ai-model-disclosure-message">
+                            {lang === 'bn' ? 'সর্বশেষ বাজার গড়:' : 'Latest market average:'}
+                            {' '}৳{yieldData.market_average.value}/kg ({yieldData.market_average.date})
+                          </p>
+                        )}
 
                         <section className="yield-ai-finance">
                           <div className="yield-ai-subheading">

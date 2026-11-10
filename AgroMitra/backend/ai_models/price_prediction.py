@@ -14,8 +14,9 @@
 
 import os
 import pickle
+import json
 import warnings
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import matplotlib.dates as mdates
@@ -228,51 +229,44 @@ def train_prophet(df, crop_name, district):
         (df['district'] == district)
     ][['date', 'avg_price']].rename(columns={'date': 'ds', 'avg_price': 'y'})
 
-    if len(prophet_df) < 30:
+    if len(prophet_df) < 60:
         print(
-            f"  ⚠️  Not enough data ({len(prophet_df)} rows). Need at least 30.")
-        return None, None
+            f"  ⚠️  Not enough data ({len(prophet_df)} rows). Need at least 60.")
+        return None, None, None
 
-    # Train/test split (last 30 days = test)
-    split_date = prophet_df['ds'].max() - timedelta(days=30)
-    train_prophet = prophet_df[prophet_df['ds'] <= split_date]
-    test_prophet = prophet_df[prophet_df['ds'] > split_date]
+    split_idx = len(prophet_df) - 30
+    train_prophet = prophet_df.iloc[:split_idx]
+    test_prophet = prophet_df.iloc[split_idx:]
 
-    # Prophet model configure করো
-    model = Prophet(
-        changepoint_prior_scale=0.05,    # trend পরিবর্তনের sensitivity
-        seasonality_prior_scale=10,      # seasonality strength
-        yearly_seasonality='auto',    # বার্ষিক pattern
-        weekly_seasonality='auto',    # সাপ্তাহিক pattern
-        daily_seasonality='auto',
-        interval_width=0.95,    # 95% confidence interval
-    )
+    def build_model():
+        prophet_model = Prophet(
+            changepoint_prior_scale=0.05,
+            seasonality_prior_scale=10,
+            yearly_seasonality='auto',
+            weekly_seasonality='auto',
+            daily_seasonality='auto',
+            interval_width=0.95,
+        )
+        prophet_model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+        prophet_model.add_seasonality(name='quarterly', period=91.25, fourier_order=3)
+        return prophet_model
 
-    # Bangladesh-specific seasonalities add করো
-    model.add_seasonality(name='monthly',  period=30.5,  fourier_order=5)
-    model.add_seasonality(name='quarterly', period=91.25, fourier_order=3)
+    evaluation_model = build_model()
+    evaluation_model.fit(train_prophet)
+    test_predictions = evaluation_model.predict(test_prophet[['ds']])['yhat'].to_numpy()
+    actual = test_prophet['y'].to_numpy(dtype=float)
+    last_value = float(train_prophet['y'].iloc[-1])
+    moving_average = float(train_prophet['y'].tail(7).mean())
+    evaluation = _forecast_evaluation(actual, test_predictions, last_value, moving_average)
+    print(f"  📊 Prophet holdout metrics: {evaluation}")
 
-    # Model train করো
-    model.fit(train_prophet)
-
-    # 30 দিনের forecast বানাও
+    # Refit on all observations for serving; holdout metrics stay from the
+    # earlier model that never saw the final 30 observations.
+    model = build_model()
+    model.fit(prophet_df)
     future = model.make_future_dataframe(periods=30, freq='D')
     forecast = model.predict(future)
-
-    # Accuracy calculate করো
-    if len(test_prophet) > 0:
-        merged = test_prophet.merge(
-            forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']],
-            on='ds', how='inner'
-        )
-        if len(merged) > 0:
-            mape = mean_absolute_percentage_error(
-                merged['y'], merged['yhat']) * 100
-            rmse = np.sqrt(mean_squared_error(merged['y'], merged['yhat']))
-            print(f"  📊 Prophet MAPE: {mape:.2f}%")
-            print(f"  📊 Prophet RMSE: ৳{rmse:.2f}/kg")
-
-    return model, forecast
+    return model, forecast, evaluation
 
 
 # ============================================================
@@ -292,9 +286,9 @@ def train_xgboost(df, crop_name, district):
         (df['district'] == district)
     ].copy()
 
-    if len(filtered) < 30:
-        print(f"  ⚠️  Not enough data ({len(filtered)} rows).")
-        return None, None, None
+    if len(filtered) < 60:
+        print(f"  ⚠️  Not enough data ({len(filtered)} rows). Need at least 60.")
+        return None, None, None, None
 
     # Feature columns
     feature_cols = [
@@ -313,13 +307,14 @@ def train_xgboost(df, crop_name, district):
     X = filtered[feature_cols]
     y = filtered['avg_price']
 
-    # Train/test split (last 30 days = test)
+    # Keep the final 30 observations untouched for chronological evaluation.
     split_idx = len(filtered) - 30
     X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    validation_idx = max(1, int(len(X_train) * 0.85))
 
     # XGBoost model configure করো
-    model = XGBRegressor(
+    evaluation_model = XGBRegressor(
         n_estimators=500,
         max_depth=6,
         learning_rate=0.05,
@@ -334,19 +329,36 @@ def train_xgboost(df, crop_name, district):
         verbosity=0,
     )
 
-    # Model train করো
-    model.fit(
-        X_train, y_train,
-        eval_set=[(X_test, y_test)],
+    evaluation_model.fit(
+        X_train.iloc[:validation_idx], y_train.iloc[:validation_idx],
+        eval_set=[(X_train.iloc[validation_idx:], y_train.iloc[validation_idx:])],
         verbose=False
     )
 
-    # Accuracy calculate করো
-    y_pred = model.predict(X_test)
-    mape = mean_absolute_percentage_error(y_test, y_pred) * 100
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    print(f"  📊 XGBoost MAPE: {mape:.2f}%")
-    print(f"  📊 XGBoost RMSE: ৳{rmse:.2f}/kg")
+    y_pred = evaluation_model.predict(X_test)
+    evaluation = _forecast_evaluation(
+        y_test.to_numpy(dtype=float),
+        y_pred,
+        float(y_train.iloc[-1]),
+        float(y_train.tail(7).mean()),
+    )
+    print(f"  📊 XGBoost holdout metrics: {evaluation}")
+
+    # Refit production model on the full time series after holdout evaluation.
+    model = XGBRegressor(
+        n_estimators=max(1, int(getattr(evaluation_model, 'best_iteration', 499)) + 1),
+        max_depth=6,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_weight=3,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        random_state=42,
+        eval_metric='rmse',
+        verbosity=0,
+    )
+    model.fit(X, y, verbose=False)
 
     # Feature importance
     importance = pd.DataFrame({
@@ -354,7 +366,36 @@ def train_xgboost(df, crop_name, district):
         'importance': model.feature_importances_
     }).sort_values('importance', ascending=False)
 
-    return model, feature_cols, importance
+    return model, feature_cols, importance, evaluation
+
+
+def _forecast_evaluation(actual, predicted, last_value, moving_average):
+    def metrics(values, estimates):
+        actual_values = np.asarray(values, dtype=float)
+        predicted_values = np.asarray(estimates, dtype=float)
+        valid = np.isfinite(actual_values) & np.isfinite(predicted_values)
+        actual_values = actual_values[valid]
+        predicted_values = predicted_values[valid]
+        if not len(actual_values):
+            return "not evaluated"
+        nonzero = actual_values != 0
+        mape = (
+            float(mean_absolute_percentage_error(actual_values[nonzero], predicted_values[nonzero]) * 100)
+            if nonzero.any()
+            else None
+        )
+        return {
+            "MAPE_percent": round(mape, 4) if mape is not None else "not evaluated (all actual values are zero)",
+            "RMSE": round(float(np.sqrt(mean_squared_error(actual_values, predicted_values))), 4),
+            "test_samples": int(len(actual_values)),
+        }
+
+    actual_values = np.asarray(actual, dtype=float)
+    return {
+        "model": metrics(actual_values, predicted),
+        "baseline_last_value": metrics(actual_values, np.full(len(actual_values), last_value)),
+        "baseline_moving_average_7": metrics(actual_values, np.full(len(actual_values), moving_average)),
+    }
 
 
 # ============================================================
@@ -501,17 +542,14 @@ def plot_results(df, crop_name, district, hybrid_df, importance_df=None):
         ax4.set_xlabel('Importance Score')
         ax4.invert_yaxis()
     else:
-        # Model comparison bar chart
-        models = ['Prophet', 'XGBoost', 'Hybrid Ensemble']
-        mape_scores = [15, 13, 10]  # example values
-        ax4.bar(models, mape_scores,
-                color=[COLORS['blue'], COLORS['orange'], COLORS['green']],
-                edgecolor='white', linewidth=0.5)
-        ax4.set_title('Model MAPE Comparison (Lower = Better)',
+        ax4.axis('off')
+        ax4.set_title('Feature importance unavailable',
                       fontweight='bold', fontsize=12)
-        ax4.set_ylabel('MAPE (%)')
-        for i, v in enumerate(mape_scores):
-            ax4.text(i, v + 0.2, f'{v}%', ha='center', fontweight='bold')
+        ax4.text(
+            0.5, 0.5,
+            'No feature-importance data was produced for this run.',
+            ha='center', va='center', wrap=True,
+        )
 
     plt.tight_layout()
 
@@ -595,25 +633,26 @@ def save_model(prophet_model, xgb_model, encoders, crop_name, district):
     """
     Trained model save করো যাতে পরে আবার use করা যায়।
     """
-    os.makedirs('models', exist_ok=True)
+    models_dir = Path(__file__).resolve().parent / 'models'
+    models_dir.mkdir(parents=True, exist_ok=True)
     safe_name = f"{crop_name}_{district}".replace(" ", "_")
 
     # XGBoost model save
     if xgb_model:
-        xgb_path = f'models/xgb_{safe_name}.pkl'
+        xgb_path = models_dir / f'xgb_{safe_name}.pkl'
         with open(xgb_path, 'wb') as f:
             pickle.dump(xgb_model, f)
         print(f"  ✅ XGBoost model saved: {xgb_path}")
 
     # Prophet model save
     if prophet_model:
-        prophet_path = f'models/prophet_{safe_name}.pkl'
+        prophet_path = models_dir / f'prophet_{safe_name}.pkl'
         with open(prophet_path, 'wb') as f:
             pickle.dump(prophet_model, f)
         print(f"  ✅ Prophet model saved: {prophet_path}")
 
     # Encoders save
-    enc_path = f'models/encoders_{safe_name}.pkl'
+    enc_path = models_dir / f'encoders_{safe_name}.pkl'
     with open(enc_path, 'wb') as f:
         pickle.dump(encoders, f)
     print(f"  ✅ Encoders saved: {enc_path}")
@@ -638,9 +677,10 @@ def main():
 
     # ── Check if data file exists ────────────────────────────
     if not os.path.exists(DATA_FILE):
-        print(f"\n  ❌ Data file not found: {DATA_FILE}")
-        print("  📝 Creating sample data for demonstration...")
-        create_sample_data(DATA_FILE, CROP_NAME, DISTRICT)
+        raise FileNotFoundError(
+            f"Training data not found: {DATA_FILE}. "
+            "The training script will not create synthetic data."
+        )
 
     # ── Step 1: Load Data ────────────────────────────────────
     df = load_data(DATA_FILE)
@@ -652,13 +692,13 @@ def main():
     print("\n" + "="*60)
     print("  STEP 3: Prophet Model Training")
     print("="*60)
-    prophet_model, prophet_forecast = train_prophet(df, CROP_NAME, DISTRICT)
+    prophet_model, prophet_forecast, prophet_evaluation = train_prophet(df, CROP_NAME, DISTRICT)
 
     # ── Step 4: Train XGBoost ────────────────────────────────
     print("\n" + "="*60)
     print("  STEP 4: XGBoost Model Training")
     print("="*60)
-    xgb_model, feature_cols, importance_df = train_xgboost(
+    xgb_model, feature_cols, importance_df, xgb_evaluation = train_xgboost(
         df, CROP_NAME, DISTRICT)
 
     # ── Step 5: Hybrid Prediction ────────────────────────────
@@ -666,7 +706,7 @@ def main():
     print("  STEP 5: Hybrid Ensemble Prediction")
     print("="*60)
 
-    if prophet_forecast is not None:
+    if prophet_forecast is not None and xgb_model is not None:
         # Future features for XGBoost
         future_features = None
         if xgb_model is not None and feature_cols is not None:
@@ -718,6 +758,22 @@ def main():
         print("  STEP 8: Saving Models")
         print("="*60)
         save_model(prophet_model, xgb_model, encoders, CROP_NAME, DISTRICT)
+        safe_name = f"{CROP_NAME}_{DISTRICT}".replace(" ", "_")
+        metrics_path = SCRIPT_DIR / 'models' / f'metrics_price_{safe_name}.json'
+        with metrics_path.open('w', encoding='utf-8') as metrics_file:
+            json.dump({
+                "model_name": "Prophet + XGBoost hybrid",
+                "algorithm": "Prophet + XGBoost; chronological 30-row holdout",
+                "training_data_source": str(Path(DATA_FILE).resolve()),
+                "data_provenance_note": "The project CSV includes generated/synthetic district rows; these holdout metrics do not establish accuracy on independently verified official market data.",
+                "training_date": datetime.now(timezone.utc).isoformat(),
+                "evaluation_metrics": {
+                    "prophet": prophet_evaluation,
+                    "xgboost": xgb_evaluation,
+                },
+                "status": "evaluated",
+            }, metrics_file, indent=2)
+        print(f"  ✅ Holdout metrics saved: {metrics_path}")
 
     print("\n" + "🌾"*30)
     print("  ✅ AgroMitra Price Prediction Complete!")
@@ -731,9 +787,7 @@ def main():
 # ============================================================
 
 def create_sample_data(file_path, crop_name, district):
-    """
-    Real data না থাকলে sample data তৈরি করো practice-এর জন্য।
-    """
+    """Create illustrative data for demos only; never used by main training."""
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
     np.random.seed(42)

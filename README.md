@@ -133,32 +133,35 @@ Developed as a **Final Year B.Sc. in Computer Science & Engineering Project** at
 # 📂 Project Structure
 
 ```
-AgroMitra
-│
-├── backend
-│   ├── ai_models       # training scripts + saved models (Prophet, XGBoost, LSTM)
-│   ├── database
-│   │   ├── models      # SQLAlchemy models
-│   │   ├── routes      # FastAPI routers (auth, product, order, ...)
-│   │   ├── schemas     # Pydantic request/response schemas
-│   │   ├── scripts     # DB setup / health-check utilities
-│   │   └── utils       # security (JWT, bcrypt, OTP) helpers
-│   ├── models          # static reference JSON (crop knowledge base, districts)
-│   └── main.py
-│
-├── frontend
-│   ├── src
-│   │   ├── api         # centralized axios client
-│   │   ├── assets
-│   │   ├── components
-│   │   ├── context
-│   │   ├── hooks
-│   │   ├── pages
-│   │   └── App.jsx
-│
+repository-root/
+├── .github/
+│   └── workflows/ci.yml
 ├── README.md
 ├── LICENSE
-└── requirements.txt
+└── AgroMitra/                 # application source lives in this inner folder
+    ├── backend/
+    │   ├── ai_models/         # AI code, artifacts, and source data
+    │   ├── database/
+    │   │   ├── models/        # SQLAlchemy models
+    │   │   ├── routes/        # FastAPI routers
+    │   │   ├── schemas/       # Pydantic schemas
+    │   │   ├── scripts/       # Database utility scripts
+    │   │   └── utils/         # Authentication, order, and domain helpers
+    │   ├── tests/             # Backend tests
+    │   ├── test-requirements.txt
+    │   ├── .env.example
+    │   └── main.py            # FastAPI application entry point
+    ├── frontend/
+    │   ├── src/
+    │   │   ├── api/
+    │   │   ├── assets/
+    │   │   ├── components/
+    │   │   ├── hooks/
+    │   │   └── pages/
+    │   ├── .env.example
+    │   └── package.json
+    ├── start-backend.bat
+    └── pytest.ini
 ```
 
 ---
@@ -204,9 +207,9 @@ AgroMitra
 ## Clone Repository
 
 ```bash
-git clone https://github.com/lalchandali/AgroMitra.git
+git clone https://github.com/lalchandali/AgroMitra-project.git
 
-cd AgroMitra
+cd AgroMitra-project/AgroMitra
 ```
 
 ---
@@ -235,7 +238,14 @@ Install Packages
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env
 ```
+
+On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
+Then set the PostgreSQL
+`DATABASE_URL`, a unique `JWT_SECRET_KEY`, and any optional external API keys.
+The example documents each supported backend setting; do not commit real
+credentials. A PostgreSQL database must be available before starting the API.
 
 Run Server
 
@@ -259,13 +269,21 @@ http://127.0.0.1:8000/docs
 
 # Frontend
 
-```bash
-cd frontend
+Open a second terminal and, from the cloned repository root, enter the inner
+application's frontend folder:
 
-npm install
+```bash
+cd AgroMitra-project/AgroMitra/frontend
+
+npm ci
+cp .env.example .env
 
 npm run dev
 ```
+
+On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
+Configure `VITE_API_URL` in the copied env file.
+The development default points to `http://localhost:8000`.
 
 Frontend
 
@@ -284,6 +302,24 @@ http://localhost:5173
 
 ---
 
+# 🧪 Tests and CI
+
+From the inner `AgroMitra/` application directory:
+
+```bash
+python -m pip install -r backend/test-requirements.txt
+python -m pytest -q backend/tests
+cd frontend
+npm ci
+npm run build
+```
+
+GitHub Actions runs the backend tests and frontend production build on pushes
+and pull requests. The backend health endpoint is available at `/health` and
+reports whether its database connection probe succeeds.
+
+---
+
 # 🤖 AI Modules
 
 | Module              | Description                  |
@@ -297,35 +333,41 @@ http://localhost:5173
 
 ---
 
-# 📸 Screenshots
+# 🔗 Live Demo and Screenshots
+
+**Live demo:** _Add the deployed application URL here when available._
+
+To add screenshots, place image files in `AgroMitra/docs/screenshots/` and
+uncomment/update the corresponding Markdown image entries below. Keep images
+representative of the current application.
 
 ## 🏠 Home
 
-> docs/home.png
+<!-- ![Home](AgroMitra/docs/screenshots/home.png) -->
 
 ---
 
 ## 👨‍🌾 Farmer Dashboard
 
-> docs/farmer-dashboard.png
+<!-- ![Farmer Dashboard](AgroMitra/docs/screenshots/farmer-dashboard.png) -->
 
 ---
 
 ## 🛒 Marketplace
 
-> docs/marketplace.png
+<!-- ![Marketplace](AgroMitra/docs/screenshots/marketplace.png) -->
 
 ---
 
 ## 👨‍💼 Admin Dashboard
 
-> docs/admin-dashboard.png
+<!-- ![Admin Dashboard](AgroMitra/docs/screenshots/admin-dashboard.png) -->
 
 ---
 
 ## 🌙 Dark Mode
 
-> docs/darkmode.png
+<!-- ![Dark Mode](AgroMitra/docs/screenshots/dark-mode.png) -->
 
 ---
 
@@ -407,7 +449,24 @@ Uttara University
 
 ✔ Bengali & English Support
 
-✔ Production Ready Architecture
+✔ Modular frontend, API, and database structure
+
+---
+
+# ⚠️ Limitations
+
+- This is an academic project and has not been independently production-hardened.
+- bKash and Nagad flows are mock integrations; a live payment provider is not
+  connected. Development OTPs are not delivered through an SMS provider.
+- Price and demand artifacts cover limited crop/district combinations. The
+  available training data includes generated rows and market uploads, and
+  saved evaluation metrics may be absent; estimates should not be treated as
+  verified market forecasts.
+- Crop-yield output is rule-based rather than a model trained on measured
+  harvest outcomes. The application does not currently provide a trained
+  disease-detection model.
+- Weather alerts require an OpenWeather API key. Live demo availability and
+  external services depend on deployment configuration.
 
 ---
 

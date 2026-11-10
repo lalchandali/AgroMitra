@@ -29,6 +29,7 @@ if sys.platform == "win32":
 
 import io
 import json
+import logging
 import os
 import shutil
 import warnings
@@ -50,6 +51,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_mod
 import inference as ai_inference  # noqa: E402 — real trained model inference (Prophet+XGBoost, LSTM)
 
 warnings.filterwarnings('ignore')
+logger = logging.getLogger(__name__)
 
 # ── Load environment variables (.env) ───────────────────────
 load_dotenv()
@@ -173,16 +175,16 @@ class CropYieldRequest(BaseModel):
 class PricePredictionItem(BaseModel):
     date: str
     predicted_price: float
-    lower_bound: float
-    upper_bound: float
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
     trend: str
 
 
 class DemandForecastItem(BaseModel):
     date: str
     predicted_demand: int
-    lower_bound: int
-    upper_bound: int
+    lower_bound: Optional[int] = None
+    upper_bound: Optional[int] = None
     market_signal: str
 
 
@@ -552,6 +554,43 @@ def load_crop_data(crop_name: str, district: str):
         )
 
 
+def latest_market_average(crop_name: str, district: str):
+    """Return the latest available average with an explicit fallback scope."""
+    try:
+        market_data = pd.read_csv(DATA_FILE)
+    except (OSError, pd.errors.ParserError):
+        logger.exception("Market data file is unavailable: %s", DATA_FILE)
+        return None
+
+    required = {'date', 'crop_name', 'district', 'avg_price'}
+    if not required.issubset(market_data.columns):
+        logger.error("Market data is missing columns: %s", sorted(required - set(market_data.columns)))
+        return None
+
+    market_data['date'] = pd.to_datetime(market_data['date'], errors='coerce')
+    market_data['avg_price'] = pd.to_numeric(market_data['avg_price'], errors='coerce')
+    market_data = market_data.dropna(subset=['date', 'avg_price'])
+
+    candidates = [
+        (market_data[
+            (market_data['crop_name'] == crop_name)
+            & (market_data['district'] == district)
+        ], 'crop_and_district'),
+        (market_data[market_data['crop_name'] == crop_name], 'crop'),
+        (market_data, 'all_market_data'),
+    ]
+    for data, scope in candidates:
+        if not data.empty:
+            latest_date = data['date'].max()
+            latest_rows = data[data['date'] == latest_date]
+            return {
+                'value': round(float(latest_rows['avg_price'].mean()), 2),
+                'date': latest_date.strftime('%Y-%m-%d'),
+                'scope': scope,
+            }
+    return None
+
+
 def simple_price_forecast(df: pd.DataFrame, days: int):
     """
     Simple statistical price forecast।
@@ -591,9 +630,6 @@ def simple_price_forecast(df: pd.DataFrame, days: int):
         predicted = predicted * seasonal_adj
         predicted = max(predicted, last_price * 0.5)
         predicted = round(predicted, 2)
-        lower = round(predicted * 0.88, 2)
-        upper = round(predicted * 1.12, 2)
-
         prev = forecasts[-1]['predicted_price'] if forecasts else last_price
         if predicted > prev * 1.01:
             trend_label = "↑ Rising"
@@ -605,8 +641,6 @@ def simple_price_forecast(df: pd.DataFrame, days: int):
         forecasts.append({
             'date':            future_date.strftime('%Y-%m-%d'),
             'predicted_price': predicted,
-            'lower_bound':     lower,
-            'upper_bound':     upper,
             'trend':           trend_label,
         })
 
@@ -637,9 +671,6 @@ def simple_demand_forecast(df: pd.DataFrame, days: int):
         s_adj = seasonal.get(future_month, 1.0)
         predicted = (roll_7 * 0.5 + roll_30 * 0.3 + last_dem * 0.2) * s_adj
         predicted = max(0, int(round(predicted)))
-        lower = int(predicted * 0.82)
-        upper = int(predicted * 1.18)
-
         if predicted > mean_dem * 1.15:
             signal = "🟢 High Demand"
         elif predicted < mean_dem * 0.85:
@@ -650,12 +681,66 @@ def simple_demand_forecast(df: pd.DataFrame, days: int):
         forecasts.append({
             'date':             future_date.strftime('%Y-%m-%d'),
             'predicted_demand': predicted,
-            'lower_bound':      lower,
-            'upper_bound':      upper,
             'market_signal':    signal,
         })
 
     return forecasts, mean_dem
+
+
+MODEL_INFO = {
+    'price-prediction': {
+        'name': 'Crop price forecast',
+        'algorithm': 'Prophet + XGBoost hybrid; statistical fallback when a matching trained artifact is unavailable',
+        'training_data_source': 'backend/ai_models/data/raw/crop_prices_v2_64districts.csv',
+        'data_provenance_note': 'The multi-district file contains generated/synthetic rows and uploaded market data; it is not independently verified official market data.',
+        'training_date': 'unknown unless recorded by the training run',
+        'metadata_prefix': 'price',
+    },
+    'demand-forecast': {
+        'name': 'Crop demand forecast',
+        'algorithm': 'LSTM sequence model; moving-average/statistical fallback when a matching trained artifact is unavailable',
+        'training_data_source': 'backend/ai_models/data/raw/crop_prices_v2_64districts.csv; demand target is quantity_available',
+        'data_provenance_note': 'The multi-district file contains generated/synthetic rows and uploaded market data; demand values are not independently verified sales.',
+        'training_date': 'unknown unless recorded by the training run',
+        'metadata_prefix': 'demand',
+    },
+    'crop-yield': {
+        'name': 'Crop yield estimate',
+        'algorithm': 'Rule-based calculation using crop, soil, season, and district suitability multipliers',
+        'training_data_source': 'backend/ai_models/models/crop_knowledge_base.json and district_profiles.json; no measured-yield training dataset',
+        'training_date': 'not applicable (not trained)',
+        'metadata_prefix': 'crop_yield',
+    },
+}
+
+
+def _read_model_metrics(model_key: str, crop_name: Optional[str], district: Optional[str]):
+    if model_key in {'price-prediction', 'demand-forecast'} and crop_name and district:
+        safe_name = f"{crop_name}_{district}".replace(" ", "_")
+        metrics_path = os.path.join(AI_MODELS_DIR, 'models', f"metrics_{MODEL_INFO[model_key]['metadata_prefix']}_{safe_name}.json")
+    elif model_key == 'crop-yield':
+        metrics_path = os.path.join(AI_MODELS_DIR, 'models', 'crop_yield.metrics.json')
+    else:
+        return None
+
+    if not os.path.isfile(metrics_path):
+        return None
+    try:
+        with open(metrics_path, encoding='utf-8') as metrics_file:
+            return json.load(metrics_file)
+    except (OSError, json.JSONDecodeError):
+        logger.exception("Could not read model metrics file: %s", metrics_path)
+        return None
+
+
+def _has_saved_evaluation(model_key: str, crop_name: str, district: str) -> bool:
+    saved = _read_model_metrics(model_key, crop_name, district)
+    return bool(
+        saved
+        and saved.get("status") == "evaluated"
+        and isinstance(saved.get("evaluation_metrics"), dict)
+        and saved["evaluation_metrics"]
+    )
 
 
 def score_crop_api(crop_name, crop_info, farmer_profile):
@@ -813,7 +898,7 @@ async def health_check():
         database_status["error"] = DATABASE_IMPORT_ERROR
 
     return {
-        "status":    "healthy",
+        "status":    "healthy" if database_status["status"] == "connected" else "degraded",
         "timestamp": datetime.now().isoformat(),
         "database":  database_status,
         "models": {
@@ -822,6 +907,60 @@ async def health_check():
             "crop_recommendation": "✅ Ready (Rule-Based)",
             "crop_yield":         "✅ Ready (Rule-Based)",
         }
+    }
+
+
+@app.get("/api/v1/ai/models/{model_key}", tags=["AI Models"])
+async def get_model_info(
+    model_key: str,
+    crop_name: Optional[str] = None,
+    district: Optional[str] = None,
+):
+    """Expose model provenance and only evaluation metrics saved by training."""
+    if model_key not in MODEL_INFO:
+        raise HTTPException(status_code=404, detail="Unknown AI model.")
+
+    info = MODEL_INFO[model_key]
+    saved = _read_model_metrics(model_key, crop_name, district)
+    if saved is not None:
+        return {
+            "model_key": model_key,
+            "model_name": saved.get("model_name", info['name']),
+            "algorithm": saved.get("algorithm", info['algorithm']),
+            "training_data_source": saved.get("training_data_source", info['training_data_source']),
+            "data_provenance_note": saved.get("data_provenance_note", info.get('data_provenance_note')),
+            "training_date": saved.get("training_date", info['training_date']),
+            "evaluation_metrics": saved.get("evaluation_metrics", "not evaluated"),
+            "status": saved.get("status", "available"),
+        }
+
+    status = "not_evaluated"
+    model_name = info['name']
+    if model_key == 'price-prediction':
+        if crop_name and district and ai_inference.price_model_available(crop_name, district):
+            status = "trained_artifact_metrics_missing"
+            model_name = "Prophet + XGBoost hybrid"
+        else:
+            status = "statistical_fallback"
+            model_name = "Statistical price estimate"
+    elif model_key == 'demand-forecast':
+        if crop_name and district and ai_inference.demand_model_available(crop_name, district):
+            status = "trained_artifact_metrics_missing"
+            model_name = "LSTM demand forecast"
+        else:
+            status = "statistical_fallback"
+            model_name = "Statistical demand estimate"
+    elif model_key == 'crop-yield':
+        status = "rule_based"
+    return {
+        "model_key": model_key,
+        "model_name": model_name,
+        "algorithm": info['algorithm'],
+        "training_data_source": info['training_data_source'],
+        "data_provenance_note": info.get('data_provenance_note'),
+        "training_date": info['training_date'],
+        "evaluation_metrics": "not evaluated",
+        "status": status,
     }
 
 
@@ -895,7 +1034,57 @@ async def price_prediction(req: PricePredictionRequest):
             detail=f"District '{req.district}' not found. Available: {list(DISTRICT_PROFILES.keys())}"
         )
 
-    df = load_crop_data(req.crop_name, req.district)
+    try:
+        df = load_crop_data(req.crop_name, req.district)
+    except HTTPException as error:
+        if error.status_code != 404:
+            logger.exception("Could not load price history for %s in %s", req.crop_name, req.district)
+        df = pd.DataFrame()
+
+    if not df.empty:
+        df['avg_price'] = pd.to_numeric(df['avg_price'], errors='coerce')
+        df = df.dropna(subset=['avg_price']).reset_index(drop=True)
+
+    market_average = latest_market_average(req.crop_name, req.district)
+    if len(df) < 30:
+        if len(df):
+            last_price = float(df['avg_price'].iloc[-1])
+        else:
+            last_price = market_average['value'] if market_average else None
+        forecasts = []
+        if last_price is not None:
+            last_date = (
+                pd.to_datetime(df['date'].iloc[-1])
+                if len(df)
+                else pd.Timestamp(market_average['date'])
+            )
+            for day in range(1, req.days + 1):
+                estimate = round(float(last_price), 2)
+                forecasts.append({
+                    'date': (last_date + timedelta(days=day)).strftime('%Y-%m-%d'),
+                    'predicted_price': estimate,
+                    'trend': '→ Stable',
+                })
+        return {
+            "crop": req.crop_name,
+            "district": req.district,
+            "current_price": last_price,
+            "forecast_days": req.days,
+            "forecasts": forecasts,
+            "model_used": "market_average_fallback",
+            "model_name": "Latest market average (fallback)",
+            "low_confidence": True,
+            "message": "Too little local history for a reliable forecast. Showing the latest available market average.",
+            "market_average": market_average,
+            "summary": {
+                "avg_7day_price": last_price,
+                "avg_30day_price": last_price,
+                "avg_forecast": last_price,
+                "trend_pct": 0,
+                "market_outlook": "Insufficient history for a trend estimate.",
+            },
+            "generated_at": datetime.now().isoformat(),
+        }
 
     prices = pd.to_numeric(df['avg_price'], errors='coerce').to_numpy(dtype=float)
     last_price = float(prices[-1])
@@ -907,13 +1096,18 @@ async def price_prediction(req: PricePredictionRequest):
     try:
         forecasts = ai_inference.predict_price_hybrid(df, req.crop_name, req.district, req.days)
     except Exception:
+        logger.exception("Trained price model failed for %s in %s", req.crop_name, req.district)
         forecasts = None  # trained model থাকলেও load/predict-এ কোনো সমস্যা হলে fallback
 
     if forecasts is not None:
         model_used = "prophet_xgboost_hybrid_v1"
+        model_name = "Prophet + XGBoost hybrid"
+        message = None
     else:
         forecasts, _, _, _ = simple_price_forecast(df, req.days)
         model_used = "statistical_fallback_v1"
+        model_name = "Statistical moving-average estimate"
+        message = "The trained model is unavailable for this crop and district. Showing a statistical estimate and the latest market average."
 
     avg_forecast = np.mean([f['predicted_price'] for f in forecasts])
     trend_pct = ((avg_forecast - last_price) / last_price) * 100
@@ -932,6 +1126,14 @@ async def price_prediction(req: PricePredictionRequest):
         "forecast_days":   req.days,
         "forecasts":       forecasts,
         "model_used":      model_used,
+        "model_name":      model_name,
+        "low_confidence": (
+            model_used != "prophet_xgboost_hybrid_v1"
+            or len(df) < 60
+            or not _has_saved_evaluation("price-prediction", req.crop_name, req.district)
+        ),
+        "message":         message,
+        "market_average":  market_average,
         "summary": {
             "avg_7day_price":  round(roll_7, 2),
             "avg_30day_price": round(roll_30, 2),
@@ -958,19 +1160,54 @@ async def demand_forecast(req: DemandForecastRequest):
         raise HTTPException(status_code=400,
                             detail=f"District '{req.district}' not found.")
 
-    df = load_crop_data(req.crop_name, req.district)
+    try:
+        df = load_crop_data(req.crop_name, req.district)
+    except HTTPException as error:
+        if error.status_code != 404:
+            logger.exception("Could not load demand history for %s in %s", req.crop_name, req.district)
+        df = pd.DataFrame()
+
+    if not df.empty:
+        df['quantity_available'] = pd.to_numeric(df['quantity_available'], errors='coerce')
+        df = df.dropna(subset=['quantity_available', 'avg_price']).reset_index(drop=True)
+    market_average = latest_market_average(req.crop_name, req.district)
+
+    if len(df) < 60:
+        return {
+            "crop": req.crop_name,
+            "district": req.district,
+            "forecast_days": req.days,
+            "forecasts": [],
+            "model_used": "market_average_fallback",
+            "model_name": "Latest market average (fallback)",
+            "low_confidence": True,
+            "message": "Too little local demand history for a reliable forecast. Showing the latest available market average instead.",
+            "market_average": market_average,
+            "summary": {
+                "historical_avg_demand": None,
+                "forecast_avg_demand": None,
+                "demand_change_pct": None,
+                "farmer_advisory": "Insufficient demand history for an advisory.",
+            },
+            "generated_at": datetime.now().isoformat(),
+        }
 
     try:
         result = ai_inference.predict_demand_lstm(df, req.crop_name, req.district, req.days)
     except Exception:
+        logger.exception("Trained demand model failed for %s in %s", req.crop_name, req.district)
         result = None
 
     if result is not None:
         forecasts, mean_dem = result
         model_used = "lstm_demand_v2"
+        model_name = "LSTM demand forecast"
+        message = None
     else:
         forecasts, mean_dem = simple_demand_forecast(df, req.days)
         model_used = "statistical_fallback_v1"
+        model_name = "Statistical moving-average estimate"
+        message = "The trained demand model is unavailable for this crop and district. Showing a statistical estimate and the latest market average."
 
     avg_forecast = np.mean([f['predicted_demand'] for f in forecasts])
     change_pct = ((avg_forecast - mean_dem) / mean_dem) * 100
@@ -988,6 +1225,14 @@ async def demand_forecast(req: DemandForecastRequest):
         "forecast_days":    req.days,
         "forecasts":        forecasts,
         "model_used":       model_used,
+        "model_name":      model_name,
+        "low_confidence": (
+            model_used != "lstm_demand_v2"
+            or len(df) < 90
+            or not _has_saved_evaluation("demand-forecast", req.crop_name, req.district)
+        ),
+        "message":         message,
+        "market_average":  market_average,
         "summary": {
             "historical_avg_demand": round(mean_dem, 0),
             "forecast_avg_demand":   round(avg_forecast, 0),
@@ -1124,14 +1369,10 @@ async def crop_yield_prediction(req: CropYieldRequest):
     adjusted_yield_per_acre = base_yield_per_acre * combined_mult
     estimated_total_yield_kg = adjusted_yield_per_acre * req.land_acres
 
-    # যত বেশি factor সুবিধাজনক না, ততই estimate-এ uncertainty বেশি ধরা হচ্ছে
-    uncertainty_pct = 10 + (1 - combined_mult) * 25
-    lower_kg = estimated_total_yield_kg * (1 - uncertainty_pct / 100)
-    upper_kg = estimated_total_yield_kg * (1 + uncertainty_pct / 100)
-
     estimated_revenue_bdt = estimated_total_yield_kg * crop_info['avg_price_bdt']
     estimated_cost_bdt = crop_info['input_cost_bdt'] * req.land_acres
     estimated_profit_bdt = estimated_revenue_bdt - estimated_cost_bdt
+    market_average = latest_market_average(req.crop_name, req.district)
 
     if combined_mult >= 0.90:
         grade, grade_label = "A", "🟢 Excellent conditions"
@@ -1152,10 +1393,11 @@ async def crop_yield_prediction(req: CropYieldRequest):
         "base_yield_per_acre_kg":   round(base_yield_per_acre, 1),
         "adjusted_yield_per_acre_kg": round(adjusted_yield_per_acre, 1),
         "estimated_total_yield_kg": round(estimated_total_yield_kg, 1),
-        "yield_range_kg": {
-            "lower": round(lower_kg, 1),
-            "upper": round(upper_kg, 1),
-        },
+        "model_used": "rule_based_crop_knowledge_v1",
+        "model_name": "Rule-based yield estimate",
+        "low_confidence": True,
+        "message": "This is a planning estimate based on reference crop data, not a trained yield model or a guarantee.",
+        "market_average": market_average,
         "estimated_revenue_bdt":    round(estimated_revenue_bdt, 0),
         "estimated_cost_bdt":       round(estimated_cost_bdt, 0),
         "estimated_profit_bdt":     round(estimated_profit_bdt, 0),

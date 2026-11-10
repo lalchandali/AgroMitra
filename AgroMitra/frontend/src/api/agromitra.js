@@ -203,8 +203,14 @@ export const getCropRecommendation = (profile) =>
 
 export const getCropYield = (payload) =>
   API.post('/api/v1/ai/crop-yield', payload)
-
-export const getFairPrice          = (cropName, district) =>
+export const getModelInfo = (modelKey, cropName = null, district = null) =>
+  API.get(`/api/v1/ai/models/${modelKey}`, {
+    params: {
+      ...(cropName ? { crop_name: cropName } : {}),
+      ...(district ? { district } : {}),
+    },
+  })
+export const getFairPrice = (cropName, district) =>
   API.get('/api/v1/ai/fair-price', { params: { crop_name: cropName, district } })
 
 // ── Market ───────────────────────────────────────────────────

@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field  # type: ignore[import]
 
-from backend.database.models.product import ProductStatus, QualityGrade
+from backend.database.models.product import ProductStatus, QualityGrade, StockStatus
 
 
 class ProductCreate(BaseModel):
@@ -16,7 +16,10 @@ class ProductCreate(BaseModel):
     title_bn       : Optional[str]  = Field(None, example="তাজা টমেটো")
     category       : str            = Field(..., example="Vegetable")
     description_en : Optional[str]  = Field(None, example="Fresh organic tomatoes from Bogura")
-    quantity_kg    : float          = Field(..., gt=0, example=500.0)
+    quantity_kg    : Optional[float] = Field(None, gt=0, example=500.0)
+    quantity       : Optional[float] = Field(None, gt=0)
+    sale_unit      : str            = Field(default="kg")
+    low_stock_threshold_kg: float   = Field(default=5.0, gt=0, example=5.0)
     unit_price_bdt : float          = Field(..., gt=0, example=22.0)
     quality_grade  : QualityGrade   = Field(default=QualityGrade.A)
     district       : str            = Field(..., example="Bogura")
@@ -29,7 +32,10 @@ class ProductUpdate(BaseModel):
     title_en       : Optional[str]   = None
     title_bn       : Optional[str]   = None
     description_en : Optional[str]   = None
-    quantity_kg    : Optional[float] = None
+    quantity_kg    : Optional[float] = Field(None, gt=0)
+    quantity       : Optional[float] = Field(None, gt=0)
+    sale_unit      : Optional[str] = None
+    low_stock_threshold_kg: Optional[float] = Field(None, gt=0)
     unit_price_bdt : Optional[float] = None
     quality_grade  : Optional[QualityGrade] = None
     is_organic     : Optional[bool]  = None
@@ -42,11 +48,16 @@ class ProductResponse(BaseModel):
     farmer_id      : UUID
     farmer_name    : Optional[str] = None   # joined from User table
     farmer_photo_url: Optional[str] = None  # joined from User table
+    farmer_verified : bool = False
     title_en       : str
     title_bn       : Optional[str]
     category       : str
     description_en : Optional[str]
     quantity_kg    : float
+    quantity       : float
+    sale_unit      : str = "kg"
+    low_stock_threshold_kg: float
+    stock_status   : StockStatus
     unit_price_bdt : float
     quality_grade  : QualityGrade
     district       : str
@@ -72,6 +83,7 @@ class FarmerProfileResponse(BaseModel):
     profile_photo_url: Optional[str] = None
     district         : Optional[str] = None
     is_verified      : bool = False
+    verification_status: Optional[str] = None
     member_since     : datetime
     average_rating   : Optional[float] = None
     review_count     : int = 0

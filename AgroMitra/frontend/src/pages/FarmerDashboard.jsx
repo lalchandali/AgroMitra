@@ -7,8 +7,8 @@ import {
   getPricePrediction, getDemandForecast, getCropRecommendation, getCropYield,
   getMyProducts, createProduct, updateProduct, deleteProduct,
   getMyOrders, updateOrderStatus,
-  getStoredUser, uploadProfilePhoto, updateProfile, resolveImageUrl, updateStoredUser,
-  getWeatherAlert
+  getStoredUser, getCurrentUser, uploadProfilePhoto, updateProfile, resolveImageUrl, updateStoredUser,
+  getWeatherAlert, submitFarmerVerification
 } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
@@ -16,6 +16,7 @@ import { useLanguage } from '../hooks/useLanguage'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { tr } from '../translations'
+import { displayQuantity, displayUnit, orderItemQuantity, orderItemUnit, UNIT_TO_BASE } from '../utils/quantityUnits'
 
 const CROPS = [
   "Rice", "Wheat", "Corn", "Tomato", "Onion", "Potato", "Brinjal", "Cabbage",
@@ -51,6 +52,15 @@ const AI_PRICE_CROPS = [
   "Ginger", "Maize", "Wheat", "Chili", "Watermelon", "Mustard", "Jute"
 ]
 
+const cropCategory = (cropName) => {
+  const crop = cropName.trim().toLowerCase()
+  if (['rice', 'wheat', 'corn', 'maize', 'mustard', 'jute'].includes(crop)) return 'Grain'
+  if (['watermelon', 'banana', 'mango', 'jackfruit', 'papaya', 'guava'].includes(crop)) return 'Fruit'
+  if (['garlic', 'ginger', 'turmeric', 'chili', 'fenugreek'].includes(crop)) return 'Spice'
+  if (['potato', 'sweet potato', 'yam', 'carrot', 'radish', 'beetroot'].includes(crop)) return 'Root'
+  return 'Vegetable'
+}
+
 const MONTH_NAMES = [
   "", "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -58,7 +68,8 @@ const MONTH_NAMES = [
 
 const BLANK_PRODUCT = {
   title_en: '', title_bn: '', category: 'Vegetable',
-  description_en: '', quantity_kg: '', unit_price_bdt: '',
+  description_en: '', quantity: '', sale_unit: 'kg', unit_price_bdt: '',
+  low_stock_threshold_kg: 5,
   quality_grade: 'A', district: 'Dhaka',
   is_organic: false, harvest_date: '', availability_until: '',
   image_url: '', image_file: null
@@ -73,7 +84,42 @@ const STATUS_CONFIG = {
   cancelled: { cls: 'fd-badge fd-badge--red', icon: '✕', label: 'Cancelled' },
 }
 
-const PAYMENT_ICONS = { bkash: '💚', nagad: '🔵', bank_transfer: '🏦', cash_on_delivery: '💵' }
+const PAYMENT_ICONS = {
+  bkash: '💚', nagad: '🔵', bank_transfer: '🏦',
+  cash_on_delivery: '💵', mock_bkash: '💚', mock_nagad: '🔵'
+}
+
+const paymentMethodLabel = (method, T) => {
+  if (method === 'cash_on_delivery' || method === 'bank_transfer') return T('cashOnDelivery')
+  if (method === 'mock_bkash') return T('bkashSandbox')
+  if (method === 'mock_nagad') return T('nagadSandbox')
+  if (method === 'bkash') return 'bKash'
+  if (method === 'nagad') return 'Nagad'
+  return method?.replaceAll('_', ' ') || '—'
+}
+
+const paymentStatusLabel = (status, method, T) => {
+  if (status === 'paid' && ['mock_bkash', 'mock_nagad'].includes(method)) {
+    return T('paymentMockPaid')
+  }
+  const labels = {
+    pending: 'paymentPending',
+    paid: 'paymentPaid',
+    failed: 'paymentFailed',
+    in_escrow: 'paymentInEscrow',
+    released: 'paymentReleased',
+    refunded: 'paymentRefunded',
+  }
+  return labels[status] ? T(labels[status]) : status || '—'
+}
+
+const paymentStatusClass = (status) =>
+  ['paid', 'released'].includes(status) ? 'fd-badge--green'
+    : ['failed', 'refunded'].includes(status) ? 'fd-badge--red'
+      : 'fd-badge--gold'
+
+const deliveryMethodLabel = (method, T) =>
+  method === 'pickup' ? T('buyerPickup') : T('farmerDelivery')
 
 const fmtDate = (iso) => {
   if (!iso) return '—'
@@ -150,7 +196,9 @@ function OrderDetailModal({ order: o, onClose, onStatusUpdate, T }) {
                     </span>
                     <div>
                       <div className="fd-detail-val" style={{ fontSize: 14 }}>{item.product_name || T('unknownProduct')}</div>
-                      <div className="fd-detail-sub">{item.quantity_kg} kg × ৳{item.unit_price}/kg</div>
+                      <div className="fd-detail-sub">
+                        {orderItemQuantity(item)} {T(`unit_${orderItemUnit(item)}`)} × ৳{item.unit_price}/{T(`unit_${orderItemUnit(item)}`)}
+                      </div>
                     </div>
                   </div>
                   <div style={{ fontWeight: 700, color: '#2E7D32' }}>৳{item.subtotal?.toLocaleString()}</div>
@@ -161,27 +209,33 @@ function OrderDetailModal({ order: o, onClose, onStatusUpdate, T }) {
 
           {/* Delivery */}
           <div className="fd-detail-section">
-            <div className="fd-detail-label">Delivery Type</div>
-            <div className="fd-detail-val">{o.delivery_type === 'pickup' ? '📦 Pickup' : '🚚 Home Delivery'}</div>
+            <div className="fd-detail-label">{T('deliveryMethod')}</div>
+            <div className="fd-detail-val">{deliveryMethodLabel(o.delivery_method || o.delivery_type, T)}</div>
           </div>
 
           <div className="fd-detail-section fd-detail-section--full">
-            <div className="fd-detail-label">Delivery Address</div>
+            <div className="fd-detail-label">{T('deliveryAddress')}</div>
             <div className="fd-detail-val">{o.delivery_address || '—'}</div>
           </div>
+          {o.delivery_note && (
+            <div className="fd-detail-section fd-detail-section--full">
+              <div className="fd-detail-label">{T('deliveryNote')}</div>
+              <div className="fd-detail-val">{o.delivery_note}</div>
+            </div>
+          )}
 
           {/* Payment */}
           <div className="fd-detail-section">
-            <div className="fd-detail-label">Payment Method</div>
+            <div className="fd-detail-label">{T('paymentMethod')}</div>
             <div className="fd-detail-val">
-              {PAYMENT_ICONS[o.payment_method] || '💳'} {o.payment_method?.replace('_', ' ')}
+              {PAYMENT_ICONS[o.payment_method] || '💳'} {paymentMethodLabel(o.payment_method, T)}
             </div>
           </div>
 
           <div className="fd-detail-section">
-            <div className="fd-detail-label">Payment Status</div>
-            <span className={`fd-badge ${o.payment_status === 'released' ? 'fd-badge--green' : 'fd-badge--gold'}`}>
-              {o.payment_status === 'released' ? '✅ Released' : '🔒 In Escrow'}
+            <div className="fd-detail-label">{T('paymentStatus')}</div>
+            <span className={`fd-badge ${paymentStatusClass(o.payment_status)}`}>
+              {paymentStatusLabel(o.payment_status, o.payment_method, T)}
             </span>
           </div>
         </div>
@@ -189,15 +243,15 @@ function OrderDetailModal({ order: o, onClose, onStatusUpdate, T }) {
         {/* Financial breakdown */}
         <div className="fd-finance-box">
           <div className="fd-finance-row">
-            <span>Order Total</span>
+            <span>{T('itemsSubtotal')}</span>
             <span>৳{o.total_amount?.toLocaleString()}</span>
           </div>
           <div className="fd-finance-row">
-            <span>Platform Fee</span>
+            <span>{T('platformFee')}</span>
             <span className="fd-finance-neg">− ৳{o.platform_fee?.toLocaleString()}</span>
           </div>
           <div className="fd-finance-row fd-finance-row--total">
-            <span>You Receive</span>
+            <span>{T('farmerNetEarning')}</span>
             <span className="fd-finance-earn">৳{o.farmer_amount?.toLocaleString()}</span>
           </div>
         </div>
@@ -240,12 +294,28 @@ export default function FarmerDashboard() {
   const { lang } = useLanguage()
   const T = (key) => tr(key, lang)
   const [user, setUser] = useState(getStoredUser())
+  const [verificationReference, setVerificationReference] = useState(user?.verification_reference || '')
+  const [savingVerification, setSavingVerification] = useState(false)
 
   useEffect(() => {
     const syncUser = () => setUser(getStoredUser())
     globalThis.addEventListener('agromitra-auth-changed', syncUser)
     return () => globalThis.removeEventListener('agromitra-auth-changed', syncUser)
   }, [])
+
+  useEffect(() => {
+    if (!user?.user_id) return undefined
+    let active = true
+    getCurrentUser()
+      .then(({ data }) => {
+        if (!active) return
+        updateStoredUser(data)
+        setUser(data)
+        setVerificationReference(data.verification_reference || '')
+      })
+      .catch(error => console.error('Could not refresh farmer verification status:', error))
+    return () => { active = false }
+  }, [user?.user_id])
 
   const [searchParams, setSearchParams] = useSearchParams()
   const VALID_TABS = ['overview', 'price', 'demand', 'recommend', 'listings', 'orders', 'profile', 'settings']
@@ -331,9 +401,9 @@ export default function FarmerDashboard() {
   const [savingProduct, setSavingProduct] = useState(false)
 
   // ── Add/Edit Product modal-এর ভিতরের AI Price Suggestion ──
-  const [aiCropType, setAiCropType] = useState(AI_PRICE_CROPS[0])
   const [aiPriceLoading, setAiPriceLoading] = useState(false)
   const [aiPriceSuggestion, setAiPriceSuggestion] = useState(null)
+  const [aiPriceError, setAiPriceError] = useState(false)
 
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -440,15 +510,14 @@ export default function FarmerDashboard() {
   // productForm.title_en থেকে সবচেয়ে কাছাকাছি AI-supported crop অনুমান করে
   // (যেমন "Fresh Tomato" টাইটেল দিলে "Tomato" ধরে নেবে) — না মিললে প্রথমটা।
   const guessAiCrop = (title) => {
-    if (!title) return AI_PRICE_CROPS[0]
+    if (!title) return null
     const lower = title.toLowerCase()
-    return AI_PRICE_CROPS.find(c => lower.includes(c.toLowerCase())) || AI_PRICE_CROPS[0]
+    return AI_PRICE_CROPS.find(c => lower.includes(c.toLowerCase())) || null
   }
 
   const openAddModal = () => {
     setEditingProduct(null)
-    setProductForm(BLANK_PRODUCT)
-    setAiCropType(AI_PRICE_CROPS[0])
+    setProductForm({ ...BLANK_PRODUCT, district: user?.district || 'Dhaka' })
     setAiPriceSuggestion(null)
     setShowModal(true)
   }
@@ -460,7 +529,9 @@ export default function FarmerDashboard() {
       title_bn: product.title_bn || '',
       category: product.category || 'Vegetable',
       description_en: product.description_en || '',
-      quantity_kg: product.quantity_kg,
+      quantity: displayQuantity(product),
+      sale_unit: product.sale_unit || 'kg',
+      low_stock_threshold_kg: product.low_stock_threshold_kg ?? 5,
       unit_price_bdt: product.unit_price_bdt,
       quality_grade: product.quality_grade || 'A',
       district: product.district,
@@ -469,27 +540,54 @@ export default function FarmerDashboard() {
       availability_until: product.availability_until || '',
       image_url: product.image_url || '',
     })
-    setAiCropType(guessAiCrop(product.title_en))
     setAiPriceSuggestion(null)
     setShowModal(true)
   }
 
-  const handleGetAiPrice = async () => {
-    setAiPriceLoading(true)
-    setAiPriceSuggestion(null)
-    try {
-      const { data } = await getPricePrediction(aiCropType, productForm.district, 7)
-      setAiPriceSuggestion(data)
-    } catch (e) {
-      toast.error(e?.response?.data?.detail || T('AI price prediction failed', 'AI প্রাইস প্রেডিকশন ব্যর্থ হয়েছে'))
-    } finally {
+  useEffect(() => {
+    const cropName = guessAiCrop(productForm.title_en)
+    if (!showModal || !cropName) {
+      setAiPriceSuggestion(null)
+      setAiPriceError(false)
       setAiPriceLoading(false)
+      return undefined
     }
-  }
+
+    let active = true
+    setAiPriceSuggestion(null)
+    setAiPriceError(false)
+    const timeout = setTimeout(async () => {
+      setAiPriceLoading(true)
+      try {
+        const { data } = await getPricePrediction(cropName, productForm.district, 7)
+        if (active) setAiPriceSuggestion(data)
+      } catch {
+        if (active) {
+          setAiPriceSuggestion(null)
+          setAiPriceError(true)
+        }
+      } finally {
+        if (active) setAiPriceLoading(false)
+      }
+    }, 500)
+
+    return () => {
+      active = false
+      clearTimeout(timeout)
+    }
+  }, [showModal, productForm.title_en, productForm.district])
 
   const handleSaveProduct = async () => {
-    if (!productForm.title_en || !productForm.quantity_kg || !productForm.unit_price_bdt) {
-      toast.error('Title, quantity, and price are required')
+    if (!productForm.title_en || !productForm.quantity || !productForm.unit_price_bdt) {
+      toast.error(T('productFieldsRequired'))
+      return
+    }
+    if (['dozen', 'piece'].includes(productForm.sale_unit) && !Number.isInteger(Number(productForm.quantity))) {
+      toast.error(T('countQuantityWhole'))
+      return
+    }
+    if (!Number(productForm.low_stock_threshold_kg) || Number(productForm.low_stock_threshold_kg) <= 0) {
+      toast.error(T('lowStockThresholdRequired'))
       return
     }
     setSavingProduct(true)
@@ -502,7 +600,9 @@ export default function FarmerDashboard() {
       formData.append('title_bn', productForm.title_bn || '')
       formData.append('category', productForm.category)
       formData.append('description_en', productForm.description_en || '')
-      formData.append('quantity_kg', Number(productForm.quantity_kg))
+      formData.append('quantity', Number(productForm.quantity))
+      formData.append('sale_unit', productForm.sale_unit)
+      formData.append('low_stock_threshold_kg', Number(productForm.low_stock_threshold_kg))
       formData.append('unit_price_bdt', Number(productForm.unit_price_bdt))
       formData.append('quality_grade', productForm.quality_grade)
       formData.append('district', productForm.district)
@@ -521,11 +621,10 @@ export default function FarmerDashboard() {
 
       if (editingProduct) {
         await updateProduct(editingProduct.product_id, formData)
-        toast.success('Product updated!')
       } else {
         await createProduct(formData)
-        toast.success('Product listed!')
       }
+      toast.success(T('listingSaved'))
       setShowModal(false)
       fetchProducts()
     } catch (e) {
@@ -537,7 +636,9 @@ export default function FarmerDashboard() {
         const detail = e.response.data.detail;
 
         if (typeof detail === 'string') {
-          errorMsg = detail;
+          errorMsg = detail.includes('Count-unit quantities must be whole numbers.')
+            ? T('countQuantityWhole')
+            : detail;
         } else if (Array.isArray(detail) && detail[0]?.msg) {
           errorMsg = `${detail[0].loc?.join('.') || 'Error'}: ${detail[0].msg}`;
         } else if (typeof detail === 'object') {
@@ -801,12 +902,12 @@ export default function FarmerDashboard() {
               </div>
 
               {/* ── Low Stock Alert ── */}
-              {products.filter(p => p.quantity_kg < 50 && p.is_available !== false).length > 0 && (
+              {products.filter(p => p.stock_status === 'low_stock' && p.is_available !== false).length > 0 && (
                 <div className="alert alert-warning" style={{ marginBottom: 20 }}>
                   ⚠️ <strong>Low Stock Alert:</strong>{' '}
                   {products
-                    .filter(p => p.quantity_kg < 50 && p.is_available !== false)
-                    .map(p => `${p.title_en} (${p.quantity_kg} kg)`)
+                    .filter(p => p.stock_status === 'low_stock' && p.is_available !== false)
+                    .map(p => `${p.title_en} (${displayQuantity(p)} ${T(`unit_${displayUnit(p)}`)})`)
                     .join(', ')
                   } — consider restocking soon.
                 </div>
@@ -877,10 +978,9 @@ export default function FarmerDashboard() {
                         const cfg = STATUS_CONFIG[o.status?.toLowerCase()] || STATUS_CONFIG.pending
                         const items = o.items || []
                         const firstItem = items[0]
-                        const totalKg = items.reduce((sum, it) => sum + Number(it.quantity_kg || 0), 0)
                         const label = items.length > 1
                           ? `${firstItem?.product_name || 'Product'} + ${items.length - 1} more`
-                          : `${firstItem?.product_name || 'Product'} × ${totalKg} kg`
+                          : `${firstItem?.product_name || 'Product'} × ${orderItemQuantity(firstItem)} ${T(`unit_${orderItemUnit(firstItem)}`)}`
                         return (
                           <div key={i} style={{
                             display: 'flex', alignItems: 'center', gap: 12,
@@ -1635,7 +1735,7 @@ export default function FarmerDashboard() {
                     <table>
                       <thead>
                         <tr>
-                          <th>Crop</th><th>Quantity</th><th>Price/kg</th>
+                          <th>Crop</th><th>Quantity</th><th>{T('thPricePerUnit')}</th>
                           <th>District</th><th>Organic</th><th>Status</th><th>Actions</th>
                         </tr>
                       </thead>
@@ -1662,7 +1762,7 @@ export default function FarmerDashboard() {
                                 </div>
                               </div>
                             </td>
-                            <td>{p.quantity_kg?.toLocaleString()} kg</td>
+                            <td>{displayQuantity(p)?.toLocaleString()} {T(`unit_${displayUnit(p)}`)}</td>
                             <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
                             <td>{p.district}</td>
                             <td>{p.is_organic ? '✅ Yes' : '—'}</td>
@@ -1747,7 +1847,8 @@ export default function FarmerDashboard() {
                           const statusCfg = STATUS_CONFIG[o.status?.toLowerCase()] || STATUS_CONFIG.pending
                           const items = o.items || []
                           const firstItem = items[0]
-                          const totalKg = items.reduce((sum, it) => sum + Number(it.quantity_kg || 0), 0)
+                            const totalQuantity = items.length === 1 ? orderItemQuantity(firstItem) : items.length
+                          const totalUnit = items.length === 1 ? T(`unit_${orderItemUnit(firstItem)}`) : T('itemCount')
                           return (
                             <tr key={o.order_id} className="fd-order-row"
                               onClick={() => setSelectedOrder(o)}
@@ -1772,7 +1873,7 @@ export default function FarmerDashboard() {
                                   <div style={{ fontSize: 11, color: '#888' }}>{firstItem.product_name_bn}</div>
                                 )}
                               </td>
-                              <td><strong>{totalKg} kg</strong></td>
+                              <td><strong>{totalQuantity} {totalUnit}</strong></td>
                               <td>
                                 <span className="fd-earn">৳{(o.farmer_amount || o.total_amount)?.toLocaleString()}</span>
                                 {o.platform_fee > 0 && (
@@ -1781,19 +1882,19 @@ export default function FarmerDashboard() {
                               </td>
                               <td>
                                 <span className="fd-payment">
-                                  {PAYMENT_ICONS[o.payment_method] || '💳'} {o.payment_method?.replace('_', ' ')}
+                                  {PAYMENT_ICONS[o.payment_method] || '💳'} {paymentMethodLabel(o.payment_method, T)}
                                 </span>
                               </td>
                               <td>
-                                <span>{o.delivery_type === 'pickup' ? '📦 Pickup' : '🚚 Delivery'}</span>
+                                <span>{deliveryMethodLabel(o.delivery_method || o.delivery_type, T)}</span>
                               </td>
                               <td>
-                                <span className="fd-address" title={o.delivery_address}>
+                                <span className="fd-address" title={o.delivery_address || o.delivery_note}>
                                   {o.delivery_address
                                     ? o.delivery_address.length > 20
                                       ? o.delivery_address.slice(0, 20) + '…'
                                       : o.delivery_address
-                                    : '—'}
+                                    : o.delivery_note || '—'}
                                 </span>
                               </td>
                               <td onClick={e => e.stopPropagation()}>
@@ -1903,9 +2004,11 @@ export default function FarmerDashboard() {
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
                   <span className="badge badge-green">👨‍🌾 Farmer</span>
                   {user?.district && <span className="badge badge-blue">📍 {user.district}</span>}
-                  {user?.is_verified
-                    ? <span className="badge badge-green">✅ Verified</span>
-                    : <span className="badge badge-orange">⏳ Not Verified</span>
+                  {user?.verification_status === 'approved'
+                    ? <span className="badge badge-green">✅ {T('verifiedFarmer')}</span>
+                    : <span className={`badge ${user?.verification_status === 'rejected' ? 'badge-red' : 'badge-orange'}`}>
+                        {user?.verification_status === 'rejected' ? T('verificationRejected') : T('verificationPending')}
+                      </span>
                   }
                   <span className="badge" style={{ background: '#F3E5F5', color: '#6A1B9A' }}>
                     ⭐ Trust Score: 87/100
@@ -1917,6 +2020,51 @@ export default function FarmerDashboard() {
                     : '—'
                   }
                 </div>
+              </div>
+
+              <div className="card" style={{ marginBottom: 20 }}>
+                <div className="card-title">{T('verificationQueue')}</div>
+                <div style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 12 }}>
+                  {T('verificationHelp')}
+                </div>
+                {user?.verification_reason && (
+                  <div className="badge badge-red" style={{ marginBottom: 12 }}>
+                    {T('verificationReason')}: {user.verification_reason}
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">{T('verificationReference')}</label>
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    maxLength={1000}
+                    value={verificationReference}
+                    onChange={event => setVerificationReference(event.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  disabled={savingVerification}
+                  onClick={async () => {
+                    setSavingVerification(true)
+                    try {
+                      const response = await submitFarmerVerification({
+                        verification_reference: verificationReference.trim() || null,
+                      })
+                      const updatedUser = { ...user, ...response.data }
+                      updateStoredUser(updatedUser)
+                      setUser(updatedUser)
+                      toast.success(T('verificationSaved'))
+                    } catch (error) {
+                      console.error('Could not submit farmer verification:', error)
+                      toast.error(T('verificationFailed'))
+                    } finally {
+                      setSavingVerification(false)
+                    }
+                  }}
+                >
+                  {savingVerification ? T('loading') : T('submitVerification')}
+                </button>
               </div>
 
               {/* Editable Info Card */}
@@ -2071,21 +2219,25 @@ export default function FarmerDashboard() {
                   {editingProduct ? T('editProduct') : T('addProduct')}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Product Title (English) *</label>
-                  <input className="form-input" type="text" value={productForm.title_en}
-                    onChange={e => setProductForm({ ...productForm, title_en: e.target.value })}
-                    placeholder="e.g. Fresh Tomato" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Product Title (বাংলা)</label>
-                  <input className="form-input" type="text" value={productForm.title_bn}
-                    onChange={e => setProductForm({ ...productForm, title_bn: e.target.value })}
-                    placeholder="যেমন: তাজা টমেটো" />
+                  <label className="form-label">{T('productCrop')} *</label>
+                  <input className="form-input farmer-product-input" type="text" list="farmer-crop-options"
+                    value={productForm.title_en}
+                    onChange={e => setProductForm({
+                      ...productForm,
+                      title_en: e.target.value,
+                      category: cropCategory(e.target.value),
+                    })}
+                    placeholder={T('cropInputPlaceholder')} required />
+                  <datalist id="farmer-crop-options">
+                    {[...new Set([...CROPS, ...AI_PRICE_CROPS])].map(cropName => (
+                      <option key={cropName} value={cropName} />
+                    ))}
+                  </datalist>
                 </div>
                 {/* ── 📸 প্রোডাক্ট ছবি আপলোড ফিল্ড ── */}
                 {/* ── 📸 প্রোডাক্ট ছবি আপলোড ফিল্ড ── */}
                 <div className="form-group" style={{ marginTop: 8 }}>
-                  <label className="form-label">Product Photo</label>
+                  <label className="form-label">{T('productPhoto')}</label>
 
                   {/* ছবি লোকালি সিলেক্ট করা থাকলে বা আগের কোনো ইমেজ থাকলে তার প্রিভিউ দেখাবে */}
                   {productForm.image_url && (
@@ -2105,7 +2257,9 @@ export default function FarmerDashboard() {
                     </div>
                   )}
 
-                  <input
+                  <label className="farmer-photo-picker">
+                    <span>{T('choosePhoto')}</span>
+                    <input
                     type="file"
                     accept="image/*"
                     className="form-input"
@@ -2123,66 +2277,67 @@ export default function FarmerDashboard() {
                         image_url: localPreviewUrl
                       });
 
-                      toast.success('Photo selected!');
+                      toast.success(T('photoSelected'));
                     }}
-                  />
+                    />
+                  </label>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="farmer-product-row">
                   <div className="form-group">
-                    <label className="form-label">Category</label>
-                    <select className="form-select" value={productForm.category}
-                      onChange={e => setProductForm({ ...productForm, category: e.target.value })}>
-                      {['Vegetable', 'Fruit', 'Grain', 'Spice', 'Root'].map(c => <option key={c}>{c}</option>)}
+                    <label className="form-label">{T('productQuantity')} *</label>
+                    <input className="form-input farmer-product-input" type="number" min="0.01"
+                      value={productForm.quantity}
+                      step={['dozen', 'piece'].includes(productForm.sale_unit) ? '1' : '0.01'}
+                      onChange={e => setProductForm({ ...productForm, quantity: e.target.value })}
+                      placeholder="0" required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{T('productUnit')}</label>
+                    <select className="form-select farmer-product-input" value={productForm.sale_unit}
+                      onChange={e => {
+                        const nextUnit = e.target.value
+                        const previousUnit = productForm.sale_unit
+                        const sameKind = ['kg', 'maund'].includes(previousUnit) === ['kg', 'maund'].includes(nextUnit)
+                        setProductForm({
+                          ...productForm,
+                          sale_unit: nextUnit,
+                          quantity: sameKind && productForm.quantity
+                            ? Number(productForm.quantity) * UNIT_TO_BASE[previousUnit] / UNIT_TO_BASE[nextUnit]
+                            : '',
+                          unit_price_bdt: sameKind && productForm.unit_price_bdt
+                            ? Number(productForm.unit_price_bdt) * UNIT_TO_BASE[nextUnit] / UNIT_TO_BASE[previousUnit]
+                            : '',
+                        })
+                      }}>
+                      {['kg', 'maund', 'dozen', 'piece'].map(unit => (
+                        <option key={unit} value={unit}>{T(`unit_${unit}`)}</option>
+                      ))}
                     </select>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Quality Grade</label>
-                    <select className="form-select" value={productForm.quality_grade}
-                      onChange={e => setProductForm({ ...productForm, quality_grade: e.target.value })}>
-                      {['A', 'B', 'C'].map(g => <option key={g}>{g}</option>)}
-                    </select>
-                  </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Quantity (kg) *</label>
-                    <input className="form-input" type="number" min="1" value={productForm.quantity_kg}
-                      onChange={e => setProductForm({ ...productForm, quantity_kg: e.target.value })}
-                      placeholder="e.g. 500" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Price per kg (৳) *</label>
-                    <input className="form-input" type="number" min="1" value={productForm.unit_price_bdt}
+                <div className="form-group">
+                    <label className="form-label">
+                      {T('productPrice')} (৳) · {T('productPricePerUnit').replace('{unit}', T(`unit_${productForm.sale_unit}`))}
+                    </label>
+                    <input className="form-input farmer-product-input" type="number" min="0.01" step="0.01"
+                      value={productForm.unit_price_bdt}
                       onChange={e => setProductForm({ ...productForm, unit_price_bdt: e.target.value })}
-                      placeholder="e.g. 22" />
-                  </div>
+                      placeholder="0" required />
                 </div>
 
                 {/* ── 🤖 AI Price Suggestion ── */}
                 <div className="form-group" style={{
                   background: 'var(--green-pale, #E8F5E9)', borderRadius: 10, padding: 14, marginTop: 4
                 }}>
-                  <label className="form-label" style={{ marginBottom: 8 }}>
-                    🤖 {T('AI Price Suggestion', 'AI প্রাইস সাজেশন')}
-                  </label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <select className="form-select" style={{ flex: '1 1 140px' }}
-                      value={aiCropType}
-                      onChange={e => { setAiCropType(e.target.value); setAiPriceSuggestion(null) }}>
-                      {AI_PRICE_CROPS.map(c => (
-                        <option key={c} value={c}>{CROP_EMOJIS[c] || '🌿'} {c}</option>
-                      ))}
-                    </select>
-                    <button type="button" className="btn btn-secondary" style={{ flex: '0 0 auto' }}
-                      onClick={handleGetAiPrice} disabled={aiPriceLoading}>
-                      {aiPriceLoading ? T('Checking...', 'চেক হচ্ছে...') : T('Get Suggested Price', 'দাম জেনে নিন')}
-                    </button>
+                  <div className="form-label" style={{ marginBottom: 6 }}>
+                  🤖 {T('aiPriceSuggestionLabel')}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--gray, #546E7A)', marginTop: 6 }}>
-                    {T(
-                      `Uses ${productForm.district}'s market data — pick the crop closest to what you're listing.`,
-                      `${productForm.district}-এর বাজারদর অনুযায়ী — যে ফসলের সাথে সবচেয়ে মিল আছে সেটা বাছাই করুন।`
-                    )}
+                  <div style={{ fontSize: 13, color: 'var(--gray, #546E7A)' }}>
+                    {aiPriceLoading ? T('aiPriceChecking') : aiPriceError
+                      ? T('aiPriceUnavailable')
+                      : aiPriceSuggestion
+                        ? T('aiReferencePerKg').replace('{price}', String(aiPriceSuggestion.summary.avg_forecast))
+                        : T('aiPriceTypeCrop')}
                   </div>
 
                   {aiPriceSuggestion && (
@@ -2217,43 +2372,35 @@ export default function FarmerDashboard() {
                           ? T('🤖 Trained AI model (Prophet + XGBoost)', '🤖 প্রশিক্ষিত AI মডেল (Prophet + XGBoost)')
                           : T('📊 Statistical estimate — no trained model yet for this crop/district', '📊 পরিসংখ্যানগত অনুমান — এই ফসল/জেলার জন্য এখনো প্রশিক্ষিত মডেল নেই')}
                       </div>
-                      <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 10, display: 'block' }}
+                      {['kg', 'maund'].includes(productForm.sale_unit) ? (
+                      <button type="button" className="btn btn-primary btn-sm farmer-product-action" style={{ marginTop: 10, display: 'block' }}
                         onClick={() => {
-                          setProductForm({ ...productForm, unit_price_bdt: aiPriceSuggestion.summary.avg_forecast })
-                          toast.success(T('Price applied!', 'দাম বসানো হয়েছে!'))
+                          const multiplier = UNIT_TO_BASE[productForm.sale_unit]
+                          setProductForm({
+                            ...productForm,
+                            unit_price_bdt: Number(aiPriceSuggestion.summary.avg_forecast) * multiplier,
+                          })
+                          toast.success(T('priceApplied'))
                         }}>
-                        ✅ {T(`Use ৳${aiPriceSuggestion.summary.avg_forecast} as my price`, `৳${aiPriceSuggestion.summary.avg_forecast} দাম হিসেবে বসাও`)}
+                        ✅ {T('useSuggestedPrice')}
                       </button>
+                      ) : <div style={{ fontSize: 12, marginTop: 8 }}>{T('aiCountUnitPriceNote')}</div>}
                     </div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">District</label>
+                  <label className="form-label">{T('productDistrict')}</label>
                   <select className="form-select" value={productForm.district}
                     onChange={e => { setProductForm({ ...productForm, district: e.target.value }); setAiPriceSuggestion(null) }}>
                     {DISTRICTS.map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Description</label>
-                  <textarea className="form-input" rows={3} style={{ resize: 'vertical' }}
-                    value={productForm.description_en}
-                    onChange={e => setProductForm({ ...productForm, description_en: e.target.value })}
-                    placeholder="Fresh from farm, pesticide-free…" />
-                </div>
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" id="is_organic" checked={productForm.is_organic}
-                    onChange={e => setProductForm({ ...productForm, is_organic: e.target.checked })} />
-                  <label htmlFor="is_organic" style={{ marginBottom: 0, cursor: 'pointer' }}>
-                    🌿 Organic product
-                  </label>
-                </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  <button className="btn btn-primary" style={{ flex: 1 }}
+                <div className="farmer-product-actions">
+                  <button className="btn btn-primary farmer-product-action" style={{ flex: 1 }}
                     onClick={handleSaveProduct} disabled={savingProduct}>
-                    {savingProduct ? '⏳ Saving…' : editingProduct ? '✅ Update Listing' : '➕ Add Listing'}
+                    {savingProduct ? '⏳ Saving…' : editingProduct ? T('updateListing') : T('addListing')}
                   </button>
-                  <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                  <button className="btn btn-secondary farmer-product-action" onClick={() => setShowModal(false)}>{T('cancel')}</button>
                 </div>
               </div>
             </div>

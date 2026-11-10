@@ -24,9 +24,10 @@ from sqlalchemy.orm import Session  # type: ignore[import]
 from backend.database import get_db
 from backend.database.models.product import Product, ProductStatus, QualityGrade
 from backend.database.models.review import Review
-from backend.database.models.user import User, UserRole
+from backend.database.models.user import User, UserRole, VerificationStatus
 from backend.database.routes.auth_routes import get_current_user
 from backend.database.schemas.product_schema import FarmerProfileResponse, ProductResponse
+from backend.database.utils.quantity_units import normalize_sale_unit, quantity_to_base
 
 
 def _parse_dt(value: Optional[str]):
@@ -90,7 +91,10 @@ async def create_product(
     title_bn       : Optional[str] = Form(None),
     category       : str = Form(...),
     description_en : Optional[str] = Form(None),
-    quantity_kg    : float = Form(...),
+    quantity       : Optional[float] = Form(None, gt=0),
+    quantity_kg    : Optional[float] = Form(None, gt=0),
+    sale_unit      : str = Form("kg"),
+    low_stock_threshold_kg: float = Form(5.0, gt=0),
     unit_price_bdt : float = Form(...),
     quality_grade  : QualityGrade = Form(default=QualityGrade.A),
     district       : str = Form(...),
@@ -105,6 +109,16 @@ async def create_product(
     """Farmer নতুন product listing তৈরি করো (ছবিসহ, multipart/form-data)।"""
     if current_user.role not in [UserRole.farmer, UserRole.admin]:
         raise HTTPException(status_code=403, detail="Only farmers can create listings.")
+    if quantity is None and quantity_kg is None:
+        raise HTTPException(status_code=422, detail="Product quantity is required.")
+    try:
+        sale_unit = normalize_sale_unit(sale_unit)
+        stock_quantity = quantity_to_base(
+            quantity if quantity is not None else quantity_kg,
+            sale_unit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     photos = None
     if file is not None:
@@ -119,7 +133,9 @@ async def create_product(
         title_bn       = title_bn,
         category       = category,
         description_en = description_en,
-        quantity_kg    = quantity_kg,
+        quantity_kg    = stock_quantity,
+        sale_unit      = sale_unit,
+        low_stock_threshold_kg = low_stock_threshold_kg,
         unit_price_bdt = unit_price_bdt,
         quality_grade  = quality_grade,
         district       = district,
@@ -135,6 +151,7 @@ async def create_product(
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
+    new_product.farmer_verified = current_user.verification_status == VerificationStatus.approved
     return new_product
 
 
@@ -151,7 +168,10 @@ async def get_products(
     db        : Session        = Depends(get_db)
 ):
     """সব active product listings দেখাও। Filter করা যাবে।"""
-    query = db.query(Product).filter(Product.status == ProductStatus.active)
+    query = db.query(Product).join(User, Product.farmer_id == User.user_id).filter(
+        Product.status == ProductStatus.active,
+        User.verification_status == VerificationStatus.approved,
+    )
 
     if category:   query = query.filter(Product.category == category)
     if district:   query = query.filter(Product.district == district)
@@ -177,11 +197,16 @@ async def get_products(
             "farmer_id": p.farmer_id,
             "farmer_name": farmer_map.get(str(p.farmer_id)),
             "farmer_photo_url": farmer_photo_map.get(str(p.farmer_id)),
+            "farmer_verified": True,
             "title_en": p.title_en,
             "title_bn": p.title_bn,
             "category": p.category,
             "description_en": p.description_en,
             "quantity_kg": p.quantity_kg,
+            "quantity": p.quantity,
+            "sale_unit": p.sale_unit or "kg",
+            "low_stock_threshold_kg": p.low_stock_threshold_kg,
+            "stock_status": p.stock_status,
             "unit_price_bdt": p.unit_price_bdt,
             "quality_grade": p.quality_grade,
             "district": p.district,
@@ -210,8 +235,10 @@ async def get_farmer_profile(farmer_id: UUID, db: Session = Depends(get_db)):
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found.")
 
-    products = db.query(Product).filter(
-        Product.farmer_id == farmer_id, Product.status == ProductStatus.active
+    products = db.query(Product).join(User, Product.farmer_id == User.user_id).filter(
+        Product.farmer_id == farmer_id,
+        Product.status == ProductStatus.active,
+        User.verification_status == VerificationStatus.approved,
     ).order_by(Product.created_at.desc()).all()
 
     rating_map = _get_rating_map(db, [p.product_id for p in products])
@@ -223,11 +250,16 @@ async def get_farmer_profile(farmer_id: UUID, db: Session = Depends(get_db)):
             farmer_id=p.farmer_id,
             farmer_name=farmer.name_en,
             farmer_photo_url=farmer.profile_photo_url,
+            farmer_verified=True,
             title_en=p.title_en,
             title_bn=p.title_bn,
             category=p.category,
             description_en=p.description_en,
             quantity_kg=p.quantity_kg,
+            quantity=p.quantity,
+            sale_unit=p.sale_unit or "kg",
+            low_stock_threshold_kg=p.low_stock_threshold_kg,
+            stock_status=p.stock_status,
             unit_price_bdt=p.unit_price_bdt,
             quality_grade=p.quality_grade,
             district=p.district,
@@ -256,7 +288,8 @@ async def get_farmer_profile(farmer_id: UUID, db: Session = Depends(get_db)):
         name_bn=farmer.name_bn,
         profile_photo_url=farmer.profile_photo_url,
         district=farmer.district,
-        is_verified=farmer.is_verified,
+        is_verified=farmer.verification_status == VerificationStatus.approved,
+        verification_status=farmer.verification_status.value,
         member_since=farmer.created_at,
         average_rating=overall_rating,
         review_count=overall_count,
@@ -282,11 +315,16 @@ async def get_my_products(
             "farmer_id": p.farmer_id,
             "farmer_name": current_user.name_en,
             "farmer_photo_url": current_user.profile_photo_url,
+            "farmer_verified": current_user.verification_status == VerificationStatus.approved,
             "title_en": p.title_en,
             "title_bn": p.title_bn,
             "category": p.category,
             "description_en": p.description_en,
             "quantity_kg": p.quantity_kg,
+            "quantity": p.quantity,
+            "sale_unit": p.sale_unit or "kg",
+            "low_stock_threshold_kg": p.low_stock_threshold_kg,
+            "stock_status": p.stock_status,
             "unit_price_bdt": p.unit_price_bdt,
             "quality_grade": p.quality_grade,
             "district": p.district,
@@ -315,12 +353,14 @@ async def get_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found.")
 
+    farmer = db.query(User).filter(User.user_id == product.farmer_id).first()
+    if not farmer or farmer.verification_status != VerificationStatus.approved:
+        raise HTTPException(status_code=404, detail="Product not found.")
+
     # View count বাড়াও
     product.views_count += 1
     db.commit()
     db.refresh(product)
-
-    farmer = db.query(User).filter(User.user_id == product.farmer_id).first()
     avg_rating, review_count = _get_rating_map(db, [product.product_id]).get(product.product_id, (None, 0))
 
     return ProductResponse(
@@ -328,11 +368,16 @@ async def get_product(
         farmer_id=product.farmer_id,
         farmer_name=farmer.name_en if farmer else None,
         farmer_photo_url=farmer.profile_photo_url if farmer else None,
+        farmer_verified=farmer.verification_status == VerificationStatus.approved,
         title_en=product.title_en,
         title_bn=product.title_bn,
         category=product.category,
         description_en=product.description_en,
         quantity_kg=product.quantity_kg,
+        quantity=product.quantity,
+        sale_unit=product.sale_unit or "kg",
+        low_stock_threshold_kg=product.low_stock_threshold_kg,
+        stock_status=product.stock_status,
         unit_price_bdt=product.unit_price_bdt,
         quality_grade=product.quality_grade,
         district=product.district,
@@ -356,7 +401,10 @@ async def update_product(
     title_bn       : Optional[str] = Form(None),
     category       : Optional[str] = Form(None),
     description_en : Optional[str] = Form(None),
-    quantity_kg    : Optional[float] = Form(None),
+    quantity       : Optional[float] = Form(None, gt=0),
+    quantity_kg    : Optional[float] = Form(None, gt=0),
+    sale_unit      : Optional[str] = Form(None),
+    low_stock_threshold_kg: Optional[float] = Form(None, gt=0),
     unit_price_bdt : Optional[float] = Form(None),
     quality_grade  : Optional[QualityGrade] = Form(None),
     district       : Optional[str] = Form(None),
@@ -380,7 +428,22 @@ async def update_product(
     if title_bn       is not None: product.title_bn       = title_bn
     if category       is not None: product.category       = category
     if description_en is not None: product.description_en = description_en
-    if quantity_kg     is not None: product.quantity_kg    = quantity_kg
+    if quantity is not None or quantity_kg is not None:
+        unit = sale_unit or (product.sale_unit if quantity is not None else "kg")
+        try:
+            unit = normalize_sale_unit(unit)
+            stock_quantity = quantity_to_base(
+                quantity if quantity is not None else quantity_kg,
+                unit,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        product.quantity_kg = stock_quantity
+        product.sale_unit = unit
+        if stock_quantity > 0 and product.status == ProductStatus.sold_out:
+            product.status = ProductStatus.active
+    if low_stock_threshold_kg is not None:
+        product.low_stock_threshold_kg = low_stock_threshold_kg
     if unit_price_bdt is not None:
         product.unit_price_bdt    = unit_price_bdt
         product.ai_fair_price_min = round(float(unit_price_bdt) * 0.90, 2)
@@ -401,6 +464,7 @@ async def update_product(
 
     db.commit()
     db.refresh(product)
+    product.farmer_verified = current_user.verification_status == VerificationStatus.approved
     return product
 
 

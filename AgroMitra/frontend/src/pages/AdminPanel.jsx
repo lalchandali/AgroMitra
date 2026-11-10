@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, updateStoredUser, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate } from '../api/agromitra'
+import { getHealth, getAllOrders, getAllUsers, updateUserStatus, verifyUser, getAllProducts, deleteProduct, uploadProfilePhoto, updateProfile, getStoredUser, resolveImageUrl, updateStoredUser, adminListTestimonials, adminSetTestimonialStatus, adminDeleteTestimonial, getTrainingDataStatus, retrainModelData, getRetrainLog, downloadRetrainTemplate, getFarmerVerificationQueue, decideFarmerVerification, getAdminReports, updateAdminReport } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
 import { tr } from '../translations'
+import { displayQuantity, displayUnit, orderItemQuantity, orderItemUnit } from '../utils/quantityUnits'
 import toast from 'react-hot-toast'
 
 const orderBadge = (status) => {
@@ -16,7 +17,23 @@ const orderBadge = (status) => {
   return map[status?.toLowerCase()] || 'badge-blue'
 }
 
-const paymentBadge = (s) => s === 'released' ? 'badge-green' : s === 'refunded' ? 'badge-red' : 'badge-gold'
+const paymentBadge = (s) => ['paid', 'released'].includes(s)
+  ? 'badge-green'
+  : ['failed', 'refunded'].includes(s) ? 'badge-red' : 'badge-gold'
+const paymentStatusLabel = (status, method, T) => {
+  if (status === 'paid' && ['mock_bkash', 'mock_nagad'].includes(method)) {
+    return T('paymentMockPaid')
+  }
+  const keys = {
+    pending: 'paymentPending',
+    paid: 'paymentPaid',
+    failed: 'paymentFailed',
+    in_escrow: 'paymentInEscrow',
+    released: 'paymentReleased',
+    refunded: 'paymentRefunded',
+  }
+  return keys[status] ? T(keys[status]) : status
+}
 const roleBadge = (r) => ({ farmer:'badge-green', buyer:'badge-blue', consumer:'badge-gold', admin:'badge-red' }[r] || 'badge-blue')
 
 const CROP_EMOJIS = {
@@ -53,6 +70,12 @@ export default function AdminPanel() {
   const [testimonials, setTestimonials]             = useState([])
   const [testimonialsLoading, setTestimonialsLoading] = useState(false)
   const [testimonialStatusFilter, setTestimonialStatusFilter] = useState('pending')
+
+  // Farmer verification and user/listing reports
+  const [verificationQueue, setVerificationQueue] = useState([])
+  const [verificationLoading, setVerificationLoading] = useState(false)
+  const [reports, setReports] = useState([])
+  const [reportsLoading, setReportsLoading] = useState(false)
 
   // Retrain data (Price Prediction + Demand Forecast)
   const [dataStatus, setDataStatus]           = useState(null)
@@ -131,11 +154,35 @@ export default function AdminPanel() {
     finally { setDataStatusLoading(false) }
   }, [])
 
+  const fetchVerificationQueue = useCallback(async () => {
+    setVerificationLoading(true)
+    try {
+      const res = await getFarmerVerificationQueue()
+      setVerificationQueue(res.data || [])
+    } catch (error) {
+      console.error('Could not load farmer verification queue:', error)
+      toast.error(tr('verificationFailed', lang))
+    } finally { setVerificationLoading(false) }
+  }, [lang])
+
+  const fetchReports = useCallback(async () => {
+    setReportsLoading(true)
+    try {
+      const res = await getAdminReports()
+      setReports(res.data || [])
+    } catch (error) {
+      console.error('Could not load reports:', error)
+      toast.error(tr('reportFailed', lang))
+    } finally { setReportsLoading(false) }
+  }, [lang])
+
   useEffect(() => { if (activeTab === 'users')    fetchUsers()   }, [activeTab, fetchUsers])
   useEffect(() => { if (activeTab === 'orders')  { fetchOrders(); fetchUsers() } }, [activeTab, fetchOrders, fetchUsers])
   useEffect(() => { if (activeTab === 'products') fetchProducts() }, [activeTab, fetchProducts])
   useEffect(() => { if (activeTab === 'overview') { fetchOrders(); fetchProducts(); fetchUsers() } }, [activeTab, fetchOrders, fetchProducts, fetchUsers])
   useEffect(() => { if (activeTab === 'testimonials') fetchTestimonials() }, [activeTab, fetchTestimonials])
+  useEffect(() => { if (activeTab === 'verification') fetchVerificationQueue() }, [activeTab, fetchVerificationQueue])
+  useEffect(() => { if (activeTab === 'reports') fetchReports() }, [activeTab, fetchReports])
   useEffect(() => { if (activeTab === 'retrain') fetchDataStatus() }, [activeTab, fetchDataStatus])
 
   // ── User actions ─────────────────────────────────────────────
@@ -153,6 +200,41 @@ export default function AdminPanel() {
       toast.success('✅ User verified!')
       fetchUsers()
     } catch (e) { toast.error(e?.response?.data?.detail || 'Could not verify') }
+  }
+
+  const handleFarmerVerification = async (farmer, status) => {
+    let reason = null
+    if (status === 'rejected') {
+      reason = globalThis.prompt(T('rejectReasonPrompt'))
+      if (reason === null) return
+      if (!reason.trim()) {
+        toast.error(T('rejectReasonRequired'))
+        return
+      }
+    }
+    try {
+      await decideFarmerVerification(farmer.user_id, status, reason)
+      toast.success(T('verificationDecisionSaved'))
+      fetchVerificationQueue()
+      fetchUsers()
+    } catch (error) {
+      console.error('Could not save farmer verification decision:', error)
+      toast.error(T('verificationDecisionFailed'))
+    }
+  }
+
+  const handleReportUpdate = async (report) => {
+    const status = report.status === 'open' ? 'resolved' : 'open'
+    const note = status === 'resolved' ? globalThis.prompt(T('reportNotePrompt'), report.admin_note || '') : report.admin_note
+    if (note === null) return
+    try {
+      await updateAdminReport(report.report_id, status, note)
+      toast.success(T('reportUpdated'))
+      fetchReports()
+    } catch (error) {
+      console.error('Could not update report:', error)
+      toast.error(T('reportUpdateFailed'))
+    }
   }
 
   // ── Product actions ──────────────────────────────────────────
@@ -237,7 +319,10 @@ export default function AdminPanel() {
   // ── Derived stats ────────────────────────────────────────────
   const totalFarmers    = users.filter(u => u.role === 'farmer').length
   const totalBuyers     = users.filter(u => u.role === 'buyer' || u.role === 'consumer').length
-  const totalRevenue    = orders.filter(o => o.payment_status === 'released').reduce((s, o) => s + (o.platform_fee || 0), 0)
+  const totalRevenue    = orders.filter(o =>
+    o.payment_status === 'released'
+    || (o.payment_status === 'paid' && !['mock_bkash', 'mock_nagad'].includes(o.payment_method))
+  ).reduce((s, o) => s + (o.platform_fee || 0), 0)
   const completedOrders = orders.filter(o => o.status === 'delivered').length
   const completionRate  = orders.length ? ((completedOrders / orders.length) * 100).toFixed(1) : 0
   const activeProducts  = products.filter(p => p.status === 'active').length
@@ -278,6 +363,8 @@ export default function AdminPanel() {
           tabs={[
             { key: 'overview',  icon: '📊', label: T('overview') },
             { key: 'users',     icon: '👥', label: T('users') },
+            { key: 'verification', icon: '✅', label: T('verificationQueue'), badge: verificationQueue.length || null },
+            { key: 'reports', icon: '🚩', label: T('reports'), badge: reports.filter(report => report.status === 'open').length || null },
             { key: 'orders',    icon: '📦', label: T('orders'),   badge: orders.length || null },
             { key: 'products',  icon: '🌿', label: T('products'), badge: products.length || null },
             { key: 'testimonials', icon: '💬', label: T('testimonials') },
@@ -352,7 +439,7 @@ export default function AdminPanel() {
                         <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{o.total_amount?.toLocaleString()}</td>
                         <td style={{ color: '#546E7A' }}>৳{o.platform_fee?.toLocaleString()}</td>
                         <td><span className={`badge ${orderBadge(o.status)}`}>{o.status}</span></td>
-                        <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{o.payment_status}</span></td>
+                        <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{paymentStatusLabel(o.payment_status, o.payment_method, T)}</span></td>
                         <td style={{ color: '#546E7A', fontSize: 13 }}>{o.created_at?.slice(0, 10)}</td>
                       </tr>
                     ))}
@@ -380,12 +467,12 @@ export default function AdminPanel() {
             ) : (
               <div className="table-container">
                 <table>
-                  <thead><tr><th>{T('thProduct')}</th><th>{T('thQty')}</th><th>{T('thPricePerKg')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th></tr></thead>
+                  <thead><tr><th>{T('thProduct')}</th><th>{T('thQty')}</th><th>{T('thPricePerUnit')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th></tr></thead>
                   <tbody>
                     {products.slice(0, 8).map(p => (
                       <tr key={p.product_id}>
                         <td><strong>{CROP_EMOJIS[p.crop_name] || '🌿'} {p.title_en}</strong></td>
-                        <td>{p.quantity_kg} kg</td>
+                        <td>{displayQuantity(p)} {T(`unit_${displayUnit(p)}`)}</td>
                         <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
                         <td style={{ fontSize: 13, color: '#546E7A' }}>{p.district}</td>
                         <td>{p.is_organic ? '🌱 Yes' : '—'}</td>
@@ -486,6 +573,87 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {activeTab === 'verification' && (
+        <div className="card">
+          <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="section-title">✅ {T('verificationQueue')}</div>
+            <button className="btn btn-secondary btn-sm" onClick={fetchVerificationQueue}>{T('refresh')}</button>
+          </div>
+          {verificationLoading ? (
+            <div>{T('loading')}</div>
+          ) : verificationQueue.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#78909C' }}>{T('noVerificationRequests')}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {verificationQueue.map(farmer => (
+                <div key={farmer.user_id} style={{
+                  border: '1px solid #E5EAE5', borderRadius: 10, padding: 16,
+                  display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+                }}>
+                  <div style={{ minWidth: 240, flex: 1 }}>
+                    <strong>{farmer.name_en}</strong>
+                    <div style={{ fontSize: 13, color: '#607D8B', marginTop: 4 }}>
+                      {farmer.mobile_number} · {farmer.district || '—'}
+                    </div>
+                    <div style={{ fontSize: 13, marginTop: 8 }}>
+                      <strong>{T('verificationReference')}:</strong> {farmer.verification_reference || '—'}
+                    </div>
+                  </div>
+                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleFarmerVerification(farmer, 'approved')}>
+                      {T('approveVerification')}
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleFarmerVerification(farmer, 'rejected')}>
+                      {T('rejectVerification')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'reports' && (
+        <div className="card">
+          <div className="flex justify-between mb-20" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div className="section-title">🚩 {T('reports')}</div>
+            <button className="btn btn-secondary btn-sm" onClick={fetchReports}>{T('refresh')}</button>
+          </div>
+          {reportsLoading ? (
+            <div>{T('loading')}</div>
+          ) : reports.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#78909C' }}>{T('noReports')}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {reports.map(report => (
+                <div key={report.report_id} style={{ border: '1px solid #E5EAE5', borderRadius: 10, padding: 16 }}>
+                  <div className="flex justify-between" style={{ flexWrap: 'wrap', gap: 8 }}>
+                    <strong>{report.target_type === 'listing' ? report.target_product_name : report.target_user_name}</strong>
+                    <span className={`badge ${report.status === 'open' ? 'badge-gold' : 'badge-green'}`}>
+                      {report.status === 'open' ? T('reportOpen') : T('reportResolved')}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#607D8B', marginTop: 4 }}>
+                    {report.target_type === 'listing' ? T('reportListing') : T('reportUser')} · {report.reporter_name || '—'} · {report.created_at?.slice(0, 10)}
+                  </div>
+                  <p style={{ margin: '10px 0', whiteSpace: 'pre-wrap' }}>{report.reason}</p>
+                  {report.admin_note && (
+                    <div style={{ fontSize: 13, color: '#546E7A', marginBottom: 10 }}>
+                      <strong>{T('reportAdminNote')}:</strong> {report.admin_note}
+                    </div>
+                  )}
+                  <button className={`btn btn-sm ${report.status === 'open' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleReportUpdate(report)}>
+                    {report.status === 'open' ? T('resolveReport') : T('reopenReport')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ════ Orders Tab ════ */}
       {activeTab === 'orders' && (
         <div className="card">
@@ -557,11 +725,11 @@ export default function AdminPanel() {
                       <td style={{ fontFamily: 'monospace', fontSize: 12 }}>#{o.order_id?.slice(-6)}</td>
                       <td style={{ fontSize: 13 }}>{nameFor(o.farmer_id) || <span style={{ fontFamily: 'monospace', color: '#9E9E9E' }}>#{o.farmer_id?.slice(-6)}</span>}</td>
                       <td style={{ fontSize: 13 }}>{nameFor(o.buyer_id) || <span style={{ fontFamily: 'monospace', color: '#9E9E9E' }}>#{o.buyer_id?.slice(-6)}</span>}</td>
-                      <td>{(o.items || []).reduce((sum, it) => sum + Number(it.quantity_kg || 0), 0)} kg</td>
+                      <td>{(o.items || []).map(it => `${orderItemQuantity(it)} ${T(`unit_${orderItemUnit(it)}`)}`).join(', ')}</td>
                       <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{o.total_amount?.toLocaleString()}</td>
                       <td style={{ color: '#546E7A' }}>৳{o.platform_fee?.toLocaleString()}</td>
                       <td><span className={`badge ${orderBadge(o.status)}`}>{o.status}</span></td>
-                      <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{o.payment_status}</span></td>
+                      <td><span className={`badge ${paymentBadge(o.payment_status)}`}>{paymentStatusLabel(o.payment_status, o.payment_method, T)}</span></td>
                       <td>
                         <span className="badge badge-blue" style={{ textTransform: 'capitalize' }}>{o.delivery_type}</span>
                         {o.delivery_address && (
@@ -642,7 +810,7 @@ export default function AdminPanel() {
             <div className="table-container">
               <table>
                 <thead>
-                  <tr><th>{T('thProduct')}</th><th>{T('thCrop')}</th><th>{T('thQtyKg')}</th><th>{T('thPricePerKg')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th><th>{T('thListed')}</th><th>{T('thAction')}</th></tr>
+                  <tr><th>{T('thProduct')}</th><th>{T('thCrop')}</th><th>{T('thQty')}</th><th>{T('thPricePerUnit')}</th><th>{T('thDistrict')}</th><th>{T('thOrganic')}</th><th>{T('thStatus')}</th><th>{T('thListed')}</th><th>{T('thAction')}</th></tr>
                 </thead>
                 <tbody>
                   {filteredProducts.map(p => (
@@ -652,7 +820,7 @@ export default function AdminPanel() {
                         {p.title_bn && <div style={{ fontSize: 11, color: '#888' }}>{p.title_bn}</div>}
                       </td>
                       <td style={{ fontSize: 13, color: '#546E7A' }}>{p.crop_name}</td>
-                      <td><strong>{p.quantity_kg}</strong></td>
+                      <td><strong>{displayQuantity(p)} {T(`unit_${displayUnit(p)}`)}</strong></td>
                       <td style={{ color: '#2E7D32', fontWeight: 600 }}>৳{p.unit_price_bdt}</td>
                       <td style={{ fontSize: 13 }}>{p.district}</td>
                       <td>{p.is_organic ? <span className="badge badge-green">🌱 Organic</span> : <span style={{ color: '#9E9E9E' }}>—</span>}</td>

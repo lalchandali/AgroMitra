@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { FiLock, FiLogIn, FiPhone, FiShield, FiUser, FiUserPlus } from 'react-icons/fi'
-import { getStoredUser, loginUser, registerUser, saveAuthSession } from '../api/agromitra'
+import { getStoredUser, loginUser, loginWithOtp, registerUser, requestLoginOtp, saveAuthSession } from '../api/agromitra'
+import { useLanguage } from '../hooks/useLanguage'
+import { tr } from '../translations'
 
 const districts = [
   "Bagerhat","Bandarban","Barguna","Barishal","Bhola","Bogura",
@@ -32,8 +34,8 @@ const districts = [
 // hood since that's what the rest of the code (getMyOrders('buyer'),
 // BuyerMarketplace.jsx) already expects — just relabeled it "Customer".
 const roleOptions = [
-  { value: 'farmer', label: '👨‍🌾 Farmer (Sell crops)' },
-  { value: 'buyer',  label: '🛒 Customer (Buy crops)' },
+  { value: 'farmer', label: 'farmerAccount' },
+  { value: 'buyer',  label: 'customerAccount' },
 ]
 
 const emptyLogin = {
@@ -75,6 +77,11 @@ const AuthPage = () => {
   const [loginForm, setLoginForm] = useState(emptyLogin)
   const [registerForm, setRegisterForm] = useState(emptyRegister)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loginMethod, setLoginMethod] = useState('otp')
+  const [otpCode, setOtpCode] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const { lang } = useLanguage()
+  const T = (key) => tr(key, lang)
 
   const isRegister = mode === 'register'
   const activeForm = isRegister ? registerForm : loginForm
@@ -91,6 +98,10 @@ const AuthPage = () => {
   const updateLogin = (event) => {
     const { name, value } = event.target
     setLoginForm((current) => ({ ...current, [name]: value }))
+    if (name === 'mobile_number') {
+      setOtpSent(false)
+      setOtpCode('')
+    }
   }
 
   const updateRegister = (event) => {
@@ -129,6 +140,42 @@ const AuthPage = () => {
       redirectByRole(user)
     } catch (error) {
       toast.error(getErrorMessage(error))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOtpLogin = async (event) => {
+    event.preventDefault()
+    setIsSubmitting(true)
+    try {
+      if (!otpSent) {
+        await requestLoginOtp(loginForm.mobile_number)
+        setOtpSent(true)
+        toast.success(T('otpSentToConsole'))
+        return
+      }
+      const { data } = await loginWithOtp(loginForm.mobile_number, otpCode)
+      saveAuthSession(data)
+      toast.success(`Logged in as ${data.user.name_en}`)
+      redirectByRole(data.user)
+    } catch (error) {
+      const detail = error?.response?.data?.detail
+      toast.error(
+        typeof detail !== 'string'
+          ? getErrorMessage(error)
+          : detail.includes('SMS provider')
+            ? T('otpProductionUnavailable')
+            : detail.includes('farmer account')
+              ? T('otpFarmerOnly')
+              : detail.includes('expired')
+                ? T('otpExpired')
+                : detail.includes('Too many attempts')
+                  ? T('otpTooManyAttempts')
+                  : detail.includes('Invalid OTP') || detail.includes('OTP not found')
+                    ? T('otpInvalid')
+                    : getErrorMessage(error)
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -210,37 +257,50 @@ const AuthPage = () => {
             </button>
           </div>
 
-          <form onSubmit={isRegister ? handleRegister : handleLogin}>
+          {!isRegister && (
+            <div className="auth-login-methods" aria-label={T('loginMethod')}>
+              <button type="button" className={loginMethod === 'otp' ? 'active' : ''}
+                onClick={() => { setLoginMethod('otp'); setOtpSent(false); setOtpCode('') }}>
+                {T('farmerPhoneOtp')}
+              </button>
+              <button type="button" className={loginMethod === 'password' ? 'active' : ''}
+                onClick={() => { setLoginMethod('password'); setOtpSent(false); setOtpCode('') }}>
+                {T('passwordLogin')}
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={isRegister ? handleRegister : loginMethod === 'otp' ? handleOtpLogin : handleLogin}>
             {isRegister && (
               <>
                 <div className="form-group">
-                  <label className="form-label" htmlFor="name_en">Full name</label>
+                  <label className="form-label" htmlFor="name_en">{T('fullName')}</label>
                   <input
                     id="name_en"
                     name="name_en"
                     className="form-input"
                     value={registerForm.name_en}
                     onChange={updateRegister}
-                    placeholder="Mohammad Rahim"
+                    placeholder={T('namePlaceholder')}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label" htmlFor="name_bn">Bangla name</label>
+                  <label className="form-label" htmlFor="name_bn">{T('banglaName')}</label>
                   <input
                     id="name_bn"
                     name="name_bn"
                     className="form-input"
                     value={registerForm.name_bn}
                     onChange={updateRegister}
-                    placeholder="Optional"
+                    placeholder={T('optionalField')}
                   />
                 </div>
               </>
             )}
 
             <div className="form-group">
-              <label className="form-label" htmlFor="mobile_number">Mobile number</label>
+              <label className="form-label" htmlFor="mobile_number">{T('mobileNumber')}</label>
               <input
                 id="mobile_number"
                 name="mobile_number"
@@ -258,7 +318,7 @@ const AuthPage = () => {
             {isRegister && (
               <div className="auth-form-row">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="role">Account type</label>
+                  <label className="form-label" htmlFor="role">{T('accountType')}</label>
                   <select
                     id="role"
                     name="role"
@@ -267,12 +327,14 @@ const AuthPage = () => {
                     onChange={updateRegister}
                   >
                     {roleOptions.map((role) => (
-                      <option key={role.value} value={role.value}>{role.label}</option>
+                      <option key={role.value} value={role.value}>
+                        {role.value === 'farmer' ? '👨‍🌾 ' : '🛒 '}{T(role.label)}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label" htmlFor="district">District</label>
+                  <label className="form-label" htmlFor="district">{T('district')}</label>
                   <select
                     id="district"
                     name="district"
@@ -288,24 +350,35 @@ const AuthPage = () => {
               </div>
             )}
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="password">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                className="form-input"
-                value={activeForm.password}
-                onChange={isRegister ? updateRegister : updateLogin}
-                placeholder="Minimum 6 characters"
-                minLength={6}
-                required
-              />
-            </div>
+            {(isRegister || loginMethod === 'password') && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="password">{T('passwordLabel')}</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  className="form-input"
+                  value={activeForm.password}
+                  onChange={isRegister ? updateRegister : updateLogin}
+                  placeholder="Minimum 6 characters"
+                  minLength={6}
+                  required
+                />
+              </div>
+            )}
+
+            {!isRegister && loginMethod === 'otp' && otpSent && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="login_otp">{T('otpCodeLabel')}</label>
+                <input id="login_otp" className="form-input" value={otpCode}
+                  onChange={event => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric" minLength={6} maxLength={6} required />
+              </div>
+            )}
 
             {isRegister && (
               <div className="form-group">
-                <label className="form-label" htmlFor="confirm_password">Confirm password</label>
+                <label className="form-label" htmlFor="confirm_password">{T('confirmPasswordLabel')}</label>
                 <input
                   id="confirm_password"
                   name="confirm_password"
@@ -320,7 +393,7 @@ const AuthPage = () => {
               </div>
             )}
 
-            {!isRegister && (
+            {!isRegister && loginMethod === 'password' && (
               <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 8 }}>
                 <Link to="/forgot-password"
                   style={{ fontSize: 13, color: 'var(--green)', textDecoration: 'none', fontWeight: 500 }}>
@@ -336,6 +409,10 @@ const AuthPage = () => {
               ) : isRegister ? (
                 <>
                   <FiUserPlus /> Create account
+                </>
+              ) : loginMethod === 'otp' ? (
+                <>
+                  <FiPhone /> {otpSent ? T('verifyAndLogin') : T('sendLoginOtp')}
                 </>
               ) : (
                 <>

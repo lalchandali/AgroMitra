@@ -13,9 +13,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.database.models.user import User, UserRole
+from backend.database.models.user import User, UserRole, VerificationStatus
 from backend.database.schemas.user_schema import (
     ChangePasswordRequest,
+    FarmerVerificationDecision,
+    FarmerVerificationSubmission,
     OTPRequest,
     OTPVerify,
     PasswordResetConfirm,
@@ -70,15 +72,39 @@ def get_current_user(
 # কিন্তু production-এ এটা থাকলে যে কেউ শুধু কারো mobile number জেনে
 # forgot-password call করে response থেকেই OTP পড়ে ফেলে পুরো account
 # takeover করতে পারত (SMS intercept করারও দরকার নেই)। তাই এখন এটা শুধু
-# non-production environment-এ ফেরত যায় — ENVIRONMENT=production সেট করলে
-# response-এ আর OTP আসবে না, শুধু server console-এর print()-এ দেখা যাবে।
+# non-production environment-এ ফেরত যায় — production-এ OTP response বা
+# server console কোনোটাতেই প্রকাশ হয় না।
 IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").strip().lower() == "production"
+OTP_LOG_TO_CONSOLE = (
+    not IS_PRODUCTION
+    and os.getenv("OTP_LOG_TO_CONSOLE", "true").strip().lower()
+    in {"1", "true", "yes", "on"}
+)
+
+
+def _log_development_otp(mobile_number: str, otp: str):
+    if OTP_LOG_TO_CONSOLE:
+        print(f"  OTP for {mobile_number}: {otp}")
+
+
+def _create_user_tokens(user: User) -> Token:
+    token_data = {
+        "user_id": str(user.user_id),
+        "mobile": user.mobile_number,
+        "role": user.role.value,
+    }
+    return Token(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+        token_type="bearer",
+        user=user,
+    )
 
 
 @router.post("/request-otp")
 async def request_otp(req: OTPRequest):
     otp = generate_otp(req.mobile_number)
-    print(f"  📱 OTP for {req.mobile_number}: {otp}")
+    _log_development_otp(req.mobile_number, otp)
     response = {"message": f"OTP sent to {req.mobile_number}", "expires": "5 minutes"}
     if not IS_PRODUCTION:
         response["dev_otp"] = otp
@@ -97,6 +123,41 @@ async def verify_otp_route(req: OTPVerify, db: Session = Depends(get_db)):
         user.is_verified = True
         db.commit()
     return {"message": message, "verified": True}
+
+
+@router.post("/request-login-otp")
+async def request_login_otp(req: OTPRequest, db: Session = Depends(get_db)):
+    if IS_PRODUCTION:
+        raise HTTPException(
+            status_code=503,
+            detail="Phone OTP login is unavailable until an SMS provider is configured.",
+        )
+
+    user = db.query(User).filter(User.mobile_number == req.mobile_number).first()
+    if not user or user.role != UserRole.farmer or not user.is_active:
+        raise HTTPException(status_code=400, detail="No active farmer account found for this number.")
+
+    otp = generate_otp(req.mobile_number)
+    _log_development_otp(req.mobile_number, otp)
+    return {"message": "Development OTP logged to the server console.", "expires": "5 minutes"}
+
+
+@router.post("/login-with-otp", response_model=Token)
+async def login_with_otp(req: OTPVerify, db: Session = Depends(get_db)):
+    is_valid, message = verify_otp(req.mobile_number, req.otp)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
+
+    user = db.query(User).filter(User.mobile_number == req.mobile_number).first()
+    if not user or user.role != UserRole.farmer:
+        raise HTTPException(status_code=401, detail="No farmer account is registered with this number.")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account suspended.")
+
+    user.is_verified = True
+    user.last_login_at = datetime.utcnow()
+    db.commit()
+    return _create_user_tokens(user)
 
 
 # ── POST /api/v1/auth/register ───────────────────────────────
@@ -144,11 +205,7 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     reset_login_attempts(user_data.mobile_number)
     user.last_login_at = datetime.utcnow()
     db.commit()
-    token_data = {"user_id": str(
-        user.user_id), "mobile": user.mobile_number, "role": user.role.value}
-    access_token = create_access_token(token_data)
-    refresh_token = create_refresh_token(token_data)
-    return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer", user=user)
+    return _create_user_tokens(user)
 
 
 # ── POST /api/v1/auth/refresh-token ──────────────────────────
@@ -201,6 +258,24 @@ async def update_profile(
     return current_user
 
 
+@router.put("/farmer/verification", response_model=UserResponse)
+async def submit_farmer_verification(
+    payload: FarmerVerificationSubmission,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.farmer:
+        raise HTTPException(status_code=403, detail="Only farmers can submit verification details.")
+    current_user.verification_reference = (
+        payload.verification_reference.strip() if payload.verification_reference else None
+    )
+    current_user.verification_status = VerificationStatus.pending
+    current_user.verification_reason = None
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 # ── POST /api/v1/auth/forgot-password ────────────────────────
 @router.post("/forgot-password")
 async def forgot_password(req: PasswordResetRequest, db: Session = Depends(get_db)):
@@ -209,7 +284,7 @@ async def forgot_password(req: PasswordResetRequest, db: Session = Depends(get_d
     if not user:
         raise HTTPException(status_code=404, detail="Mobile number not found.")
     otp = generate_otp(req.mobile_number)
-    print(f"  🔑 Reset OTP for {req.mobile_number}: {otp}")
+    _log_development_otp(req.mobile_number, otp)
     response = {"message": "Password reset OTP sent."}
     if not IS_PRODUCTION:
         response["dev_otp"] = otp
@@ -328,6 +403,47 @@ async def verify_user(
     db.commit()
     db.refresh(target_user)
     return target_user
+
+
+@router.get("/admin/farmers/verification", response_model=List[UserResponse], tags=["Authentication"])
+async def list_farmer_verification_queue(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return db.query(User).filter(
+        User.role == UserRole.farmer,
+        User.verification_status == VerificationStatus.pending,
+    ).order_by(User.created_at.asc()).limit(500).all()
+
+
+@router.put(
+    "/admin/farmers/{user_id}/verification",
+    response_model=UserResponse,
+    tags=["Authentication"],
+)
+async def decide_farmer_verification(
+    user_id: str,
+    payload: FarmerVerificationDecision,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    if payload.status == VerificationStatus.pending:
+        raise HTTPException(status_code=400, detail="Admin decisions must approve or reject verification.")
+    farmer = db.query(User).filter(
+        User.user_id == user_id,
+        User.role == UserRole.farmer,
+    ).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found.")
+    farmer.verification_status = payload.status
+    farmer.verification_reason = payload.reason.strip() if payload.reason else None
+    db.commit()
+    db.refresh(farmer)
+    return farmer
 
 
 UPLOAD_DIR = "uploads/profile_photos"

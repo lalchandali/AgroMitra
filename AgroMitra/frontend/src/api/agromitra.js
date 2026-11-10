@@ -149,9 +149,16 @@ export const getStoredUser = () => {
 
 // ── Auth ─────────────────────────────────────────────────────
 export const loginUser      = (credentials) => API.post('/api/v1/auth/login', credentials)
+export const requestLoginOtp = (mobile) => API.post('/api/v1/auth/request-login-otp', { mobile_number: mobile })
+export const loginWithOtp = (mobile, otp) =>
+  API.post('/api/v1/auth/login-with-otp', { mobile_number: mobile, otp })
 export const registerUser   = (payload)     => API.post('/api/v1/auth/register', payload)
 export const getCurrentUser = ()            => API.get('/api/v1/auth/me')
 export const updateProfile  = (data)        => API.put('/api/v1/auth/profile', data)
+export const submitFarmerVerification = (data) => API.put('/api/v1/auth/farmer/verification', data)
+export const getFarmerVerificationQueue = () => API.get('/api/v1/auth/admin/farmers/verification')
+export const decideFarmerVerification = (userId, status, reason = null) =>
+  API.put(`/api/v1/auth/admin/farmers/${userId}/verification`, { status, reason })
 
 export const changePassword = (currentPassword, newPassword) =>
   API.put('/api/v1/auth/change-password', { current_password: currentPassword, new_password: newPassword })
@@ -171,6 +178,10 @@ export const getFarmerProfile  = (farmerId)   => API.get(`/api/v1/products/farme
 export const createProduct     = (formData)       => API.post('/api/v1/products/', formData, { headers: { 'Content-Type': undefined } })
 export const updateProduct     = (id, formData)   => API.put(`/api/v1/products/${id}`, formData, { headers: { 'Content-Type': undefined } })
 export const deleteProduct     = (id)         => API.delete(`/api/v1/products/${id}`)
+export const createUserReport = (payload) => API.post('/api/v1/reports/', payload)
+export const getAdminReports = () => API.get('/api/v1/reports/admin')
+export const updateAdminReport = (id, status, admin_note = null) =>
+  API.put(`/api/v1/reports/admin/${id}`, { status, admin_note })
 
 // ── Orders ───────────────────────────────────────────────────
 export const getMyOrders       = (view) => API.get('/api/v1/orders/', { params: view ? { view } : {} })
@@ -205,16 +216,7 @@ export const getMarketPrices = (cropName = null, district = null) => {
 }
 
 // ── Reviews ──────────────────────────────────────────────────
-export const createReview = async (payload) => {
-  try {
-    return await API.post('/api/v1/reviews/', payload)
-  } catch (error) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
-      return { data: { success: true } }
-    }
-    throw error
-  }
-}
+export const createReview = (payload) => API.post('/api/v1/reviews/', payload)
 
 export const getProductReviews = async (productId) => {
   try {

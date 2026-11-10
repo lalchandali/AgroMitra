@@ -8,6 +8,7 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -15,10 +16,12 @@ from backend.database.models.order import Order, OrderStatus
 from backend.database.models.order_item import OrderItem
 from backend.database.models.product import Product
 from backend.database.models.review import Review
-from backend.database.models.user import User
+from backend.database.models.review_product_claim import ReviewProductClaim
+from backend.database.models.user import User, UserRole
 from backend.database.routes.auth_routes import get_current_user
 from backend.database.routes.notification_routes import create_notification
 from backend.database.schemas.review_schema import ReviewCreate, ReviewResponse
+from backend.database.utils.review_eligibility import review_eligibility_error
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["Reviews"])
 
@@ -53,15 +56,34 @@ async def create_review(
         raise HTTPException(status_code=404, detail="Order item not found.")
 
     order = db.query(Order).filter(Order.order_id == order_item.order_id).first()
-    if not order or str(order.buyer_id) != str(current_user.user_id):
-        raise HTTPException(status_code=403, detail="You can only review products from your own orders.")
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    existing = db.query(Review).filter(
+        Review.buyer_id == current_user.user_id,
+        Review.product_id == order_item.product_id,
+    ).first()
+    eligibility_error = review_eligibility_error(
+        is_buyer=current_user.role in (UserRole.buyer, UserRole.consumer),
+        owns_order=str(order.buyer_id) == str(current_user.user_id),
+        delivered=order.status == OrderStatus.delivered,
+        already_reviewed=existing is not None,
+    )
+    if eligibility_error:
+        status_code, detail = eligibility_error
+        raise HTTPException(status_code=status_code, detail=detail)
 
-    if order.status != OrderStatus.delivered:
-        raise HTTPException(status_code=400, detail="You can only review products after delivery is confirmed.")
-
-    existing = db.query(Review).filter(Review.order_item_id == payload.order_item_id).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="You've already reviewed this item.")
+    db.add(ReviewProductClaim(
+        buyer_id=current_user.user_id,
+        product_id=order_item.product_id,
+    ))
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        constraint_name = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+        if constraint_name == "review_product_claims_pkey":
+            raise HTTPException(status_code=409, detail="You have already reviewed this product.") from error
+        raise
 
     review = Review(
         order_item_id=order_item.order_item_id,
@@ -84,7 +106,14 @@ async def create_review(
         link="/farmer?tab=listings",
     )
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        constraint_name = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+        if constraint_name in {"uq_review_per_order_item", "review_product_claims_pkey"}:
+            raise HTTPException(status_code=409, detail="You have already reviewed this product.") from error
+        raise
     db.refresh(review)
     return _build_review_response(review, db)
 
@@ -130,6 +159,9 @@ async def get_reviewable_items(
     হয়নি, তাদের order_item_id — frontend এটা দিয়ে বুঝবে My Orders-এ
     কোন item-এর পাশে "⭐ Rate this" বাটন দেখাতে হবে।
     """
+    if current_user.role not in (UserRole.buyer, UserRole.consumer):
+        return []
+
     delivered_order_ids = [
         row.order_id for row in db.query(Order.order_id).filter(
             Order.buyer_id == current_user.user_id,
@@ -139,16 +171,16 @@ async def get_reviewable_items(
     if not delivered_order_ids:
         return []
 
-    all_item_ids = {
-        row.order_item_id for row in db.query(OrderItem.order_item_id).filter(
-            OrderItem.order_id.in_(delivered_order_ids)
+    claimed_product_ids = {
+        row.product_id for row in db.query(ReviewProductClaim.product_id).filter(
+            ReviewProductClaim.buyer_id == current_user.user_id
         ).all()
     }
 
-    reviewed_item_ids = {
-        row.order_item_id for row in db.query(Review.order_item_id).filter(
-            Review.buyer_id == current_user.user_id
-        ).all()
-    }
-
-    return list(all_item_ids - reviewed_item_ids)
+    reviewable_item_ids = []
+    seen_product_ids = set(claimed_product_ids)
+    for item in db.query(OrderItem).filter(OrderItem.order_id.in_(delivered_order_ids)).all():
+        if item.product_id not in seen_product_ids:
+            reviewable_item_ids.append(item.order_item_id)
+            seen_product_ids.add(item.product_id)
+    return reviewable_item_ids

@@ -10,6 +10,7 @@
 import os
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -37,12 +38,28 @@ if (
     or "user:password" in raw_database_url
     or "host:port" in raw_database_url
 ):
-    print(
-        "  [WARNING] DATABASE_URL not set (or still a placeholder) in the environment.",
-        "Falling back to a generic local-dev connection string - set DATABASE_URL",
-        "in backend/.env for anything beyond local testing.",
-    )
-    DATABASE_URL = LOCAL_DEV_FALLBACK_URL
+    admin_password = os.getenv("DB_ADMIN_PASSWORD", "")
+    if admin_password:
+        DATABASE_URL = URL.create(
+            "postgresql+psycopg2",
+            username=os.getenv("DB_ADMIN_USER", "postgres"),
+            password=admin_password,
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            database="agromitra_db",
+        )
+        print(
+            "  [WARNING] DATABASE_URL not set (or still a placeholder).",
+            "Using DB_ADMIN settings for local development; configure DATABASE_URL",
+            "with a least-privilege app account for deployment.",
+        )
+    else:
+        print(
+            "  [WARNING] DATABASE_URL not set (or still a placeholder) in the environment.",
+            "Falling back to a generic local-dev connection string - set DATABASE_URL",
+            "in backend/.env for anything beyond local testing.",
+        )
+        DATABASE_URL = LOCAL_DEV_FALLBACK_URL
 else:
     DATABASE_URL = raw_database_url
 

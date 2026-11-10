@@ -9,6 +9,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Numeric, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import synonym
 
 from backend.database.database import Base
 
@@ -28,13 +29,17 @@ class OrderStatus(str, enum.Enum):
 
 class PaymentStatus(str, enum.Enum):
     pending = "pending"
+    paid = "paid"
+    failed = "failed"
     in_escrow = "in_escrow"
     released = "released"
     refunded = "refunded"
-    failed = "failed"
 
 
 class PaymentMethod(str, enum.Enum):
+    cash_on_delivery = "cash_on_delivery"
+    mock_bkash = "mock_bkash"
+    mock_nagad = "mock_nagad"
     bkash = "bkash"
     nagad = "nagad"
     bank_transfer = "bank_transfer"
@@ -65,10 +70,21 @@ class Order(Base):
     farmer_amount = Column(Numeric(12, 2), nullable=False)
 
     status = Column(Enum(OrderStatus), default=OrderStatus.placed)
-    payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.pending)
-    payment_method = Column(Enum(PaymentMethod), nullable=False)
-    delivery_type = Column(Enum(DeliveryType), nullable=False)
+    payment_status = Column(
+        Enum(PaymentStatus),
+        default=PaymentStatus.pending,
+        server_default="pending",
+    )
+    payment_method = Column(
+        Enum(PaymentMethod),
+        nullable=False,
+        default=PaymentMethod.cash_on_delivery,
+        server_default="cash_on_delivery",
+    )
+    delivery_method = Column(Enum(DeliveryType), nullable=False)
+    delivery_type = synonym("delivery_method")
     delivery_address = Column(Text, nullable=True)
+    delivery_note = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     confirmed_at = Column(DateTime, nullable=True)

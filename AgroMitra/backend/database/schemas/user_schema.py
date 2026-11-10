@@ -7,9 +7,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from backend.database.models.user import UserRole
+from backend.database.models.user import UserRole, VerificationStatus
 
 # ============================================================
 # REGISTRATION
@@ -97,6 +97,9 @@ class UserResponse(BaseModel):
     name_en:           str
     name_bn:           Optional[str] = None
     role:              UserRole
+    verification_status: VerificationStatus = VerificationStatus.pending
+    verification_reference: Optional[str] = None
+    verification_reason: Optional[str] = None
     district:          Optional[str] = None
     is_verified:       bool
     is_active:         bool
@@ -116,6 +119,21 @@ class UserUpdate(BaseModel):
     name_bn:           Optional[str] = None
     district:          Optional[str] = None
     profile_photo_url: Optional[str] = None
+
+
+class FarmerVerificationSubmission(BaseModel):
+    verification_reference: Optional[str] = Field(None, max_length=1000)
+
+
+class FarmerVerificationDecision(BaseModel):
+    status: VerificationStatus
+    reason: Optional[str] = Field(None, max_length=1000)
+
+    @model_validator(mode="after")
+    def require_rejection_reason(self):
+        if self.status == VerificationStatus.rejected and not (self.reason and self.reason.strip()):
+            raise ValueError("A reason is required when rejecting farmer verification.")
+        return self
 
 
 # ============================================================

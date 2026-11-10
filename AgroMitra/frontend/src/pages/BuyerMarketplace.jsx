@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getAllProducts, getMyOrders, placeOrder, cancelOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, updateStoredUser, createReview, getProductReviews, getReviewableItems, getFarmerProfile } from '../api/agromitra'
+import { getAllProducts, getMyOrders, placeOrder, cancelOrder, getStoredUser, getFairPrice, getPricePrediction, getDemandForecast, uploadProfilePhoto, resolveImageUrl, updateStoredUser, createReview, getProductReviews, getReviewableItems, getFarmerProfile, getPlatformFee, createUserReport } from '../api/agromitra'
 import Sidebar from '../components/Sidebar'
 import SettingsTab from '../components/SettingsTab'
 import { useLanguage } from '../hooks/useLanguage'
 import { tr } from '../translations'
+import { displayQuantity, displayUnit, orderItemQuantity, orderItemUnit } from '../utils/quantityUnits'
 
 // existing code...
 
@@ -15,6 +16,7 @@ const CROP_EMOJIS = {
   Ginger: '🫚', Corn: '🌽', Chili: '🌶️', Carrot: '🥕',
   Cucumber: '🥒', Pumpkin: '🎃', Spinach: '🥗', Wheat: '🌾',
 }
+const roundMoney = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100
 
 const ProductFarmerInfo = ({ product, lang, onSelect }) => (
   <div className="bm-product-farmer">
@@ -36,7 +38,14 @@ const ProductFarmerInfo = ({ product, lang, onSelect }) => (
       </span>
       <span className="bm-product-farmer-copy">
         <span className="bm-product-farmer-label">{lang === 'bn' ? 'কৃষক' : 'GROWN BY'}</span>
-        <span className="bm-product-farmer-name">{product.farmer_name || (lang === 'bn' ? 'কৃষক' : 'Farmer')}</span>
+        <span className="bm-product-farmer-name">
+          {product.farmer_name || (lang === 'bn' ? 'কৃষক' : 'Farmer')}
+          {product.farmer_verified && (
+            <span className="badge badge-green" style={{ marginLeft: 6, fontSize: 10 }}>
+              {tr('verifiedFarmer', lang)}
+            </span>
+          )}
+        </span>
       </span>
       {product.average_rating != null && (
         <span className="bm-product-farmer-rating">★ {product.average_rating} <small>({product.review_count})</small></span>
@@ -47,21 +56,24 @@ const ProductFarmerInfo = ({ product, lang, onSelect }) => (
 )
 
 const ProductStockInfo = ({ product, lang }) => {
-  const quantity = product.quantity_kg == null ? null : Number(product.quantity_kg)
-  const hasStock = quantity != null && Number.isFinite(quantity) && quantity > 0
+  const quantity = displayQuantity(product)
+  const unit = displayUnit(product)
+  const threshold = Number(product.low_stock_threshold_kg ?? 5)
+  const stockStatus = product.stock_status || (
+    quantity == null || !Number.isFinite(quantity) || quantity <= 0 || product.status === 'sold_out'
+      ? 'out_of_stock'
+    : Number(product.quantity_kg) <= threshold ? 'low_stock' : 'in_stock'
+  )
+  const stockClass = stockStatus === 'out_of_stock'
+    ? 'is-empty'
+    : stockStatus === 'low_stock' ? 'is-low' : ''
 
   return (
-    <div className={`bm-product-stock${quantity != null && !hasStock ? ' is-empty' : ''}${quantity == null ? ' is-unknown' : ''}`}>
+    <div className={`bm-product-stock ${stockClass}`}>
       <span className="bm-product-stock-icon" aria-hidden="true">📦</span>
       <span className="bm-product-stock-copy">
-        <span className="bm-product-stock-label">
-          {quantity == null
-            ? (lang === 'bn' ? 'মজুদের তথ্য নেই' : 'STOCK NOT LISTED')
-            : hasStock
-              ? (lang === 'bn' ? 'মজুদ আছে' : 'AVAILABLE')
-              : (lang === 'bn' ? 'মজুদ নেই' : 'OUT OF STOCK')}
-        </span>
-        <strong>{quantity != null && Number.isFinite(quantity) ? `${quantity.toLocaleString()} kg` : '—'}</strong>
+        <span className="bm-product-stock-label">{tr(stockStatus === 'in_stock' ? 'inStock' : stockStatus === 'low_stock' ? 'lowStock' : 'outOfStock', lang)}</span>
+        <strong>{quantity != null && Number.isFinite(quantity) ? `${quantity.toLocaleString()} ${tr(`unit_${unit}`, lang)}` : '—'}</strong>
       </span>
     </div>
   )
@@ -125,8 +137,11 @@ export default function BuyerMarketplace() {
 
   // ── Checkout state ──────────────────────────────────────────
   const [deliveryAddress, setDeliveryAddress] = useState(user?.address || '')
-  const [paymentMethod, setPaymentMethod] = useState('bkash')
-  const [deliveryType, setDeliveryType] = useState('pickup')
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery')
+  const [deliveryMethod, setDeliveryMethod] = useState('pickup')
+  const [deliveryNote, setDeliveryNote] = useState('')
+  const [platformFeePercent, setPlatformFeePercent] = useState(null)
+  const [platformFeeLoadFailed, setPlatformFeeLoadFailed] = useState(false)
   const [placingOrder, setPlacingOrder] = useState(false)
 
   // ── Orders state ────────────────────────────────────────────
@@ -144,6 +159,26 @@ export default function BuyerMarketplace() {
   const [farmerProfile, setFarmerProfile] = useState(null)
   const [farmerProfileLoading, setFarmerProfileLoading] = useState(false)
   const [farmerProfileError, setFarmerProfileError] = useState(false)
+  const [reportTarget, setReportTarget] = useState(null)
+  const [reportReason, setReportReason] = useState('')
+  const [submittingReport, setSubmittingReport] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    getPlatformFee()
+      .then(({ data }) => {
+        const feePercent = Number(data.platform_fee_percent)
+        if (!Number.isFinite(feePercent) || feePercent < 0) {
+          throw new Error('Platform fee endpoint returned an invalid percentage.')
+        }
+        if (active) setPlatformFeePercent(feePercent)
+      })
+      .catch(error => {
+        console.error('Could not load platform fee:', error)
+        if (active) setPlatformFeeLoadFailed(true)
+      })
+    return () => { active = false }
+  }, [])
 
   // ── Reviews state ────────────────────────────────────────────
   const [reviewableItemIds, setReviewableItemIds] = useState(new Set())  // যেসব order_item এখনো review করা হয়নি
@@ -183,9 +218,40 @@ export default function BuyerMarketplace() {
       setRatingValue(0)
       setRatingComment('')
     } catch (e) {
-      toast.error(e?.response?.data?.detail || T('reviewFailed'))
+      const status = e?.response?.status
+      const detail = e?.response?.data?.detail
+      toast.error(
+        status === 409 ? T('reviewAlreadySubmitted')
+          : status === 400 ? T('reviewNotDelivered')
+            : status === 403 ? (detail?.startsWith('Only buyers') ? T('reviewBuyerOnly') : T('reviewOwnOrderOnly'))
+              : T('reviewFailed')
+      )
     } finally {
       setSubmittingRating(false)
+    }
+  }
+
+  const handleSubmitReport = async () => {
+    if (!reportTarget || reportReason.trim().length < 5) {
+      toast.error(T('reportReasonRequired'))
+      return
+    }
+    setSubmittingReport(true)
+    try {
+      await createUserReport({
+        target_type: reportTarget.target_type,
+        target_product_id: reportTarget.target_product_id,
+        target_user_id: reportTarget.target_user_id,
+        reason: reportReason.trim(),
+      })
+      toast.success(T('reportSubmitted'))
+      setReportTarget(null)
+      setReportReason('')
+    } catch (error) {
+      console.error('Could not submit report:', error)
+      toast.error(T('reportFailed'))
+    } finally {
+      setSubmittingReport(false)
     }
   }
 
@@ -212,16 +278,19 @@ export default function BuyerMarketplace() {
   }, [])
 
   const handleCancelOrder = async (orderId) => {
-    const confirmMsg = lang === 'bn'
-      ? 'এই অর্ডার বাতিল করবেন? Payment ফেরত দেওয়া হবে।'
-      : 'Cancel this order? The payment will be refunded.'
+    const orderBeingCancelled = orders.find(order => order.order_id === orderId)
+    const wasPending = orderBeingCancelled?.payment_status === 'pending'
+    const isMockPayment = ['mock_bkash', 'mock_nagad'].includes(orderBeingCancelled?.payment_method)
+    const paymentWillFail = wasPending || isMockPayment
+    const confirmMsg = T(paymentWillFail ? 'confirmCancelPendingOrder' : 'confirmCancelPaidOrder')
     if (!globalThis.confirm(confirmMsg)) return
     setCancellingId(orderId)
     try {
       await cancelOrder(orderId)
-      toast.success(lang === 'bn' ? 'অর্ডার বাতিল ও রিফান্ড হয়েছে।' : 'Order cancelled and refunded.')
-      setOrders(prev => prev.map(o => o.order_id === orderId ? { ...o, status: 'cancelled', payment_status: 'refunded' } : o))
-      setSelectedOrder(prev => prev && prev.order_id === orderId ? { ...prev, status: 'cancelled', payment_status: 'refunded' } : prev)
+      const paymentStatus = paymentWillFail ? 'failed' : 'refunded'
+      toast.success(T(paymentWillFail ? 'orderCancelled' : 'orderCancelledRefunded'))
+      setOrders(prev => prev.map(o => o.order_id === orderId ? { ...o, status: 'cancelled', payment_status: paymentStatus } : o))
+      setSelectedOrder(prev => prev && prev.order_id === orderId ? { ...prev, status: 'cancelled', payment_status: paymentStatus } : prev)
     } catch (e) {
       toast.error(e?.response?.data?.detail || 'Could not cancel this order.')
     } finally {
@@ -331,7 +400,17 @@ export default function BuyerMarketplace() {
       toast.error(lang === 'bn'
         ? 'নিজের product নিজে কিনতে পারবেন না।'
         : 'You cannot order your own product.')
-      return
+      return false
+    }
+    const stock = displayQuantity(product)
+    if (!Number.isFinite(stock) || stock <= 0 || product.stock_status === 'out_of_stock' || product.status === 'sold_out') {
+      toast.error(T('outOfStock'))
+      return false
+    }
+    const existing = cart.find(item => item.product.product_id === product.product_id)
+    if ((existing?.quantity_kg || 0) + 1 > stock) {
+      toast.error(T('quantityTooLarge'))
+      return false
     }
     setCart(prev => {
       const exists = prev.find(i => i.product.product_id === product.product_id)
@@ -342,10 +421,17 @@ export default function BuyerMarketplace() {
       )
       return [...prev, { product, quantity_kg: 1 }]
     })
-    toast.success(`${getEmoji(product)} ${product.title_en} added to cart!`)
+    toast.success(`${getEmoji(product)} ${product.title_en} ${T('addedToCart')}`)
+    return true
   }
 
   const updateQty = (productId, delta) => {
+    const item = cart.find(cartItem => cartItem.product.product_id === productId)
+    const available = displayQuantity(item?.product)
+    if (delta > 0 && item && item.quantity_kg + delta > available) {
+      toast.error(T('quantityTooLarge'))
+      return
+    }
     setCart(prev => prev
       .map(i => i.product.product_id === productId ? { ...i, quantity_kg: Math.max(1, i.quantity_kg + delta) } : i)
     )
@@ -354,7 +440,24 @@ export default function BuyerMarketplace() {
   const removeFromCart = (productId) =>
     setCart(prev => prev.filter(i => i.product.product_id !== productId))
 
-  const cartTotal = cart.reduce((sum, i) => sum + (i.product.unit_price_bdt * i.quantity_kg), 0)
+  const cartTotal = cart.reduce((sum, item) =>
+    sum + roundMoney(Number(item.product.unit_price_bdt) * item.quantity_kg), 0)
+  const cartGroups = Object.values(cart.reduce((groups, item) => {
+    const farmerId = item.product.farmer_id
+    if (!groups[farmerId]) groups[farmerId] = []
+    groups[farmerId].push(item)
+    return groups
+  }, {}))
+  const cartPlatformFee = platformFeePercent == null ? null : cartGroups.reduce((sum, items) => {
+    const subtotal = items.reduce((groupSum, item) =>
+      groupSum + roundMoney(Number(item.product.unit_price_bdt) * item.quantity_kg), 0)
+    return sum + Math.round((subtotal * platformFeePercent / 100 + Number.EPSILON) * 100) / 100
+  }, 0)
+  const cartHasStockIssue = cart.some(item =>
+    item.product.stock_status === 'out_of_stock'
+    || item.product.status === 'sold_out'
+    || item.quantity_kg > displayQuantity(item.product)
+  )
   const cartCount = cart.reduce((sum, i) => sum + i.quantity_kg, 0)
 
   const toggleWishlist = (product) => {
@@ -395,6 +498,36 @@ export default function BuyerMarketplace() {
     cancelled: { icon: '✕', label: 'Cancelled', color: '#C62828', bg: '#FFEBEE' },
   }
 
+  const paymentMethodLabel = (method) => {
+    if (method === 'cash_on_delivery' || method === 'bank_transfer') return T('cashOnDelivery')
+    if (method === 'mock_bkash') return T('bkashSandbox')
+    if (method === 'mock_nagad') return T('nagadSandbox')
+    if (method === 'bkash') return 'bKash'
+    if (method === 'nagad') return 'Nagad'
+    return method?.replaceAll('_', ' ') || '—'
+  }
+
+  const paymentStatusLabel = (status, method) => {
+    if (status === 'paid' && ['mock_bkash', 'mock_nagad'].includes(method)) {
+      return T('paymentMockPaid')
+    }
+    const labels = {
+      pending: 'paymentPending',
+      paid: 'paymentPaid',
+      failed: 'paymentFailed',
+      in_escrow: 'paymentInEscrow',
+      released: 'paymentReleased',
+      refunded: 'paymentRefunded',
+    }
+    return labels[status] ? T(labels[status]) : status || '—'
+  }
+  const paymentStatusClass = (status) =>
+    ['paid', 'released'].includes(status) ? 'badge-green'
+      : ['failed', 'refunded'].includes(status) ? 'badge-red'
+        : 'badge-gold'
+  const deliveryMethodLabel = (method) =>
+    method === 'pickup' ? T('buyerPickup') : T('farmerDelivery')
+
   // ── Place order ─────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (!user) {
@@ -402,7 +535,7 @@ export default function BuyerMarketplace() {
       navigate('/auth')
       return
     }
-    if (!deliveryAddress.trim()) {
+    if (deliveryMethod === 'delivery' && !deliveryAddress.trim()) {
       toast.error(T('enterAddress'))
       return
     }
@@ -410,36 +543,44 @@ export default function BuyerMarketplace() {
       toast.error(T('cartEmptyErr'))
       return
     }
+    if (platformFeePercent == null || cartHasStockIssue) {
+      toast.error(platformFeePercent == null ? T('feeLoadFailed') : T('stockChanged'))
+      return
+    }
 
     // Cart-কে farmer অনুযায়ী group করো — একই farmer-এর সব product
     // এক Order-এ (একাধিক item সহ) যাবে, আলাদা আলাদা order হবে না।
-    const groups = {}
-    for (const item of cart) {
-      const fid = item.product.farmer_id
-      if (!groups[fid]) groups[fid] = []
-      groups[fid].push(item)
-    }
-
     setPlacingOrder(true)
     const results = { success: 0, failed: 0 }
     const errorMessages = []
+    const successfulFarmerIds = new Set()
 
-    for (const fid of Object.keys(groups)) {
+    for (const items of cartGroups) {
+      const farmerId = items[0]?.product.farmer_id
       try {
         await placeOrder({
-          items: groups[fid].map(item => ({
+          items: items.map(item => ({
             product_id: item.product.product_id,
-            quantity_kg: item.quantity_kg,
+            quantity: item.quantity_kg,
           })),
           payment_method: paymentMethod,
-          delivery_type: deliveryType,
-          delivery_address: deliveryAddress,
+          delivery_method: deliveryMethod,
+          delivery_address: deliveryMethod === 'delivery' ? deliveryAddress.trim() : null,
+          delivery_note: deliveryNote.trim() || null,
         })
         results.success++
+        successfulFarmerIds.add(farmerId)
       } catch (err) {
         results.failed++
-        const msg = err.response?.data?.detail ||
-          (lang === 'bn' ? 'অর্ডার ব্যর্থ হয়েছে' : 'Order failed')
+        const detail = err.response?.data?.detail
+        const msg = detail === 'Order quantities must be at least 0.01 in the listed unit.'
+          ? T('minimumOrderQuantity')
+          : detail === 'Count-unit quantities must be whole numbers.'
+            ? T('countQuantityWhole')
+          : detail?.startsWith('Stock changed')
+            ? T('stockChanged')
+            : detail ||
+          T('orderFailed')
         errorMessages.push(msg)
       }
     }
@@ -447,8 +588,8 @@ export default function BuyerMarketplace() {
     setPlacingOrder(false)
 
     if (results.success > 0) {
-      toast.success(`✅ ${results.success} order(s) placed! Payment held in Escrow.`)
-      setCart([])
+      toast.success(T('ordersPlacedToast').replace('{count}', String(results.success)))
+      setCart(prev => prev.filter(item => !successfulFarmerIds.has(item.product.farmer_id)))
       handleTabChange('orders')
       fetchOrders()
     }
@@ -502,7 +643,7 @@ export default function BuyerMarketplace() {
                   <div className="stat-label">{s.label}</div>
                 </div>
               </div>
-            ))}
+              ))}
           </div>
       {/* ════ Browse Tab ════ */}
       {activeTab === 'browse' && (
@@ -577,7 +718,7 @@ export default function BuyerMarketplace() {
                     </div>
                     <ProductFarmerInfo product={p} lang={lang} onSelect={setSelectedFarmerId} />
                     <div className="bm-product-purchase-info">
-                      <div className="product-price">৳{p.unit_price_bdt}<span>/kg</span></div>
+                      <div className="product-price">৳{p.unit_price_bdt}<span>/{tr(`unit_${displayUnit(p)}`, lang)}</span></div>
                       <ProductStockInfo product={p} lang={lang} />
                     </div>
                   </div>
@@ -586,6 +727,7 @@ export default function BuyerMarketplace() {
                         <button
                           className="btn btn-primary btn-sm"
                           style={{ flex: 1 }}
+                          disabled={p.stock_status === 'out_of_stock' || p.status === 'sold_out' || displayQuantity(p) <= 0}
                           onClick={() => addToCart(p)}
                         >{T('addToCart')}</button>
                         <button
@@ -649,7 +791,7 @@ export default function BuyerMarketplace() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin:7, padding: 8, background: '#F4FBF6', borderRadius: 8, border: '1px solid #DCEFE0', fontSize: 13, color: '#546E7A' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>💰 Fair price range :</span>
-                            <strong>৳{fair?.fair_price_min ?? '—'}–{fair?.fair_price_max ?? '—'}/kg</strong>
+                            <strong>৳{fair?.fair_price_min ?? '—'}–{fair?.fair_price_max ?? '—'}/{tr(`unit_${displayUnit(p)}`, lang)}</strong>
                           </div>
 
                           {/* 💡 স্ট্যাটাস অনুযায়ী ডাইনামিক ব্যাজ কালার ও টেক্সট */}
@@ -715,7 +857,7 @@ export default function BuyerMarketplace() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600 }}>{item.product.title_en}</div>
                       <div style={{ fontSize: 13, color: '#546E7A' }}>
-                        ৳{item.product.unit_price_bdt}/kg
+                        ৳{item.product.unit_price_bdt}/{tr(`unit_${displayUnit(item.product)}`, lang)}
                       </div>
                     </div>
                     {/* Qty controls */}
@@ -724,14 +866,15 @@ export default function BuyerMarketplace() {
                         style={{ padding: '2px 10px' }}
                         onClick={() => updateQty(item.product.product_id, -1)}>−</button>
                       <span style={{ fontWeight: 600, minWidth: 32, textAlign: 'center' }}>
-                        {item.quantity_kg} kg
+                        {item.quantity_kg} {tr(`unit_${displayUnit(item.product)}`, lang)}
                       </span>
                       <button className="btn btn-sm btn-secondary"
                         style={{ padding: '2px 10px' }}
+                        disabled={item.quantity_kg >= displayQuantity(item.product)}
                         onClick={() => updateQty(item.product.product_id, 1)}>+</button>
                     </div>
                     <div style={{ fontWeight: 700, color: '#2E7D32', minWidth: 70, textAlign: 'right' }}>
-                      ৳{(item.product.unit_price_bdt * item.quantity_kg).toLocaleString()}
+                      ৳{roundMoney(Number(item.product.unit_price_bdt) * item.quantity_kg).toLocaleString()}
                     </div>
                     <button
                       className="btn btn-sm"
@@ -753,59 +896,87 @@ export default function BuyerMarketplace() {
           {/* Checkout */}
           {cart.length > 0 && (
             <div className="card">
-              <div className="card-title">💳 Checkout</div>
+              <div className="card-title">💳 {T('checkout')}</div>
 
               <div className="form-group">
-                <label className="form-label">Delivery Address *</label>
-                <input className="form-input"
-                  placeholder="House, Road, Area, District..."
-                  value={deliveryAddress}
-                  onChange={e => setDeliveryAddress(e.target.value)} />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Delivery Type</label>
-                <select className="form-select" value={deliveryType}
-                  onChange={e => setDeliveryType(e.target.value)}>
-                  <option value="pickup">📦 Pickup</option>
-                  <option value="delivery">🚚 Home Delivery</option>
+                <label className="form-label">{T('deliveryMethod')}</label>
+                <select className="form-select" value={deliveryMethod}
+                  onChange={e => setDeliveryMethod(e.target.value)}>
+                  <option value="pickup">📦 {T('buyerPickup')}</option>
+                  <option value="delivery">🚚 {T('farmerDelivery')}</option>
                 </select>
               </div>
 
+              {deliveryMethod === 'delivery' && (
+                <div className="form-group">
+                  <label className="form-label">{T('deliveryAddress')} *</label>
+                  <input className="form-input"
+                    placeholder={T('deliveryAddressPlaceholder')}
+                    value={deliveryAddress}
+                    onChange={e => setDeliveryAddress(e.target.value)} />
+                </div>
+              )}
+
               <div className="form-group">
-                <label className="form-label">Payment Method</label>
+                <label className="form-label">{T('deliveryNote')}</label>
+                <textarea className="form-input" rows={2}
+                  value={deliveryNote}
+                  onChange={e => setDeliveryNote(e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{T('paymentMethod')}</label>
                 <select className="form-select" value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value)}>
-                  <option value="bkash">💚 bKash</option>
-                  <option value="nagad">🔵 Nagad</option>
-                  <option value="bank_transfer">💵 Cash on Delivery</option>
+                  <option value="cash_on_delivery">💵 {T('cashOnDelivery')}</option>
+                  <option value="mock_bkash">💚 {T('bkashSandbox')}</option>
+                  <option value="mock_nagad">🔵 {T('nagadSandbox')}</option>
                 </select>
               </div>
 
-              <div className="alert alert-info">
-                🔒 Payment protected by AgroMitra Escrow — funds released only after delivery confirmation.
-              </div>
+              {(paymentMethod === 'mock_bkash' || paymentMethod === 'mock_nagad') && (
+                <div className="alert alert-info">{T('sandboxNotice')}</div>
+              )}
 
               {/* Order summary */}
               <div style={{ background: '#F9FBF9', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                 {cart.map((item, i) => (
                   <div key={i} className="flex justify-between" style={{ fontSize: 13, marginBottom: 4 }}>
-                    <span>{getEmoji(item.product)} {item.product.title_en} × {item.quantity_kg} kg</span>
+                    <span>{getEmoji(item.product)} {item.product.title_en} × {item.quantity_kg} {tr(`unit_${displayUnit(item.product)}`, lang)}</span>
                     <span style={{ color: '#2E7D32', fontWeight: 600 }}>
-                      ৳{(item.product.unit_price_bdt * item.quantity_kg).toLocaleString()}
+                      ৳{roundMoney(Number(item.product.unit_price_bdt) * item.quantity_kg).toLocaleString()}
                     </span>
                   </div>
                 ))}
-                <div className="flex justify-between" style={{ fontWeight: 700, marginTop: 8, borderTop: '1px solid #E0E0E0', paddingTop: 8 }}>
-                  <span>Total ({cart.length} item{cart.length > 1 ? 's' : ''})</span>
-                  <span style={{ color: '#2E7D32' }}>৳{cartTotal.toLocaleString()}</span>
+                <div style={{ borderTop: '1px solid #E0E0E0', paddingTop: 8, marginTop: 8 }}>
+                  <div className="flex justify-between" style={{ fontSize: 13, marginBottom: 5 }}>
+                    <span>{T('itemsSubtotal')}</span>
+                    <span>৳{cartTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between" style={{ fontSize: 13, marginBottom: 5 }}>
+                    <span>{T('platformFee')} ({platformFeePercent == null ? '—' : `${platformFeePercent}%`})</span>
+                    <span>{cartPlatformFee == null ? '—' : `৳${cartPlatformFee.toLocaleString()}`}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#546E7A', marginBottom: 8 }}>
+                    {T('feeFromFarmerShare')}
+                  </div>
+                  <div className="flex justify-between" style={{ fontWeight: 700 }}>
+                    <span>{T('totalPayable')}</span>
+                    <span style={{ color: '#2E7D32' }}>৳{cartTotal.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
+              {platformFeeLoadFailed && (
+                <div className="alert alert-danger" role="alert">{T('feeLoadFailed')}</div>
+              )}
+              {cartHasStockIssue && (
+                <div className="alert alert-danger" role="alert">{T('stockChanged')}</div>
+              )}
               <button
                 className="btn btn-primary btn-full"
                 onClick={handlePlaceOrder}
-                disabled={placingOrder}
+                disabled={placingOrder || platformFeePercent == null || cartHasStockIssue}
               >
                 {placingOrder ? T('loading') : `✅ ${T('placeOrder')} — ৳${cartTotal.toLocaleString()}`}
               </button>
@@ -852,7 +1023,6 @@ export default function BuyerMarketplace() {
                 const firstProduct = firstItem ? products.find(p => p.product_id === firstItem.product_id) : null
                 const firstEmoji = firstProduct ? getEmoji(firstProduct) : '🌿'
                 const statusCfg = ORDER_STATUS_CONFIG[o.status?.toLowerCase()] || ORDER_STATUS_CONFIG.placed
-                const totalKg = items.reduce((sum, i) => sum + Number(i.quantity_kg || 0), 0)
 
                 return (
                   <div key={o.order_id} className="card" style={{ cursor: 'pointer' }}
@@ -867,14 +1037,12 @@ export default function BuyerMarketplace() {
                               : `${firstItem?.product_name || 'Product'} + ${items.length - 1} more`}
                           </div>
                           <div style={{ fontSize: 13, color: '#546E7A', marginTop: 2 }}>
-                            👨‍🌾 {o.farmer_name || 'Farmer'} · {items.length} item{items.length > 1 ? 's' : ''} · {totalKg} kg · {fmtDate(o.created_at)} {fmtTime(o.created_at)}
+                            👨‍🌾 {o.farmer_name || 'Farmer'} · {items.length} item{items.length > 1 ? 's' : ''} · {fmtDate(o.created_at)} {fmtTime(o.created_at)}
                           </div>
                           <div style={{ fontSize: 13, color: '#546E7A' }}>
-                            {o.delivery_type === 'pickup' ? '📦 Pickup' : '🚚 Delivery'} ·{' '}
-                            {o.payment_method === 'bkash' ? '💚 bKash'
-                              : o.payment_method === 'nagad' ? '🔵 Nagad'
-                                : o.payment_method === 'bank_transfer' ? '💵 Cash on Delivery'
-                                  : '💳 Other'}
+                            {o.delivery_method === 'pickup' || o.delivery_type === 'pickup' ? '📦' : '🚚'}{' '}
+                            {deliveryMethodLabel(o.delivery_method || o.delivery_type)} ·{' '}
+                            {paymentMethodLabel(o.payment_method)}
                           </div>
                         </div>
                       </div>
@@ -890,8 +1058,8 @@ export default function BuyerMarketplace() {
                           {statusCfg.icon} {statusCfg.label}
                         </span>
                         <div style={{ marginTop: 6 }}>
-                          <span className={`badge ${o.payment_status === 'released' ? 'badge-green' : 'badge-gold'}`}>
-                            {o.payment_status === 'released' ? '✅ Released' : '🔒 Escrow'}
+                          <span className={`badge ${paymentStatusClass(o.payment_status)}`}>
+                            {paymentStatusLabel(o.payment_status, o.payment_method)}
                           </span>
                         </div>
                       </div>
@@ -1104,7 +1272,9 @@ export default function BuyerMarketplace() {
                               <span style={{ fontSize: 20 }}>{emoji}</span>
                               <div>
                                 <div style={{ fontSize: 14, fontWeight: 600 }}>{item.product_name || 'Product'}</div>
-                                <div style={{ fontSize: 12, color: '#546E7A' }}>{item.quantity_kg} kg × ৳{item.unit_price}/kg</div>
+                                <div style={{ fontSize: 12, color: '#546E7A' }}>
+                                  {orderItemQuantity(item)} {tr(`unit_${orderItemUnit(item)}`, lang)} × ৳{item.unit_price}/{tr(`unit_${orderItemUnit(item)}`, lang)}
+                                </div>
                               </div>
                             </div>
                             <div style={{ fontSize: 14, fontWeight: 700, color: '#2E7D32' }}>৳{item.subtotal?.toLocaleString()}</div>
@@ -1119,8 +1289,8 @@ export default function BuyerMarketplace() {
                     {[
                       { label: 'Farmer', val: o.farmer_name || 'Farmer' },
                       { label: T('orderDate'), val: `${fmtDate(o.created_at)} ${fmtTime(o.created_at)}` },
-                      { label: 'Delivery', val: o.delivery_type === 'pickup' ? '📦 Pickup' : '🚚 Home Delivery' },
-                      { label: 'Payment', val: o.payment_method?.replace('_', ' ') },
+                      { label: T('deliveryMethod'), val: deliveryMethodLabel(o.delivery_method || o.delivery_type) },
+                      { label: T('paymentMethod'), val: paymentMethodLabel(o.payment_method) },
                     ].map((f, i) => (
                       <div key={i} style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: 8 }}>
                         <div style={{ fontSize: 11, color: '#9E9E9E', fontWeight: 600, textTransform: 'uppercase' }}>{f.label}</div>
@@ -1129,24 +1299,39 @@ export default function BuyerMarketplace() {
                     ))}
                   </div>
 
-                  {/* Address */}
+                  {/* Fulfilment information */}
                   {o.delivery_address && (
                     <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: 8, marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, color: '#9E9E9E', fontWeight: 600, textTransform: 'uppercase' }}>Delivery Address</div>
+                      <div style={{ fontSize: 11, color: '#9E9E9E', fontWeight: 600, textTransform: 'uppercase' }}>{T('deliveryAddress')}</div>
                       <div style={{ fontSize: 14, fontWeight: 600, marginTop: 3 }}>{o.delivery_address}</div>
+                    </div>
+                  )}
+                  {o.delivery_note && (
+                    <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: 8, marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, color: '#9E9E9E', fontWeight: 600, textTransform: 'uppercase' }}>{T('deliveryNote')}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginTop: 3 }}>{o.delivery_note}</div>
                     </div>
                   )}
 
                   {/* Financial */}
                   <div style={{ background: '#F0FFF4', borderRadius: 8, padding: 14, marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-                      <span style={{ color: '#546E7A' }}>Order Total</span>
+                      <span style={{ color: '#546E7A' }}>{T('itemsSubtotal')}</span>
+                      <span style={{ fontWeight: 700 }}>৳{o.total_amount?.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                      <span style={{ color: '#546E7A' }}>{T('platformFee')}</span>
+                      <span style={{ fontWeight: 700 }}>৳{o.platform_fee?.toLocaleString()}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#546E7A', marginBottom: 8 }}>{T('feeFromFarmerShare')}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                      <span style={{ color: '#546E7A' }}>{T('totalPayable')}</span>
                       <span style={{ fontWeight: 700 }}>৳{o.total_amount?.toLocaleString()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                      <span style={{ color: '#546E7A' }}>Escrow Status</span>
-                      <span className={`badge ${o.payment_status === 'released' ? 'badge-green' : 'badge-gold'}`}>
-                        {o.payment_status === 'released' ? '✅ Released to Farmer' : '🔒 In Escrow'}
+                      <span style={{ color: '#546E7A' }}>{T('paymentStatus')}</span>
+                      <span className={`badge ${paymentStatusClass(o.payment_status)}`}>
+                        {paymentStatusLabel(o.payment_status, o.payment_method)}
                       </span>
                     </div>
                   </div>
@@ -1214,12 +1399,13 @@ export default function BuyerMarketplace() {
                     </div>
                     <ProductFarmerInfo product={p} lang={lang} onSelect={setSelectedFarmerId} />
                     <div className="bm-product-purchase-info">
-                      <div className="product-price">৳{p.unit_price_bdt}<span>/kg</span></div>
+                      <div className="product-price">৳{p.unit_price_bdt}<span>/{tr(`unit_${displayUnit(p)}`, lang)}</span></div>
                       <ProductStockInfo product={p} lang={lang} />
                     </div>
                   </div>
                   <div className="product-footer" style={{ gap: 8 }}>
                     <button className="btn btn-primary btn-sm" style={{ flex: 1 }}
+                      disabled={p.stock_status === 'out_of_stock' || p.status === 'sold_out' || displayQuantity(p) <= 0}
                       onClick={() => { addToCart(p); toggleWishlist(p) }}>
                       🛒 Add to Cart
                     </button>
@@ -1369,7 +1555,7 @@ export default function BuyerMarketplace() {
                   <span style={{ fontSize: 24 }}>{getEmoji(p)}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{p.title_en}</div>
-                    <div style={{ fontSize: 12, color: 'var(--gray)' }}>৳{p.unit_price_bdt}/kg · {p.district}</div>
+                    <div style={{ fontSize: 12, color: 'var(--gray)' }}>৳{p.unit_price_bdt}/{tr(`unit_${displayUnit(p)}`, lang)} · {p.district}</div>
                   </div>
                   <button className="btn btn-primary btn-sm" onClick={() => { addToCart(p); handleTabChange('cart') }}>
                     🛒 Add
@@ -1460,9 +1646,12 @@ export default function BuyerMarketplace() {
                     <div style={{ fontSize: 12, color: '#546E7A', marginTop: 2 }}>per kg</div>
                   </div>
                   <div style={{ background: '#E3F2FD', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: '#1565C0' }}>{p.quantity_kg?.toLocaleString()}</div>
-                    <div style={{ fontSize: 12, color: '#546E7A', marginTop: 2 }}>kg available</div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: '#1565C0' }}>{displayQuantity(p)?.toLocaleString()}</div>
+                    <div style={{ fontSize: 12, color: '#546E7A', marginTop: 2 }}>{tr(`unit_${displayUnit(p)}`, lang)} available</div>
                   </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <ProductStockInfo product={p} lang={lang} />
                 </div>
 
                 <div
@@ -1487,9 +1676,33 @@ export default function BuyerMarketplace() {
                   }}>👨‍🌾</span>
                   <div>
                     <div style={{ fontSize: 11, color: '#546E7A' }}>{T('farmerLabel')}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2E2E2E', textDecoration: 'underline dotted' }}>{p.farmer_name || 'Verified Farmer'}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2E2E2E', textDecoration: 'underline dotted' }}>
+                      {p.farmer_name || (lang === 'bn' ? 'কৃষক' : 'Farmer')}
+                      {p.farmer_verified && (
+                        <span className="badge badge-green" style={{ marginLeft: 6, fontSize: 10 }}>
+                          {T('verifiedFarmer')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {(user?.role === 'buyer' || user?.role === 'consumer') && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                    <button className="btn btn-sm btn-secondary" onClick={() => {
+                      setReportTarget({ target_type: 'listing', target_product_id: p.product_id })
+                      setReportReason('')
+                    }}>
+                      {T('reportListing')}
+                    </button>
+                    <button className="btn btn-sm btn-secondary" onClick={() => {
+                      setReportTarget({ target_type: 'user', target_user_id: p.farmer_id })
+                      setReportReason('')
+                    }}>
+                      {T('reportUser')}
+                    </button>
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
                   {[
@@ -1617,14 +1830,15 @@ export default function BuyerMarketplace() {
 
                 {inCart && (
                   <div style={{ background: '#E8F5E9', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, color: '#2E7D32', fontWeight: 600 }}>🛒 In cart: {inCart.quantity_kg} kg</span>
+                    <span style={{ fontSize: 13, color: '#2E7D32', fontWeight: 600 }}>🛒 In cart: {inCart.quantity_kg} {tr(`unit_${displayUnit(p)}`, lang)}</span>
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#2E7D32' }}>৳{(inCart.quantity_kg * p.unit_price_bdt).toLocaleString()}</span>
                   </div>
                 )}
 
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="btn btn-primary" style={{ flex: 1, padding: '12px' }}
-                    onClick={() => { addToCart(p); toast.success('Added to cart!'); setSelectedProduct(null) }}>
+                    disabled={p.stock_status === 'out_of_stock' || p.status === 'sold_out' || displayQuantity(p) <= 0}
+                    onClick={() => { if (addToCart(p)) setSelectedProduct(null) }}>
                     🛒 Add to Cart
                   </button>
                   <button style={{
@@ -1706,7 +1920,11 @@ export default function BuyerMarketplace() {
                   )}
                   <div style={{ fontSize: 20, fontWeight: 800 }}>
                     {farmerProfile.name_en}
-                    {farmerProfile.is_verified && <span title="Verified" style={{ marginLeft: 6 }}>✅</span>}
+                    {farmerProfile.is_verified && (
+                      <span className="badge badge-green" style={{ marginLeft: 8, verticalAlign: 'middle' }}>
+                        {T('verifiedFarmer')}
+                      </span>
+                    )}
                   </div>
                   {farmerProfile.name_bn && <div style={{ fontSize: 14, opacity: 0.85 }}>{farmerProfile.name_bn}</div>}
                   <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6 }}>
@@ -1732,6 +1950,17 @@ export default function BuyerMarketplace() {
                   </div>
                 </div>
 
+                {(user?.role === 'buyer' || user?.role === 'consumer') && (
+                  <div style={{ padding: '0 24px 18px' }}>
+                    <button className="btn btn-sm btn-secondary" onClick={() => {
+                      setReportTarget({ target_type: 'user', target_user_id: farmerProfile.farmer_id })
+                      setReportReason('')
+                    }}>
+                      {T('reportUser')}
+                    </button>
+                  </div>
+                )}
+
                 {/* Other listings from this farmer */}
                 <div style={{ padding: '0 24px 24px' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#546E7A', marginBottom: 10 }}>
@@ -1755,9 +1984,9 @@ export default function BuyerMarketplace() {
                           <span style={{ fontSize: 24 }}>{getEmoji(fp)}</span>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 600 }}>{fp.title_en}</div>
-                            <div style={{ fontSize: 12, color: '#546E7A' }}>{fp.quantity_kg} kg {lang === 'bn' ? 'পাওয়া যাচ্ছে' : 'available'}</div>
+                            <div style={{ fontSize: 12, color: '#546E7A' }}>{displayQuantity(fp)} {tr(`unit_${displayUnit(fp)}`, lang)} {lang === 'bn' ? 'পাওয়া যাচ্ছে' : 'available'}</div>
                           </div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#2E7D32' }}>৳{fp.unit_price_bdt}/kg</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#2E7D32' }}>৳{fp.unit_price_bdt}/{tr(`unit_${displayUnit(fp)}`, lang)}</div>
                         </div>
                       ))}
                     </div>
@@ -1765,6 +1994,37 @@ export default function BuyerMarketplace() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {reportTarget && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}
+          onMouseDown={() => setReportTarget(null)}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: 460 }} onMouseDown={event => event.stopPropagation()}>
+            <div className="card-title">{T(reportTarget.target_type === 'listing' ? 'reportListing' : 'reportUser')}</div>
+            <label className="form-label" htmlFor="report-reason">{T('reportReason')}</label>
+            <textarea
+              id="report-reason"
+              className="form-input"
+              rows={5}
+              minLength={5}
+              maxLength={2000}
+              value={reportReason}
+              onChange={event => setReportReason(event.target.value)}
+            />
+            <div className="flex gap-8" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-secondary" onClick={() => setReportTarget(null)}>{T('cancel')}</button>
+              <button className="btn btn-primary" disabled={submittingReport || reportReason.trim().length < 5}
+                onClick={handleSubmitReport}>
+                {submittingReport ? T('loading') : T('submitReport')}
+              </button>
+            </div>
           </div>
         </div>
       )}

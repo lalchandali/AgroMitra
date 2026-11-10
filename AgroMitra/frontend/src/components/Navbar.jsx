@@ -201,7 +201,7 @@ const Navbar = () => {
         >
           {darkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
         </button>
-        
+
 
         {user ? (
           <>

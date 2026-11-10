@@ -115,6 +115,7 @@ try:
     from backend.database.routes.review_routes import router as review_router
     from backend.database.routes.settings_routes import router as settings_router
     from backend.database.routes.testimonial_routes import router as testimonial_router
+    from backend.database.routes.user_report_routes import router as user_report_router
 
     db_base.metadata.create_all(bind=db_engine)
     app.include_router(auth_router)
@@ -124,6 +125,7 @@ try:
     app.include_router(review_router)
     app.include_router(testimonial_router)
     app.include_router(notification_router)
+    app.include_router(user_report_router)
     DATABASE_ENABLED = True
     print("Database routes enabled on the main AI API.")
 except Exception as exc:

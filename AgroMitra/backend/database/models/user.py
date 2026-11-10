@@ -7,7 +7,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 
 from backend.database.database import Base
@@ -19,6 +19,12 @@ class UserRole(str, enum.Enum):
     buyer    = "buyer"
     consumer = "consumer"
     admin    = "admin"
+
+
+class VerificationStatus(str, enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
 
 
 # ── User Table ───────────────────────────────────────────────
@@ -34,6 +40,14 @@ class User(Base):
     district         = Column(String(50), nullable=True)
     password_hash    = Column(String(255), nullable=False)
     profile_photo_url= Column(String(500), nullable=True)
+    verification_status = Column(
+        Enum(VerificationStatus),
+        nullable=False,
+        default=VerificationStatus.pending,
+        server_default="pending",
+    )
+    verification_reference = Column(Text, nullable=True)
+    verification_reason = Column(Text, nullable=True)
     is_verified      = Column(Boolean, default=False)
     is_active        = Column(Boolean, default=True)
     trust_score      = Column(Numeric(4, 1), default=50.0)

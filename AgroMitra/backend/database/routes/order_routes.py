@@ -6,17 +6,19 @@
 # ============================================================
 
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import case
 from sqlalchemy.orm import Session
 
 # Windows console UTF-8 fix এখন main.py-এর একদম শুরুতে একবারই করা হয়
 # (sys.stdout.reconfigure) — তাই এখানে আলাদা করে stdout wrap করার
 # দরকার নেই।
 from backend.database import get_db
-from backend.database.models.order import Order, OrderStatus, PaymentStatus
+from backend.database.models.order import DeliveryType, Order, OrderStatus, PaymentMethod, PaymentStatus
 from backend.database.models.order_item import OrderItem
 from backend.database.models.product import Product, ProductStatus
 from backend.database.models.user import User, UserRole
@@ -29,6 +31,8 @@ from backend.database.schemas.order_schema import (
     OrderResponse,
     OrderStatusUpdate,
 )
+from backend.database.utils.order_finance import calculate_order_totals
+from backend.database.utils.quantity_units import calculate_sale_line, quantity_from_base
 
 router = APIRouter(prefix="/api/v1/orders", tags=["Orders"])
 
@@ -50,6 +54,8 @@ def _build_order_response(order: Order, db: Session) -> OrderResponse:
             order_item_id=i.order_item_id,
             product_id=i.product_id,
             quantity_kg=float(i.quantity_kg),
+            quantity=float(i.quantity if i.quantity is not None else quantity_from_base(i.quantity_kg, i.unit or "kg")),
+            unit=i.unit or "kg",
             unit_price=float(i.unit_price),
             subtotal=float(i.subtotal),
             product_name=p.title_en if p else None,
@@ -70,8 +76,10 @@ def _build_order_response(order: Order, db: Session) -> OrderResponse:
         status=order.status,
         payment_status=order.payment_status,
         payment_method=order.payment_method,
-        delivery_type=order.delivery_type,
+        delivery_method=order.delivery_method,
+        delivery_type=order.delivery_method,
         delivery_address=order.delivery_address,
+        delivery_note=order.delivery_note,
         created_at=order.created_at,
         confirmed_at=order.confirmed_at,
         delivered_at=order.delivered_at,
@@ -85,11 +93,18 @@ def _build_order_response(order: Order, db: Session) -> OrderResponse:
 def _restock_order_items(order: Order, db: Session):
     items = db.query(OrderItem).filter(OrderItem.order_id == order.order_id).all()
     for item in items:
-        product = db.query(Product).filter(Product.product_id == item.product_id).first()
-        if product:
-            product.quantity_kg = float(product.quantity_kg) + float(item.quantity_kg)
-            if product.status == ProductStatus.sold_out:
-                product.status = ProductStatus.active
+        db.query(Product).filter(
+            Product.product_id == item.product_id
+        ).update(
+            {
+                "quantity_kg": Product.quantity_kg + item.quantity_kg,
+                "status": case(
+                    (Product.status == ProductStatus.sold_out, ProductStatus.active),
+                    else_=Product.status,
+                ),
+            },
+            synchronize_session=False,
+        )
 
 
 # ── POST /api/v1/orders ───────────────────────────────────────
@@ -143,48 +158,68 @@ async def place_order(
     if str(farmer_id) == str(current_user.user_id):
         raise HTTPException(status_code=400, detail="You cannot order your own product.")
 
-    if order_data.delivery_type.value == "delivery" and not order_data.delivery_address:
+    if order_data.delivery_method == DeliveryType.delivery and not order_data.delivery_address:
         raise HTTPException(status_code=400, detail="Delivery address required for delivery orders.")
 
     # প্রতিটা item-এর জন্য stock atomically check + decrement করো
     # (WHERE quantity_kg >= চাহিদা — দুইজন একসাথে অর্ডার করলেও overselling হবে না)
-    order_items_data = []  # (product, quantity_kg, unit_price, subtotal)
-    total_amount = 0.0
+    order_items_data = []  # (product, sale quantity, base quantity, unit, unit price, subtotal)
+    items_subtotal = Decimal("0.00")
     try:
         for item in order_data.items:
             product = product_map[item.product_id]
-            unit_price = float(product.unit_price_bdt)
-            subtotal = round(unit_price * item.quantity_kg, 2)
-            total_amount += subtotal
+            sale_unit = product.sale_unit or "kg"
+            requested_quantity = item.quantity
+            if requested_quantity is None:
+                if sale_unit != "kg":
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "This product requires a quantity in its listed unit. "
+                            "Refresh the marketplace and try again."
+                        ),
+                    )
+                requested_quantity = item.quantity_kg
+            try:
+                sale_quantity, base_quantity, subtotal = calculate_sale_line(
+                    requested_quantity,
+                    sale_unit,
+                    product.unit_price_bdt,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            if base_quantity <= 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Order quantities must be at least 0.01 in the listed unit.",
+                )
+            unit_price = Decimal(str(product.unit_price_bdt))
+            items_subtotal += subtotal
 
             updated_rows = db.query(Product).filter(
                 Product.product_id == item.product_id,
-                Product.quantity_kg >= item.quantity_kg
+                Product.status == ProductStatus.active,
+                Product.quantity_kg >= base_quantity
             ).update(
-                {"quantity_kg": Product.quantity_kg - item.quantity_kg},
+                {"quantity_kg": Product.quantity_kg - base_quantity},
                 synchronize_session=False,
-                # synchronize_session=False: SQLAlchemy shouldn't try to replay this
-                # subtraction in plain Python to keep the in-memory session in sync —
-                # Product.quantity_kg is a Decimal (from Postgres NUMERIC) but
-                # item.quantity_kg is a plain float, and Python refuses Decimal - float
-                # arithmetic. The DB does the subtraction correctly either way; we
-                # db.refresh(product) right after, so session sync isn't needed here.
             )
 
             if updated_rows == 0:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Not enough stock for '{product.title_en}'. Only {product.quantity_kg} kg available."
+                    detail="Stock changed while placing the order. Refresh the product and try again."
                 )
-            order_items_data.append((product, item.quantity_kg, unit_price, subtotal))
+            order_items_data.append((product, sale_quantity, base_quantity, sale_unit, unit_price, subtotal))
     except HTTPException:
         db.rollback()
         raise
 
-    total_amount = round(total_amount, 2)
     platform_fee_percent = get_platform_fee_percent(db)  # admin panel থেকে সেট করা %
-    platform_fee = round(total_amount * (platform_fee_percent / 100), 2)
-    farmer_amount = round(total_amount - platform_fee, 2)
+    total_amount, platform_fee, farmer_amount = calculate_order_totals(
+        items_subtotal,
+        platform_fee_percent,
+    )
 
     new_order = Order(
         buyer_id=current_user.user_id,
@@ -193,19 +228,26 @@ async def place_order(
         platform_fee=platform_fee,
         farmer_amount=farmer_amount,
         payment_method=order_data.payment_method,
-        delivery_type=order_data.delivery_type,
+        delivery_method=order_data.delivery_method,
         delivery_address=order_data.delivery_address,
+        delivery_note=order_data.delivery_note,
         status=OrderStatus.placed,
-        payment_status=PaymentStatus.in_escrow,
+        payment_status=(
+            PaymentStatus.paid
+            if order_data.payment_method in {PaymentMethod.mock_bkash, PaymentMethod.mock_nagad}
+            else PaymentStatus.pending
+        ),
     )
     db.add(new_order)
     db.flush()  # commit ছাড়াই order_id পাওয়ার জন্য
 
-    for product, qty, unit_price, subtotal in order_items_data:
+    for product, sale_quantity, base_quantity, sale_unit, unit_price, subtotal in order_items_data:
         db.add(OrderItem(
             order_id=new_order.order_id,
             product_id=product.product_id,
-            quantity_kg=qty,
+            quantity_kg=base_quantity,
+            quantity=sale_quantity,
+            unit=sale_unit,
             unit_price=unit_price,
             subtotal=subtotal,
         ))
@@ -226,7 +268,7 @@ async def place_order(
     db.commit()
     db.refresh(new_order)
 
-    print(f"  New order: {new_order.order_id} | {len(order_items_data)} item(s) | Tk.{total_amount} | Escrow held")
+    print(f"  New order: {new_order.order_id} | {len(order_items_data)} item(s) | Tk.{total_amount}")
     return _build_order_response(new_order, db)
 
 
@@ -296,7 +338,7 @@ async def update_order_status(
     db: Session = Depends(get_db)
 ):
     """Order status update করো (পুরো order-এর সব item-এর status একসাথে বদলায়)।"""
-    order = db.query(Order).filter(Order.order_id == order_id).first()
+    order = db.query(Order).filter(Order.order_id == order_id).with_for_update().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -340,11 +382,19 @@ async def update_order_status(
 
     if new_status == OrderStatus.delivered:
         order.delivered_at = datetime.utcnow()
-        order.payment_status = PaymentStatus.released
-        print(f"  Escrow released: Tk.{order.farmer_amount} -> Farmer")
+        if order.payment_status == PaymentStatus.pending:
+            order.payment_status = PaymentStatus.paid
+        elif order.payment_status == PaymentStatus.in_escrow:
+            order.payment_status = PaymentStatus.released
+            print(f"  Escrow released: Tk.{order.farmer_amount} -> Farmer")
 
     if new_status == OrderStatus.cancelled:
-        order.payment_status = PaymentStatus.refunded
+        order.payment_status = (
+            PaymentStatus.failed
+            if order.payment_status == PaymentStatus.pending
+            or order.payment_method in {PaymentMethod.mock_bkash, PaymentMethod.mock_nagad}
+            else PaymentStatus.refunded
+        )
         _restock_order_items(order, db)
 
     # ── Notify the other party — farmer's actions notify the buyer,
@@ -374,7 +424,7 @@ async def cancel_order(
     db: Session = Depends(get_db)
 ):
     """Order cancel করো (শুধু placed status-এ, buyer নিজে)।"""
-    order = db.query(Order).filter(Order.order_id == order_id).first()
+    order = db.query(Order).filter(Order.order_id == order_id).with_for_update().first()
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
@@ -389,7 +439,12 @@ async def cancel_order(
         )
 
     order.status = OrderStatus.cancelled
-    order.payment_status = PaymentStatus.refunded
+    order.payment_status = (
+        PaymentStatus.failed
+        if order.payment_status == PaymentStatus.pending
+        or order.payment_method in {PaymentMethod.mock_bkash, PaymentMethod.mock_nagad}
+        else PaymentStatus.refunded
+    )
     _restock_order_items(order, db)
 
     create_notification(
@@ -402,7 +457,12 @@ async def cancel_order(
     )
 
     db.commit()
-    return {"message": "Order cancelled and payment refunded.", "order_id": str(order_id)}
+    message = (
+        "Order cancelled and payment refunded."
+        if order.payment_status == PaymentStatus.refunded
+        else "Order cancelled."
+    )
+    return {"message": message, "order_id": str(order_id)}
 
 
 # ── GET /api/v1/orders/admin/all ─────────────────────────────

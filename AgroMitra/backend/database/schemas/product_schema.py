@@ -88,6 +88,7 @@ class FarmerProfileResponse(BaseModel):
     average_rating   : Optional[float] = None
     review_count     : int = 0
     active_listings  : int = 0
+    trust_score      : float = 50.0
     products         : List[ProductResponse] = []
 
     class Config:

@@ -22,6 +22,7 @@ from backend.database.routes.auth_routes import get_current_user
 from backend.database.routes.notification_routes import create_notification
 from backend.database.schemas.review_schema import ReviewCreate, ReviewResponse
 from backend.database.utils.review_eligibility import review_eligibility_error
+from backend.database.utils.trust_score import refresh_trust_score
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["Reviews"])
 
@@ -94,6 +95,9 @@ async def create_review(
         comment=payload.comment,
     )
     db.add(review)
+    farmer = db.query(User).filter(User.user_id == order.farmer_id).first()
+    if farmer:
+        refresh_trust_score(farmer, db)
 
     product = db.query(Product).filter(Product.product_id == order_item.product_id).first()
     stars = "⭐" * payload.rating

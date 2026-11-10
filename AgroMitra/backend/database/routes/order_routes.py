@@ -33,6 +33,7 @@ from backend.database.schemas.order_schema import (
 )
 from backend.database.utils.order_finance import calculate_order_totals
 from backend.database.utils.quantity_units import calculate_sale_line, quantity_from_base
+from backend.database.utils.trust_score import refresh_trust_score
 
 router = APIRouter(prefix="/api/v1/orders", tags=["Orders"])
 
@@ -396,6 +397,11 @@ async def update_order_status(
             else PaymentStatus.refunded
         )
         _restock_order_items(order, db)
+
+    if new_status == OrderStatus.delivered:
+        farmer = db.query(User).filter(User.user_id == order.farmer_id).first()
+        if farmer:
+            refresh_trust_score(farmer, db)
 
     # ── Notify the other party — farmer's actions notify the buyer,
     #    and a cancel notifies whichever side didn't request it. ──

@@ -41,6 +41,7 @@ from backend.database.utils.security import (
     verify_otp,
     verify_password,
 )
+from backend.database.utils.trust_score import refresh_trust_score
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -234,7 +235,14 @@ async def refresh_token_route(req: TokenRefresh, db: Session = Depends(get_db)):
 
 # ── GET /api/v1/auth/me ───────────────────────────────────────
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _, score_changed = refresh_trust_score(current_user, db)
+    if score_changed:
+        db.commit()
+        db.refresh(current_user)
     return current_user
 
 
@@ -441,6 +449,7 @@ async def decide_farmer_verification(
         raise HTTPException(status_code=404, detail="Farmer not found.")
     farmer.verification_status = payload.status
     farmer.verification_reason = payload.reason.strip() if payload.reason else None
+    refresh_trust_score(farmer, db)
     db.commit()
     db.refresh(farmer)
     return farmer

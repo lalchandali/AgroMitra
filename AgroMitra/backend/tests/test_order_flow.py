@@ -20,6 +20,7 @@ from backend.database.utils.quantity_units import (
     quantity_to_base,
 )
 from backend.database.utils.review_eligibility import review_eligibility_error
+from backend.database.utils.trust_score import calculate_trust_score
 from fastapi import HTTPException
 from pydantic import ValidationError
 
@@ -230,6 +231,19 @@ class ReviewEligibilityTests(unittest.TestCase):
             ),
             (403, "Only buyers can submit reviews."),
         )
+
+
+class TrustScoreTests(unittest.TestCase):
+    def test_new_pending_farmer_starts_at_neutral_score(self):
+        self.assertEqual(calculate_trust_score("pending", None, 0, 0), 50)
+
+    def test_verification_reviews_and_deliveries_affect_score(self):
+        self.assertEqual(calculate_trust_score("approved", 4.5, 2, 4), 87)
+
+    def test_score_is_bounded_and_deliveries_stop_at_ten(self):
+        self.assertEqual(calculate_trust_score("approved", 5, 1, 10), 100)
+        self.assertEqual(calculate_trust_score("approved", 5, 1, 100), 100)
+        self.assertEqual(calculate_trust_score("rejected", 1, 1, 0), 23)
 
 
 if __name__ == "__main__":

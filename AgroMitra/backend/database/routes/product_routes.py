@@ -28,6 +28,7 @@ from backend.database.models.user import User, UserRole, VerificationStatus
 from backend.database.routes.auth_routes import get_current_user
 from backend.database.schemas.product_schema import FarmerProfileResponse, ProductResponse
 from backend.database.utils.quantity_units import normalize_sale_unit, quantity_to_base
+from backend.database.utils.trust_score import refresh_trust_score
 
 
 def _parse_dt(value: Optional[str]):
@@ -281,6 +282,10 @@ async def get_farmer_profile(farmer_id: UUID, db: Session = Depends(get_db)):
     ).filter(Review.farmer_id == farmer_id).first()
     overall_rating = round(float(agg.avg_rating), 1) if agg and agg.avg_rating is not None else None
     overall_count = agg.cnt if agg else 0
+    trust_score, score_changed = refresh_trust_score(farmer, db)
+    if score_changed:
+        db.commit()
+        db.refresh(farmer)
 
     return FarmerProfileResponse(
         farmer_id=farmer.user_id,
@@ -294,6 +299,7 @@ async def get_farmer_profile(farmer_id: UUID, db: Session = Depends(get_db)):
         average_rating=overall_rating,
         review_count=overall_count,
         active_listings=len(product_list),
+        trust_score=trust_score,
         products=product_list,
     )
 @router.get("/my", response_model=List[ProductResponse])

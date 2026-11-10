@@ -61,6 +61,9 @@ const cropCategory = (cropName) => {
   return 'Vegetable'
 }
 
+const trustScoreLabel = (score) =>
+  score == null || !Number.isFinite(Number(score)) ? '—/100' : `${Math.round(Number(score))}/100`
+
 const MONTH_NAMES = [
   "", "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -669,6 +672,17 @@ export default function FarmerDashboard() {
       await updateOrderStatus(orderId, newStatus)
       toast.success(`Order marked as ${newStatus}`)
       fetchOrders()
+      if (newStatus === 'delivered') {
+        getCurrentUser()
+          .then(({ data: updatedUser }) => {
+            updateStoredUser(updatedUser)
+            setUser(updatedUser)
+          })
+          .catch(error => {
+            console.error('Could not refresh trust score after delivery:', error)
+            toast.error('Order delivered, but could not refresh trust score.')
+          })
+      }
     } catch {
       toast.error('Could not update order status')
     }
@@ -797,7 +811,18 @@ export default function FarmerDashboard() {
               { icon: '📦', label: T('activeListings'), val: productsLoading ? '…' : activeListings, change: T('activeListings'), color: '#E8F5E9', border: '#2E7D32' },
               { icon: '🛒', label: T('pendingOrders'), val: ordersLoading ? '…' : pendingOrders, change: `${orders.length} ${T('totalOrders')}`, color: '#E3F2FD', border: '#1976D2' },
               { icon: '💰', label: T('totalEarningsStat'), val: ordersLoading ? '…' : `৳${totalEarnings.toLocaleString()}`, change: T('fromDelivered'), color: '#FFF3E0', border: '#E65100' },
-              { icon: '⭐', label: T('trustScore'), val: '87/100', change: T('verified'), color: '#F3E5F5', border: '#6A1B9A' },
+              {
+                icon: '⭐',
+                label: T('trustScore'),
+                val: trustScoreLabel(user?.trust_score),
+                change: user?.verification_status === 'approved'
+                  ? T('verified')
+                  : user?.verification_status === 'rejected'
+                    ? T('verificationRejected')
+                    : T('verificationPending'),
+                color: '#F3E5F5',
+                border: '#6A1B9A',
+              },
             ].map((s, i) => (
               <div key={i} className="stat-card" style={{ borderLeftColor: s.border }}>
                 <div className="stat-icon" style={{ background: s.color }}>{s.icon}</div>
@@ -2011,7 +2036,7 @@ export default function FarmerDashboard() {
                       </span>
                   }
                   <span className="badge" style={{ background: '#F3E5F5', color: '#6A1B9A' }}>
-                    ⭐ Trust Score: 87/100
+                    ⭐ {T('trustScore')}: {trustScoreLabel(user?.trust_score)}
                   </span>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 10 }}>

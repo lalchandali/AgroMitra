@@ -1933,7 +1933,7 @@ export default function BuyerMarketplace() {
                 </div>
 
                 {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: '20px 24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, padding: '20px 24px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>
                       {farmerProfile.average_rating != null ? `⭐ ${farmerProfile.average_rating}` : '—'}
@@ -1947,6 +1947,12 @@ export default function BuyerMarketplace() {
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32' }}>{farmerProfile.is_verified ? '✅' : '—'}</div>
                     <div style={{ fontSize: 11, color: '#546E7A' }}>{lang === 'bn' ? 'যাচাইকৃত' : 'verified'}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#6A1B9A' }}>
+                      ⭐ {Math.round(Number(farmerProfile.trust_score) || 0)}/100
+                    </div>
+                    <div style={{ fontSize: 11, color: '#546E7A' }}>{T('trustScore')}</div>
                   </div>
                 </div>
 

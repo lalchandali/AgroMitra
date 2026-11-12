@@ -2312,8 +2312,6 @@ tbody td {
   margin-bottom: 28px;
 }
 
-.bm-header-left {}
-
 .bm-title {
   font-size: 26px;
   font-weight: 800;
@@ -2944,8 +2942,6 @@ tbody td {
   gap: 20px;
   align-items: start;
 }
-
-.bm-cart-items {}
 
 .bm-section-head {
   display: flex;
